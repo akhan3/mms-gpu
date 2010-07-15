@@ -1,0 +1,13 @@
+# use glob syntax.
+syntax: glob
+obj/*
+bin/*
+*.mat
+*.ods
+*.o
+*.out
+log*
+
+# switch to regexp syntax.
+#syntax: regexp
+#^\.pc/
