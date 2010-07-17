@@ -29,8 +29,10 @@ struct node {
 // constructor - used only for root node
     node() {
         parent = NULL;
-        for(int i=0; i<=7; i++) 
+        for(int i=0; i<8; i++) 
             neighbor[i] = NULL;
+        for(int i=0; i<27; i++) 
+            interaction[i] = NULL;
         level = 0;
         x = 0;
         y = 0;
@@ -40,16 +42,16 @@ struct node {
 
 // Split up parent node into 4 children nodes
     void split() {
-        for(int i=0; i<=3; i++) {
+        for(int i=0; i<4; i++) {
             child[i] = (node*) malloc(sizeof(node));
             node *n = child[i];
             
             n->parent = this;
-            for(int j=0; j<=3; j++) 
+            for(int j=0; j<4; j++) 
                 n->child[j] = NULL;
             n->level = level+1;
             n->id = (byte*) malloc((n->level+1) * sizeof(byte));
-            for(int j=0; j<=level; j++)
+            for(unsigned int j=0; j<=level; j++)
                 n->id[j] = id[j];
             n->id[level+1] = i;
             // extract coordinates at level
@@ -59,80 +61,79 @@ struct node {
                 n->x |= (n->id[j]&1)      << (n->level-j);
                 n->y |= ((n->id[j]&2)>>1) << (n->level-j);
             }            
-            for(int j=0; j<=7; j++) 
+            for(int j=0; j<8; j++) 
                 n->neighbor[j] = NULL;
+            for(int j=0; j<27; j++) 
+                n->interaction[j] = NULL;
         }
     }
 
 
-// construct neighbors list
-    void find_neighbors(node* n, node* root) {
-        if (n->parent == NULL)
+// construct neighbors and intercation list
+    void find_neighbors(node* root) {
+        if (parent == NULL)
             return;
+        // char *idstring = (char*) malloc(100);
         unsigned int Nx[8];
         unsigned int Ny[8];
-        byte *Nid = (byte*) malloc((n->level+1) * sizeof(byte));
-        Nx[0] = n->x-1; Ny[0] = n->y-1;
-        Nx[1] = n->x  ; Ny[1] = n->y-1;
-        Nx[2] = n->x+1; Ny[2] = n->y-1;
-        Nx[3] = n->x-1; Ny[3] = n->y  ;
-        Nx[4] = n->x+1; Ny[4] = n->y  ;
-        Nx[5] = n->x-1; Ny[5] = n->y+1;
-        Nx[6] = n->x  ; Ny[6] = n->y+1;
-        Nx[7] = n->x+1; Ny[7] = n->y+1;
-        char *idstring = (char*) malloc(100);
-        n->get_idstring(idstring);
-        // printf("neighbors of L%d%s=(%d,%d) are ", n->level, idstring, n->x, n->y);
+        byte *Nid = (byte*) malloc(level+1);
+        Nx[0] = x-1; Ny[0] = y-1;
+        Nx[1] = x  ; Ny[1] = y-1;
+        Nx[2] = x+1; Ny[2] = y-1;
+        Nx[3] = x-1; Ny[3] = y  ;
+        Nx[4] = x+1; Ny[4] = y  ;
+        Nx[5] = x-1; Ny[5] = y+1;
+        Nx[6] = x  ; Ny[6] = y+1;
+        Nx[7] = x+1; Ny[7] = y+1;
         for(int j=0; j<=7; j++) {
-            // printf("(%d,%d)=", Nx[j], Ny[j]);
-            for(int k=0; k<=n->level; k++)
+            for(unsigned int k=0; k<=level; k++)
                 Nid[k] = 0;
-            // printf("[");
-            for(int k=n->level; k>=0; k--) {
-                Nid[k] |= (Nx[j] & (1<<(n->level-k))) >> (n->level-k);
-                Nid[k] |= ((Ny[j] & (1<<(n->level-k))) >> (n->level-k)) << 1;
-                // printf("{%d:%d}", k, Nid[k]);
+            for(int k=level; k>=0; k--) {
+                Nid[k] |= (Nx[j] & (1<<(level-k))) >> (level-k);
+                Nid[k] |= ((Ny[j] & (1<<(level-k))) >> (level-k)) << 1;
             }
-            for(int k=0; k<=n->level; k++)
-                // printf("%d", Nid[k]);
-            // printf("]");
+            for(unsigned int k=0; k<=level; k++)
             // join the neighbors
             if (Nid[0] == 0) {
                 node *nt = root;
-                for(int k=1; k<=n->level; k++) {
+                for(unsigned int k=1; k<=level; k++)
                     nt = nt->child[Nid[k]];
+                neighbor[j] = nt;
+            }
+        }
+        
+        // Now construct the interaction list
+        if (level <= 1)
+            return;
+        node *fullList[32];
+        int c = 0;
+        for(int j=0; j<8; j++) {                // parent's neighbor index
+            if (parent->neighbor[j]) {          // if parent has this neighbor?
+                for(int k=0; k<4; k++) {        // parent's neighbor's child index
+                    fullList[c++] = parent->neighbor[j]->child[k];
                 }
-                n->neighbor[j] = nt;
-                n->neighbor[j]->get_idstring(idstring);
-                // printf("{%d:(%d,%d)=%s}", j, n->neighbor[j]->x, n->neighbor[j]->y, idstring);
             }
-            // printf(" ");
         }
-        // NEWLINE;
+        int c1 = 0;
+        for (int i=0; i<c; i++) {
+            int foundInNeighbor = 0; 
+            for (int j=0; j<8; j++) { 
+                if (fullList[i] == neighbor[j]) {
+                    foundInNeighbor = 1; 
+                    break; 
+                }
+            }
+            if (!foundInNeighbor)
+                interaction[c1++] = fullList[i];
+        }
+    } // function
 
-        n->get_idstring(idstring);
-        // printf("Neighbors of L%d%s=(%d,%d) are ", n->level, idstring, n->x, n->y);
-        for(int j=0; j<=7; j++) {
-            // printf("%p ", n->neighbor[j]);
-            if (n->neighbor[j] != NULL) {
-                // printf("(%d,%d)", n->neighbor[j]->x, n->neighbor[j]->y);
-                n->neighbor[j]->get_idstring(idstring);
-                // printf("=");
-                // printf("%s ", idstring);
-            }
-            else {
-                // printf("( , )=");
-                // printf("[] ");
-            }
-        }
-        // NEWLINE;
-    }
 
 // Gather node-id in a string
     void get_idstring(char *s) {
         int c = 0;
         c += sprintf(s, "[");
-        for(int a=0; a<=level; a++)
+        for(unsigned int a=0; a<=level; a++)
             c += sprintf(s+c, "%d", id[a]);
         c += sprintf(s+c, "]");
     }
@@ -142,18 +143,18 @@ struct node {
 
 //******************************************************************
 
-void create_tree_recurs(node *thisnode, const int limit) {
+void create_tree_recurs(node *thisnode, const unsigned int limit) {
     if (thisnode->level >= limit)
         return;
-    // printf("tree recursive call...\n");
+    // printf("tree recursive call...\n");required by July 21. (Min. 4; max. 12)
     thisnode->split();
     for(int i=0; i<=3; i++)
         create_tree_recurs(thisnode->child[i], limit);
 }
 
-void find_neighbors_recurs(node *thisnode, node *root, const int limit) {
+void find_neighbors_recurs(node *thisnode, node *root, const unsigned int limit) {
     // printf("find recursive call...\n");
-    thisnode->find_neighbors(thisnode, root);
+    thisnode->find_neighbors(root);
     if (thisnode->level >= limit)
         return;
     for(int i=0; i<=3; i++)
@@ -172,7 +173,8 @@ int rand_atob(const int a, const int b) {
 //*************************************************************************//
 int main(void) {
     srand(time(NULL));
-    const int N = 1024;
+    const int N = 256;
+    // const int N = 1000*1000;
     const int logN = ceil(log2(N) / log2(4));
     printf("N = %d, log4(N) = %d\n", N, logN);
     printf("sizeof(node) = %ld\n", sizeof(node));
@@ -185,62 +187,66 @@ int main(void) {
     find_neighbors_recurs(root, root, logN);
     
     
-
-
-
-// traverse to a random deepest node
+// traverse to a random node at the deepest level
+    int c[5] = {0,0,0,0,0};
+    int cc = 0;
     node* n = root;
     char *idstring = (char*) malloc(100);
-    int c[3] = {0,2,3};
-    int cc = 0;
     while (n->child[0] != NULL)
     {
         n = n->child[rand_atob(0,4)];
         // n = n->child[c[cc++]];
         n->get_idstring(idstring);
-        printf("this node is at L%d: %s ", n->level, idstring);
-        printf("(%d,%d)", n->x, n->y);
+        printf("this node is at L%d%s(%d,%d)", n->level, idstring, n->x, n->y);
         NEWLINE;
+        // if(rand() / (double)RAND_MAX < 0.2) break;
     }
-    printf("and its neighbors are");
+    printf("its neighbors are ");
     for(int i=0; i<8; i++)
-        if (n->neighbor[i] != NULL)
-            printf("(%d,%d) ", n->neighbor[i]->x, n->neighbor[i]->y);
+        if (n->neighbor[i] != NULL) {
+            n->neighbor[i]->get_idstring(idstring);
+            printf("%s(%d,%d) ", idstring, n->neighbor[i]->x, n->neighbor[i]->y);
+            // printf("(%d,%d) ", n->neighbor[i]->x, n->neighbor[i]->y);
+        }
+    NEWLINE;
+    printf("its interactions are ");
+    for(int i=0; i<27; i++)
+        if (n->interaction[i] != NULL) {
+            n->interaction[i]->get_idstring(idstring);
+            printf("%s(%d,%d) ", idstring, n->interaction[i]->x, n->interaction[i]->y);
+        }
     NEWLINE;
     
     
     unsigned int size = (unsigned int)pow(2, n->level);
     byte *matrix = (byte*) malloc(size*size);
-    printf("size of matrix = %dx%d\n", size, size);
-    for(int i=0; i<size; i++) {
-        for(int j=0; j<size; j++) {
-            matrix[i*size+j] = '#';
+    // printf("size of matrix = %dx%d\n", size, size);
+    for(unsigned int i=0; i<size; i++) {
+        for(unsigned int j=0; j<size; j++) {
+            matrix[i*size+j] = 'o';
         }
     }
-    matrix[n->y*size+n->x] = '#';
+    matrix[n->y*size+n->x] = 'S';
     for(int i=0; i<8; i++) {
         if (n->neighbor[i] != NULL)
-            matrix[n->neighbor[i]->y*size+n->neighbor[i]->x] = 219;
+            matrix[n->neighbor[i]->y*size+n->neighbor[i]->x] = 'N';
     }
-    // for(int i=0; i<size; i++) {
-    for(int i=size-1; i>=0; i--) {        
-        for(int j=0; j<size; j++) {
+    for (int i=0; i<27; i++) {
+        if (n->interaction[i] != NULL)
+            matrix[n->interaction[i]->y*size+n->interaction[i]->x] = '#';
+    }
+    for(int i=size-1; i>=0; i--) {
+        for(unsigned int j=0; j<size; j++) {
             printf("%c ", matrix[i*size+j]);
         }
         NEWLINE;
     }
     
-    
-    
-    // while (n->parent != NULL)
-    // {
-        // n = n->parent;
-        // n->get_idstring(idstring);
-        // printf("this node is at L%d: %s ", n->level, idstring);
-        // printf("(%d,%d)", n->x, n->y);
-        // NEWLINE;
-    // }
-    
+    // int a = n->child[1] == n->child[0];
+    // int a[10];
+    // printf("a=%ld\n", sizeof(n->child[1] == n->child[0]));
+    // printf("%p %p %ld %d\n", n->parent, n->parent->parent, n->parent-n->parent->parent, n->parent>n->parent->parent);
+
 
     free(root);
 	return EXIT_SUCCESS;
