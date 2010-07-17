@@ -14,7 +14,8 @@ typedef unsigned char byte;
 //*******************************************************************
 //*********** Node class definition *********************************
 //*******************************************************************
-struct node {
+class node {
+    public:
 	node *parent;	    // pointer to parent
 	node *child[4];     // pointers to 4 children
 	node *neighbor[8];  // pointers to 8 neighbors
@@ -40,27 +41,54 @@ struct node {
         id[0] = 0;
     }
 
+// calculate x and y spatial coords from id
+    inline unsigned int calc_x(unsigned int level1, byte *id1) {
+        unsigned int x1 = 0;
+        for(int j=level1; j>=1; j--)
+            x1 |= (id1[j]&1) << (level1-j);
+        return x1;
+    }
+    inline unsigned int calc_y(unsigned int level1, byte *id1) {
+        unsigned int y1 = 0;
+        for(int j=level1; j>=1; j--)
+            y1 |= ((id1[j]&2)>>1) << (level1-j);
+        return y1;
+    }
+    // unsigned int calc_x() {
+        // x = 0;
+        // for(int j=level; j>=1; j--)
+            // x |= (id[j]&1) << (level-j);
+        // return x;
+    // }
+
+// calculate id from x and y spatial coords
+    inline void calc_id(byte*id1, unsigned int level1, unsigned int x1, unsigned int y1) {
+        for(unsigned int k=0; k<=level1; k++)
+            id1[k] = 0;
+        for(int k=level1; k>=0; k--) {
+            id1[k] |= (x1 & (1<<(level1-k))) >> (level1-k);
+            id1[k] |= ((y1 & (1<<(level1-k))) >> (level1-k)) << 1;
+        }
+    }
+
 // Split up parent node into 4 children nodes
     void split() {
         for(int i=0; i<4; i++) {
             child[i] = (node*) malloc(sizeof(node));
             node *n = child[i];
-            
             n->parent = this;
             for(int j=0; j<4; j++) 
                 n->child[j] = NULL;
             n->level = level+1;
+        // calculate node's id
             n->id = (byte*) malloc((n->level+1) * sizeof(byte));
             for(unsigned int j=0; j<=level; j++)
                 n->id[j] = id[j];
             n->id[level+1] = i;
-            // extract coordinates at level
-            n->x = 0;
-            n->y = 0;
-            for(int j=n->level; j>=1; j--) {
-                n->x |= (n->id[j]&1)      << (n->level-j);
-                n->y |= ((n->id[j]&2)>>1) << (n->level-j);
-            }            
+        // calculate spatial coordinates at level
+            n->x = n->calc_x(n->level, n->id);
+            n->y = n->calc_y(n->level, n->id);
+        // initialize neighbor and interaction list to NULL
             for(int j=0; j<8; j++) 
                 n->neighbor[j] = NULL;
             for(int j=0; j<27; j++) 
@@ -85,24 +113,21 @@ struct node {
         Nx[5] = x-1; Ny[5] = y+1;
         Nx[6] = x  ; Ny[6] = y+1;
         Nx[7] = x+1; Ny[7] = y+1;
-        for(int j=0; j<=7; j++) {
-            for(unsigned int k=0; k<=level; k++)
-                Nid[k] = 0;
-            for(int k=level; k>=0; k--) {
-                Nid[k] |= (Nx[j] & (1<<(level-k))) >> (level-k);
-                Nid[k] |= ((Ny[j] & (1<<(level-k))) >> (level-k)) << 1;
-            }
-            for(unsigned int k=0; k<=level; k++)
-            // join the neighbors
-            if (Nid[0] == 0) {
-                node *nt = root;
-                for(unsigned int k=1; k<=level; k++)
-                    nt = nt->child[Nid[k]];
-                neighbor[j] = nt;
+        for(int j=0; j<=7; j++) {   // for each of 8 neighbors
+            calc_id(Nid, level, Nx[j], Ny[j]);
+            // put the pointer to neighbor in neighbors list
+            for(unsigned int k=0; k<=level; k++) {
+                if (Nid[0] == 0) {
+                    node *nt = root;
+                    for(unsigned int k=1; k<=level; k++)
+                        nt = nt->child[Nid[k]];
+                    neighbor[j] = nt;
+                }
             }
         }
         
         // Now construct the interaction list
+        // by taking difference of two sets
         if (level <= 1)
             return;
         node *fullList[32];
@@ -188,8 +213,8 @@ int main(void) {
     
     
 // traverse to a random node at the deepest level
-    int c[5] = {0,0,0,0,0};
-    int cc = 0;
+    // int c[5] = {0,0,0,0,0};
+    // int cc = 0;
     node* n = root;
     char *idstring = (char*) malloc(100);
     while (n->child[0] != NULL)
