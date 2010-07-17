@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <iostream>
 #include <cmath>
 
@@ -101,7 +102,6 @@ class node {
     void find_neighbors(node* root) {
         if (parent == NULL)
             return;
-        // char *idstring = (char*) malloc(100);
         unsigned int Nx[8];
         unsigned int Ny[8];
         byte *Nid = (byte*) malloc(level+1);
@@ -125,6 +125,7 @@ class node {
                 }
             }
         }
+        free(Nid);
         
         // Now construct the interaction list
         // by taking difference of two sets
@@ -168,6 +169,21 @@ class node {
 
 //******************************************************************
 
+void destroy_node(node *thisnode) {
+    free(thisnode->id);
+    free(thisnode);
+}
+
+void prune_tree_recurs(node *thisnode) {
+    if (thisnode->child[0] == NULL) {
+        destroy_node(thisnode);
+        return;
+    }
+    for(int i=0; i<=3; i++)
+         prune_tree_recurs(thisnode->child[i]);
+    destroy_node(thisnode);
+}
+
 void create_tree_recurs(node *thisnode, const unsigned int limit) {
     if (thisnode->level >= limit)
         return;
@@ -196,11 +212,15 @@ int rand_atob(const int a, const int b) {
 //*************************************************************************//
 //******************** Main function **************************************//
 //*************************************************************************//
-int main(void) {
+int main(int argc, char **argv) 
+{
     srand(time(NULL));
-    const int N = 256;
-    // const int N = 1000*1000;
-    const int logN = ceil(log2(N) / log2(4));
+    unsigned int N = 1024;
+    if(argc >= 2) {
+        sscanf(argv[1], "%u", &N);
+        assert(N > 0);
+    }
+    const unsigned int logN = ceil(log2(N) / log2(4));
     printf("N = %d, log4(N) = %d\n", N, logN);
     printf("sizeof(node) = %ld\n", sizeof(node));
     
@@ -216,7 +236,7 @@ int main(void) {
     // int c[5] = {0,0,0,0,0};
     // int cc = 0;
     node* n = root;
-    char *idstring = (char*) malloc(100);
+    char idstring[100];
     while (n->child[0] != NULL)
     {
         n = n->child[rand_atob(0,4)];
@@ -266,13 +286,9 @@ int main(void) {
         }
         NEWLINE;
     }
+    free(matrix);
     
-    // int a = n->child[1] == n->child[0];
-    // int a[10];
-    // printf("a=%ld\n", sizeof(n->child[1] == n->child[0]));
-    // printf("%p %p %ld %d\n", n->parent, n->parent->parent, n->parent-n->parent->parent, n->parent>n->parent->parent);
 
-
-    free(root);
+    prune_tree_recurs(root);
 	return EXIT_SUCCESS;
 }
