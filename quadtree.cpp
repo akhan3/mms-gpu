@@ -3,203 +3,30 @@
 #include <assert.h>
 #include <iostream>
 #include <cmath>
+#include "Box.hpp"
+#define NEWLINE printf("\n");
+
 
 using namespace std;
 using std::cout;
 using std::endl;
 
-typedef unsigned char byte;
-#define NEWLINE printf("\n");
 
-
-//*******************************************************************
-//*********** Node class definition *********************************
-//*******************************************************************
-class node {
-    public:
-	node *parent;	    // pointer to parent
-	node *child[4];     // pointers to 4 children
-	node *neighbor[8];  // pointers to 8 neighbors
-	node *interaction[27];  // pointers to 27 interaction nodes
-	unsigned int level;
-	unsigned int x;
-	unsigned int y;
-	byte *id;
-    
-// methods
-
-// constructor - used only for root node
-    node() {
-        parent = NULL;
-        for(int i=0; i<8; i++) 
-            neighbor[i] = NULL;
-        for(int i=0; i<27; i++) 
-            interaction[i] = NULL;
-        level = 0;
-        x = 0;
-        y = 0;
-        id = (byte*) malloc((level+1) * sizeof(unsigned int));
-        id[0] = 0;
-    }
-
-// calculate x and y spatial coords from id
-    inline unsigned int calc_x(unsigned int level1, byte *id1) {
-        unsigned int x1 = 0;
-        for(int j=level1; j>=1; j--)
-            x1 |= (id1[j]&1) << (level1-j);
-        return x1;
-    }
-    inline unsigned int calc_y(unsigned int level1, byte *id1) {
-        unsigned int y1 = 0;
-        for(int j=level1; j>=1; j--)
-            y1 |= ((id1[j]&2)>>1) << (level1-j);
-        return y1;
-    }
-    // unsigned int calc_x() {
-        // x = 0;
-        // for(int j=level; j>=1; j--)
-            // x |= (id[j]&1) << (level-j);
-        // return x;
-    // }
-
-// calculate id from x and y spatial coords
-    inline void calc_id(byte*id1, unsigned int level1, unsigned int x1, unsigned int y1) {
-        for(unsigned int k=0; k<=level1; k++)
-            id1[k] = 0;
-        for(int k=level1; k>=0; k--) {
-            id1[k] |= (x1 & (1<<(level1-k))) >> (level1-k);
-            id1[k] |= ((y1 & (1<<(level1-k))) >> (level1-k)) << 1;
-        }
-    }
-
-// Split up parent node into 4 children nodes
-    void split() {
-        for(int i=0; i<4; i++) {
-            child[i] = (node*) malloc(sizeof(node));
-            node *n = child[i];
-            n->parent = this;
-            for(int j=0; j<4; j++) 
-                n->child[j] = NULL;
-            n->level = level+1;
-        // calculate node's id
-            n->id = (byte*) malloc((n->level+1) * sizeof(byte));
-            for(unsigned int j=0; j<=level; j++)
-                n->id[j] = id[j];
-            n->id[level+1] = i;
-        // calculate spatial coordinates at level
-            n->x = n->calc_x(n->level, n->id);
-            n->y = n->calc_y(n->level, n->id);
-        // initialize neighbor and interaction list to NULL
-            for(int j=0; j<8; j++) 
-                n->neighbor[j] = NULL;
-            for(int j=0; j<27; j++) 
-                n->interaction[j] = NULL;
-        }
-    }
-
-
-// construct neighbors and intercation list
-    void find_neighbors(node* root) {
-        if (parent == NULL)
-            return;
-        unsigned int Nx[8];
-        unsigned int Ny[8];
-        byte *Nid = (byte*) malloc(level+1);
-        Nx[0] = x-1; Ny[0] = y-1;
-        Nx[1] = x  ; Ny[1] = y-1;
-        Nx[2] = x+1; Ny[2] = y-1;
-        Nx[3] = x-1; Ny[3] = y  ;
-        Nx[4] = x+1; Ny[4] = y  ;
-        Nx[5] = x-1; Ny[5] = y+1;
-        Nx[6] = x  ; Ny[6] = y+1;
-        Nx[7] = x+1; Ny[7] = y+1;
-        for(int j=0; j<=7; j++) {   // for each of 8 neighbors
-            calc_id(Nid, level, Nx[j], Ny[j]);
-            // put the pointer to neighbor in neighbors list
-            for(unsigned int k=0; k<=level; k++) {
-                if (Nid[0] == 0) {
-                    node *nt = root;
-                    for(unsigned int k=1; k<=level; k++)
-                        nt = nt->child[Nid[k]];
-                    neighbor[j] = nt;
-                }
-            }
-        }
-        free(Nid);
-        
-        // Now construct the interaction list
-        // by taking difference of two sets
-        if (level <= 1)
-            return;
-        node *fullList[32];
-        int c = 0;
-        for(int j=0; j<8; j++) {                // parent's neighbor index
-            if (parent->neighbor[j]) {          // if parent has this neighbor?
-                for(int k=0; k<4; k++) {        // parent's neighbor's child index
-                    fullList[c++] = parent->neighbor[j]->child[k];
-                }
-            }
-        }
-        int c1 = 0;
-        for (int i=0; i<c; i++) {
-            int foundInNeighbor = 0; 
-            for (int j=0; j<8; j++) { 
-                if (fullList[i] == neighbor[j]) {
-                    foundInNeighbor = 1; 
-                    break; 
-                }
-            }
-            if (!foundInNeighbor)
-                interaction[c1++] = fullList[i];
-        }
-    } // function
-
-
-// Gather node-id in a string
-    void get_idstring(char *s) {
-        int c = 0;
-        c += sprintf(s, "[");
-        for(unsigned int a=0; a<=level; a++)
-            c += sprintf(s+c, "%d", id[a]);
-        c += sprintf(s+c, "]");
-    }
-};  // struct definition finished
-
-
-
-//******************************************************************
-
-void destroy_node(node *thisnode) {
-    free(thisnode->id);
-    free(thisnode);
-}
-
-void prune_tree_recurs(node *thisnode) {
-    if (thisnode->child[0] == NULL) {
-        destroy_node(thisnode);
+void create_tree_recurse(Box *thisBox, const unsigned int limit) {
+    if (thisBox->level >= limit)
         return;
-    }
+    thisBox->split();
     for(int i=0; i<=3; i++)
-         prune_tree_recurs(thisnode->child[i]);
-    destroy_node(thisnode);
+        create_tree_recurse(thisBox->child[i], limit);
 }
 
-void create_tree_recurs(node *thisnode, const unsigned int limit) {
-    if (thisnode->level >= limit)
-        return;
-    // printf("tree recursive call...\n");required by July 21. (Min. 4; max. 12)
-    thisnode->split();
-    for(int i=0; i<=3; i++)
-        create_tree_recurs(thisnode->child[i], limit);
-}
-
-void find_neighbors_recurs(node *thisnode, node *root, const unsigned int limit) {
+void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit) {
     // printf("find recursive call...\n");
-    thisnode->find_neighbors(root);
-    if (thisnode->level >= limit)
+    thisBox->find_neighbors(root);
+    if (thisBox->level >= limit)
         return;
     for(int i=0; i<=3; i++)
-        find_neighbors_recurs(thisnode->child[i], root, limit);
+        find_neighbors_recurse(thisBox->child[i], root, limit);
 }
 
 int rand_atob(const int a, const int b) {
@@ -215,34 +42,33 @@ int rand_atob(const int a, const int b) {
 int main(int argc, char **argv) 
 {
     srand(time(NULL));
-    unsigned int N = 1024;
+    unsigned int N = 64;
     if(argc >= 2) {
         sscanf(argv[1], "%u", &N);
         assert(N > 0);
     }
     const unsigned int logN = ceil(log2(N) / log2(4));
     printf("N = %d, log4(N) = %d\n", N, logN);
-    printf("sizeof(node) = %ld\n", sizeof(node));
+    printf("sizeof(Box) = %ld\n", sizeof(Box));
     
-    node *root = (node*) malloc(sizeof(node));
-    *root = node();
+    Box *root = new Box(0);
 
 // generate the tree
-    create_tree_recurs(root, logN);
-    find_neighbors_recurs(root, root, logN);
+    create_tree_recurse(root, logN);
+    find_neighbors_recurse(root, root, logN);
     
     
-// traverse to a random node at the deepest level
+// traverse to a random Box at the deepest level
     // int c[5] = {0,0,0,0,0};
     // int cc = 0;
-    node* n = root;
+    Box* n = root;
     char idstring[100];
     while (n->child[0] != NULL)
     {
         n = n->child[rand_atob(0,4)];
         // n = n->child[c[cc++]];
         n->get_idstring(idstring);
-        printf("this node is at L%d%s(%d,%d)", n->level, idstring, n->x, n->y);
+        printf("this Box is at L%d%s(%d,%d)", n->level, idstring, n->x, n->y);
         NEWLINE;
         // if(rand() / (double)RAND_MAX < 0.2) break;
     }
@@ -289,6 +115,13 @@ int main(int argc, char **argv)
     free(matrix);
     
 
-    prune_tree_recurs(root);
+
+
+
+    
+
+
+    delete root;
+
 	return EXIT_SUCCESS;
 }
