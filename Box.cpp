@@ -1,11 +1,16 @@
 #include <stdio.h>
 // #include <iostream>
 // #include <string.h>
-// #include <cmath>
+#include <cmath>
 #include "Box.hpp"
 
 // constructor
-Box::Box(unsigned int level1) {
+Box::Box(char ch1) { // temporary
+    ch = ch1;
+    id = new byte[4]();
+}
+
+Box::Box(unsigned int level1, unsigned int limit) {
     level = level1;
     parent = NULL;
     for(int i=0; i<4; i++) 
@@ -16,7 +21,12 @@ Box::Box(unsigned int level1) {
         interaction[i] = NULL;
     x = 0;
     y = 0;
-    id = new byte[level+1];
+    // cx = 0;    
+    // cy = 0;
+    cx = (unsigned int)pow(2, limit-level) * x + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
+    cy = (unsigned int)pow(2, limit-level) * y + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
+    potential = 0;
+    id = new byte[level+1]();
     id[0] = 0;
 }
 
@@ -29,9 +39,9 @@ Box::~Box() {
 }
 
 // Split up parent Box into 4 children Boxs
-void Box::split() {
+void Box::split(unsigned int limit) {
     for(int i=0; i<4; i++) {
-        child[i] = new Box(level+1);
+        child[i] = new Box(level+1, limit);
         Box *n = child[i];
         n->parent = this;
         n->level = level+1;
@@ -42,6 +52,9 @@ void Box::split() {
     // calculate spatial coordinates at level
         n->x = n->calc_x(n->level, n->id);
         n->y = n->calc_y(n->level, n->id);
+    // calculate spatial coordinates at deepest level
+        n->cx = (unsigned int)pow(2, limit-n->level) * n->x + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
+        n->cy = (unsigned int)pow(2, limit-n->level) * n->y + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
     }
 }
 
@@ -50,7 +63,7 @@ void Box::split() {
 void Box::find_neighbors(Box* root) {
     unsigned int Nx[8];
     unsigned int Ny[8];        
-    byte *Nid = new byte[level+1];
+    byte *Nid = new byte[level+1]();
     Nx[0] = x-1; Ny[0] = y-1;
     Nx[1] = x  ; Ny[1] = y-1;
     Nx[2] = x+1; Ny[2] = y-1;
@@ -98,7 +111,7 @@ void Box::find_neighbors(Box* root) {
         if (!foundInNeighbor)
             interaction[c1++] = fullList[i];
     }
-} // split function
+} // find_neighbors function
 
 // calculate x and y spatial coords from id
 unsigned int Box::calc_x (unsigned int level1, byte *id1) {

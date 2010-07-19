@@ -6,6 +6,7 @@ typedef unsigned char byte;
 class Box {
 // data members
 public:
+	char ch; // temporary
 	byte *id;
 	Box *parent;	    // pointer to parent
 	Box *child[4];     // pointers to 4 children
@@ -14,13 +15,17 @@ public:
 	unsigned int level;
 	unsigned int x;
 	unsigned int y;
+	float cx;
+	float cy;
+	float potential;
 
 // constructors and destructor
-    Box(unsigned int);
+    Box(char ch1);   // temporary
+    Box(unsigned int level1, unsigned int limit);
     ~Box();
 
 // member functions
-    void            split();
+    void            split(unsigned int limit);
     void            find_neighbors(Box* root);
     unsigned int    calc_x(unsigned int level1, byte *id1);
     unsigned int    calc_y(unsigned int level1, byte *id1);
