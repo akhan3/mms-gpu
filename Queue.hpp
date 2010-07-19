@@ -1,11 +1,9 @@
 #ifndef _QUEUE_H_
 #define _QUEUE_H_
 
-#include "Box.hpp"
-
 class Queue {
 // data members
-    Box **contents;
+    void **contents;
 public:
     int size;
     int count;
@@ -16,12 +14,10 @@ public:
     ~Queue();
 
 // member functions
-    // void            enqueue(char n);
-    // char            dequeue();
-    void            enqueue(Box* n);
-    Box*            dequeue();
-   int             isEmpty();
-    void            printQueue();
+    void            enqueue(void* n);
+    void*           dequeue();
+    int             isEmpty();
+    // void            printQueue();
 };
 
 #endif // #ifndef  _QUEUE_H_

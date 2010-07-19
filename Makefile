@@ -10,7 +10,7 @@ else
 	COMMONFLAGS += -O3
 endif
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)
-OBJS        := quadtree.o Box.o fmm_calc.o
+OBJS        := quadtree.o Box.o Queue.o fmm_calc.o
 TARGET    	:= quadtree
 
 all: $(TARGET)
@@ -18,8 +18,9 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBPATH)
 
-quadtree.o	: quadtree.cpp Box.hpp
+quadtree.o	: quadtree.cpp Box.hpp Queue.hpp
 Box.o 		: Box.cpp Box.hpp
+Queue.o		: Queue.cpp Queue.hpp
 fmm_calc.o	: fmm_calc.cpp Box.hpp
 
 clean:

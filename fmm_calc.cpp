@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cmath>
 #include "Box.hpp"
+#include "Queue.hpp"
 #define NEWLINE printf("\n");
 
 int rand_atob(const int a, const int b);
@@ -16,6 +17,11 @@ using std::endl;
 // =========================================================================
 // ==== Complex number functions ===========================================
 // =========================================================================
+inline float magnitude(const float x, const float y)
+{
+    return sqrt(x*x + y*y);
+}
+
 void cmpx_pow(  const float x, const float y, const unsigned int p,
                 float *xo, float *yo)
 {
@@ -53,22 +59,39 @@ void cmpx_div(  const float a, const float b,
 
 // Breadth-first tarversal
 // ===============================
-// void traverse_tree_bfs( Box *n, 
-                            // const unsigned int limit, 
-                            // const unsigned int H, 
-                            // float *potential
-                          // ) 
-// {
-    
-    // // function to perform on node
-    // if (n->level == limit)
-        // potential[(int)(n->cy*H+n->cx)] = n->potential;
-    // // Recursion
-    // if (n->level < limit) {
-        // for(int i=0; i<=3; i++)
-            // traverse_tree_recurse(n->child[i], limit, H, potential);
-    // }
-// }
+void traverse_tree_bfs(Box *root, const unsigned int limit) 
+{
+    const unsigned int N = (unsigned int)pow(4, limit);
+    Queue Q(N);
+    Q.enqueue(root);
+    while(!Q.isEmpty()) {
+        // function to perform on node
+        Box *n = (Box*)Q.dequeue();
+        char idstring[100];
+        n->get_idstring(idstring);
+        // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
+        // NEWLINE;
+        if (n->level < limit) {
+            for(int i=0; i<=3; i++)
+                Q.enqueue(n->child[i]);
+        }
+    }
+}
+
+// Depth-first tarversal
+// ===============================
+void traverse_tree_dfs(Box *n, const unsigned int limit) 
+{
+    // function to perform on node
+    char idstring[100];
+    n->get_idstring(idstring);
+    // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
+    // NEWLINE;
+    if (n->level < limit) {
+        for(int i=0; i<=3; i++)
+            traverse_tree_dfs(n->child[i], limit);
+    }
+}
 
 // to collect potential data
 // ===============================
@@ -183,7 +206,19 @@ int fmm_calc(Box *root, const unsigned int limit) {
     printf("#################\n");    
     printf("N = %d, log4(N) = %d, sqrt(N) = %d\n", N, limit, H);
     FILE *fh = NULL;
-    
+
+    printf("#################\n");    
+    printf("#      BFS      #\n");
+    printf("#################\n");    
+    traverse_tree_bfs(root, limit);
+    printf("#################\n");    
+    printf("#      DFS      #\n");
+    printf("#################\n");    
+    traverse_tree_dfs(root, limit);
+    return 0;
+
+
+
 // charge matrix
     float *charge = new float[N]();
     
