@@ -4,49 +4,9 @@
 #include <iostream>
 #include <cmath>
 #include "Box.hpp"
+#include "helper_functions.hpp"
 #define NEWLINE printf("\n");
 
-
-using namespace std;
-using std::cout;
-using std::endl;
-
-
-// prototype for FMM function
-int fmm_calc(Box *root, unsigned int logN);
-
-
-void create_tree_recurse(Box *thisBox, const unsigned int limit) {
-    // Recursion
-    if (thisBox->level < limit) {
-        // function to perform on node
-        thisBox->split(limit);
-        for(int i=0; i<=3; i++)
-            create_tree_recurse(thisBox->child[i], limit);
-    }
-}
-
-void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit) {
-    // function to perform on node
-    thisBox->find_neighbors(root);
-    // Recursion
-    if (thisBox->level < limit) {
-        for(int i=0; i<=3; i++)
-            find_neighbors_recurse(thisBox->child[i], root, limit);
-    }
-}
-
-int rand_atob(const int a, const int b) {
-    double r = rand() / (double)RAND_MAX;
-    r = a + (b-a) * r;
-    return (int)r;
-}
-
-float frand_atob(const float a, const float b) {
-    double r = rand() / (double)RAND_MAX;
-    r = a + (b-a) * r;
-    return (float)r;
-}
 
 //*************************************************************************//
 //******************** Main function **************************************//
@@ -141,6 +101,7 @@ int main(int argc, char **argv)
     // }
     // free(matrix);
     
+
 
 
 // call the function for main FMM calculation 
