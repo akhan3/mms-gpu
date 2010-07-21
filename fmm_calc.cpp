@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
+#include <sys/time.h>
 #include <cmath>
 #include "Box.hpp"
 #include "Queue.hpp"
@@ -57,11 +59,14 @@ void fmm_bfs(   Box *n,
                     const unsigned int P    // multipole series (k = 1...P)
                 ) 
 {
-    assert(limit <= actual_limit);
+    assert(limit == actual_limit);  // unable to currently support arbitrary depth calculations.
+    // assert(limit <= actual_limit);
     printf("Executing FMM algorithm...\n");
     unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
+    const float lengthBox = 10;
+    const float meshwidth = lengthBox / sqrt(N);
     Queue Qu(N);
     Qu.enqueue(n);
     while(!Qu.isEmpty()) {
@@ -83,7 +88,6 @@ void fmm_bfs(   Box *n,
             // printf("width=%d ", (int)width);
             // printf("Xrange=[%.0f,%.0f] Yrange=[%.0f,%.0f]", ceil(n->cx-width/2), floor(n->cx+width/2), 
                                                             // ceil(n->cy-width/2), floor(n->cy+width/2));
-            float Q = 0;
         // calculation with interaction list 
             for(int i=0; i<27; i++) {
                 Box *ni = n->interaction[i];
@@ -91,28 +95,37 @@ void fmm_bfs(   Box *n,
                     float rx = ni->cx - n->cx;
                     float ry = ni->cy - n->cy;
                     float potential_tmp = 0;
-                    Q = 0;
-                // checking for source charges in the source box
-                    for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
-                        for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                            float q = charge[yy*H+xx];
-                            if (q != 0) { // if charge found 
-                                Q += q;
-                                float rx_ = xx - n->cx;
-                                float ry_ = yy - n->cy;
-                                float cos_dtheta = cmpx_costheta_between(rx,ry,rx_,ry_);
-                                float multipole_series = 0;
-                                // multipole series
-                                for(unsigned int k=0; k<=P; k++) {
-                                    float num = pow(cmpx_magnitude(rx_, ry_), k);
-                                    float den = pow(cmpx_magnitude(rx, ry), k+1);
-                                    float leg = legendre(k, cos_dtheta);
-                                    multipole_series += num / den * leg;
-                                }
-                                potential_tmp += q * multipole_series;
-                            } // if (q != 0)
+                    if(n->level < limit) // if (except last level), do the multipole expansion
+                    {
+                        // checking for source charges in the source box
+                        for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
+                            for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
+                                float q = charge[yy*H+xx];
+                                if (q != 0) { // if charge found
+                                    float rx_ = xx - n->cx;
+                                    float ry_ = yy - n->cy;
+                                    float cos_dtheta = cmpx_costheta_between(rx,ry,rx_,ry_);
+                                    // printf("cos_theta=%f ", cos_dtheta);
+                                    float multipole_series = 0;
+                                    // multipole series
+                                    for(unsigned int k=0; k<=P; k++) {
+                                        float num = pow(cmpx_magnitude(rx_, ry_), k);
+                                        float den = pow(cmpx_magnitude(rx, ry), k+1);
+                                        float leg = legendre(k, cos_dtheta);
+                                        multipole_series += num / den * leg;
+                                    }
+                                        potential_tmp += q * multipole_series / meshwidth;
+                                } // if (q != 0)
+                            } // source charge loop
                         } // source charge loop
-                    } // source charge loop
+                    } // if (except last level)
+                    else // if (last level), multipole expansions is not possible. 
+                         // do exact calculation instead
+                    {
+                        assert(n->cx == n->x && n->cy == n->y);
+                        float q = charge[(int)(n->cy*H + n->cx)];
+                        potential_tmp += q / cmpx_magnitude(rx, ry) / meshwidth;
+                    } // if (last level)
                     ni->potential += potential_tmp;
                 } // if (ni != NULL) 
             } // interaction loop
@@ -124,9 +137,11 @@ void fmm_bfs(   Box *n,
                     Box *nb = n->neighbor[i];
                     if (nb != NULL) 
                     {
+                        assert(n->cx == n->x && n->cy == n->y);
+                        float q = charge[(int)(n->cy*H + n->cx)];
                         float rx = nb->cx - n->cx;
                         float ry = nb->cy - n->cy;
-                        nb->potential += Q / cmpx_magnitude(rx, ry);
+                        nb->potential += q / cmpx_magnitude(rx, ry) / meshwidth;
                     }
                 } // neighbor loop
             } // if deepest level
@@ -156,7 +171,7 @@ int fmm_calc(Box *root, const unsigned int limit) {
     
 // Charge configuration
 // ===========================
-// dipole
+// // dipole
     // int l = H/8;
     // int x0 = H/2;
     // int y1 = (H-l)/2;
@@ -167,7 +182,11 @@ int fmm_calc(Box *root, const unsigned int limit) {
 // place a random charge at random location
     int xx = H/2;
     int yy = H/2;
-    charge[yy*H + xx] = 1;
+    // charge[yy*H + xx] = 1;
+    charge[yy*H + xx] = 1/4.0;
+    charge[(yy-1)*H + xx] = 1/4.0;
+    charge[yy*H + xx-1] = 1/4.0;
+    charge[(yy-1)*H + xx-1] = 1/4.0;
     // charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
     // charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
     // for(int i=0; i<(int)(N*charge_probability); i++)
@@ -175,20 +194,25 @@ int fmm_calc(Box *root, const unsigned int limit) {
         // charge[rand_atob(0,H)*H + rand_atob(0,H)] = frand_atob(1, 10);
 
 // Few random charges at random locations
-    // for(unsigned int yy=0; yy<H; yy++) {
-        // for(unsigned int xx=0; xx<H; xx++) {
+    // for(unsigned int yy=0; yy<H; yy++)
+        // for(unsigned int xx=0; xx<H; xx++)
             // if(frand_atob(0, 1) < charge_probability)
-                // charge[yy*H + xx] = 1;
-                // // charge[yy*H + xx] = frand_atob(1, 10);
-        // }
-    // }
+                // charge[yy*H + xx] = frand_atob(1, 10);
 
 // write charge matrix to file
     status |= matrix2file(charge, H, H, "charge.dat");
     // status |= matrix2stdout(charge, H, H, "charge");
 
+
 // Run the FMM algorithm on tree
-    fmm_bfs(root, limit, limit, H, charge, P);
+    timeval time1, time2;
+    status |= gettimeofday(&time1, NULL);
+        fmm_bfs(root, limit, limit, H, charge, P);
+    status |= gettimeofday(&time2, NULL);
+    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    printf("fmm_bfs() took %f seconds\n", deltatime);
+
+
         
 // collect result in a matrix
     float *potential = new float[N]();    // potential matrix
@@ -204,7 +228,6 @@ int fmm_calc(Box *root, const unsigned int limit) {
         sprintf(filename, "potential_L%d.dat", l);
         status |= matrix2file(potential, H, H, filename);
     }
-
 
 // closing
     delete []potential;

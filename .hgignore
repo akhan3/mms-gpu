@@ -3,10 +3,13 @@ syntax: glob
 obj/*
 bin/*
 *.mat
+*.dat
 *.ods
 *.o
 *.out
 log*
+pathdef.m
+unused/*
 
 # switch to regexp syntax.
 #syntax: regexp
