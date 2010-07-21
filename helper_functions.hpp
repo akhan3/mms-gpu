@@ -7,7 +7,7 @@ float legendre(unsigned int k, float x);
 
 // ==== Complex number functions ===========================================
 // =========================================================================
-float magnitude(const float x, const float y);
+float cmpx_magnitude(const float x, const float y);
 void cmpx_pow(  const float x, const float y, const unsigned int p,
                 float *xo, float *yo);
 void cmpx_ln(   const float x, const float y,
@@ -15,8 +15,11 @@ void cmpx_ln(   const float x, const float y,
 void cmpx_div(  const float a, const float b,
                 const float c, const float d,
                 float *xo, float *yo);
+float cmpx_costheta_between(    const float a, const float b,
+                                const float c, const float d    );
 
 int matrix2file(const float* matrix, const int rows, const int cols, const char* filename);
+int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname);
 
 // Depth-first tarversal
 void traverse_tree_dfs(Box *n, const unsigned int limit);

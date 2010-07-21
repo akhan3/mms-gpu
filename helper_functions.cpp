@@ -13,7 +13,7 @@
 // ==== Complex number functions ===========================================
 // =========================================================================
 // inline
-float magnitude(const float x, const float y)
+float cmpx_magnitude(const float x, const float y)
 {
     return sqrt(x*x + y*y);
 }
@@ -50,6 +50,13 @@ void cmpx_div(  const float a, const float b,
     *xo = (a*c + b*d) / denominator;
     *yo = (b*c - a*d) / denominator;
 }
+
+float cmpx_costheta_between(    const float a, const float b,
+                                const float c, const float d    )
+{
+    float dot_product = a*c + b*d;
+    return dot_product / cmpx_magnitude(a,b) / cmpx_magnitude(c,d);
+}
 // =========================================================================
 
 
@@ -85,6 +92,17 @@ int matrix2file(const float* matrix, const int rows, const int cols, const char*
         fprintf(fh, "\n");
     }
     fclose(fh);
+    return EXIT_SUCCESS;
+}
+
+int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname) {
+    printf("%s = [\n", matrixname);
+    for(int r=0; r<rows; r++) {     // axis ij
+        for(int c=0; c<cols; c++)
+            printf("%g ", matrix[r*cols+c]);
+        printf("\n");
+    }
+    printf("];\n");
     return EXIT_SUCCESS;
 }
 

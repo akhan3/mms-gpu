@@ -13,6 +13,27 @@
     maxV = max(potential_fmm(:));
     minV = min(potential_fmm(:));
 
+%% FMM stages animation
+    %figure; 
+    %imagesc(x,y,charge); axis image xy; colorbar;
+    %%spy(flipud(charge));
+    %title('Charge distribution');
+    %for l = 2:log(N)/log(4)
+    %%for l = log(N)/log(4):log(N)/log(4)
+        %filename = ['potential_L', num2str(l), '.dat'];
+        %potential_fmm_L = load(filename); 
+        %figure; 
+        %imagesc(x,y,potential_fmm_L); 
+        %caxis([minV, maxV]);
+        %axis image xy;
+        %title(['FMM at Level ', num2str(l)]);
+    %end
+
+
+% =========================================
+%     Exact potential by Matlab
+% =========================================
+
 % exact potential matrix
     potential_exact = zeros(H,H);
     % charge setup
@@ -22,7 +43,7 @@
         X_ = X - (xx(k)-1);
         Y_ = Y - (yy(k)-1);
         R_ = sqrt(X_.^2 + Y_.^2);
-        potential_exact = potential_exact + (q * log(R_));
+        potential_exact = potential_exact + (q * 1./R_);
         potential_exact(find(abs(potential_exact) == inf)) = 0;
     end
 
@@ -58,20 +79,3 @@
         %imagesc(x,y,relerr); axis image xy; colorbar
         imagesc(x,y,log10(relerr)); axis image xy; colorbar;
         title('log_{10} of relative error');
-
-
-% FMM stages animation
-    figure; 
-    imagesc(x,y,charge); axis image xy; colorbar;
-    %spy(flipud(charge));
-    title('Charge distribution');
-    %for l = 2:log(N)/log(4)
-    for l = log(N)/log(4):log(N)/log(4)
-        filename = ['potential_L', num2str(l), '.dat'];
-        potential_fmm = load(filename); 
-        figure; 
-        imagesc(x,y,potential_fmm); 
-        caxis([minV, maxV]);
-        axis image xy;
-        title(['FMM at Level ', num2str(l)]);
-    end

@@ -62,83 +62,60 @@ void fmm_bfs(   Box *n,
     unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
-    Queue Q(N);
-    Q.enqueue(n);
-    while(!Q.isEmpty()) {
-        Box *n = (Box*)Q.dequeue();
+    Queue Qu(N);
+    Qu.enqueue(n);
+    while(!Qu.isEmpty()) {
+        Box *n = (Box*)Qu.dequeue();
         // function to perform on node
         if(n->level >= 2)   // no FMM steps for Level-0 and Level-1
         {
-            // inheret with parent's potential
-            n->potential += n->parent->potential;            
-            float Q = 0;
-            float *a = new float[P]();
-            float width = pow(2, actual_limit-n->level);
-
             if(prev_level != n->level) {
                 printf("   level%d, %d boxes...\n", n->level, (int)pow(4, n->level));
                 prev_level = n->level;
             }
+            // inheret with parent's potential
+            n->potential += n->parent->potential;            
+            float width = pow(2, actual_limit-n->level);
+
             // char idstring[100];
             // n->get_idstring(idstring);
             // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) ", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
             // printf("width=%d ", (int)width);
             // printf("Xrange=[%.0f,%.0f] Yrange=[%.0f,%.0f]", ceil(n->cx-width/2), floor(n->cx+width/2), 
                                                             // ceil(n->cy-width/2), floor(n->cy+width/2));
-            for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
-                for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                    float q = charge[yy*H+xx];
-                    if (q != 0) {
-                        Q += q;
-                        float rx_ = xx - n->cx;
-                        float ry_ = yy - n->cy;
-                        // printf("{q=%g@(%d,%d)=[%.1f%s%.1fi]} ", q, xx,yy, rx_, ry_>=0 ? "+" : "", ry_);
-                        // printf("ak = {");
-                        for(unsigned int k=1; k<=P; k++) {
-                            a[k-1] += -q * pow(magnitude(rx_, ry_), k);
-                            // printf("%g, ", a[k-1]);
-                        }
-                        // printf("}");
-                    }
-                }
-            }
-            // if(0 || Q !=0) {
-                // printf("Q=%g ", Q);
-                // printf("ak={");
-                // for(unsigned int k=1; k<=P; k++)
-                    // printf("%g, ", a[k-1]);
-                // printf("} ");
-            // }
-
+            float Q = 0;
         // calculation with interaction list 
-            float rx;
-            float ry;
-            // printf("interacts with ");
             for(int i=0; i<27; i++) {
                 Box *ni = n->interaction[i];
-                if (ni != NULL) 
-                {
+                if (ni != NULL) {
+                    float rx = ni->cx - n->cx;
+                    float ry = ni->cy - n->cy;
                     float potential_tmp = 0;
-                    rx = ni->cx - n->cx;
-                    ry = ni->cy - n->cy;
-                    // ni->get_idstring(idstring);
-                    // NEWLINE;
-                    // printf("    ");
-                    // printf("L%d%s: ", ni->level, idstring);
-                    // printf("[%.0f%s%.0fi]", rx, ry>=0 ? "+" : "", ry);
-                    potential_tmp += Q * log(magnitude(rx, ry));
-                    for(unsigned int k=1; k<=P; k++) {
-                        potential_tmp += a[k-1] / pow(magnitude(rx, ry), k) / k;
-                    }
-                    // printf("%.3g + ", potential_tmp);
-                    // printf("%.3g + ", ni->parent->potential);
-                    // printf("%.3g = ", ni->potential);
-                    // inheret potential value from the parent
+                    Q = 0;
+                // checking for source charges in the source box
+                    for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
+                        for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
+                            float q = charge[yy*H+xx];
+                            if (q != 0) { // if charge found 
+                                Q += q;
+                                float rx_ = xx - n->cx;
+                                float ry_ = yy - n->cy;
+                                float cos_dtheta = cmpx_costheta_between(rx,ry,rx_,ry_);
+                                float multipole_series = 0;
+                                // multipole series
+                                for(unsigned int k=0; k<=P; k++) {
+                                    float num = pow(cmpx_magnitude(rx_, ry_), k);
+                                    float den = pow(cmpx_magnitude(rx, ry), k+1);
+                                    float leg = legendre(k, cos_dtheta);
+                                    multipole_series += num / den * leg;
+                                }
+                                potential_tmp += q * multipole_series;
+                            } // if (q != 0)
+                        } // source charge loop
+                    } // source charge loop
                     ni->potential += potential_tmp;
-                    // ni->potential += potential_tmp + ni->parent->potential;
-                    // printf("%g", ni->potential);
-                }
-            }
+                } // if (ni != NULL) 
+            } // interaction loop
             // NEWLINE;
 
         // calculation with neighbor list at the deepest level
@@ -147,19 +124,19 @@ void fmm_bfs(   Box *n,
                     Box *nb = n->neighbor[i];
                     if (nb != NULL) 
                     {
-                        rx = nb->cx - n->cx;
-                        ry = nb->cy - n->cy;
-                        nb->potential += Q * log(magnitude(rx, ry));
+                        float rx = nb->cx - n->cx;
+                        float ry = nb->cy - n->cy;
+                        nb->potential += Q / cmpx_magnitude(rx, ry);
                     }
-                }
-            }
+                } // neighbor loop
+            } // if deepest level
         }   // if(n->level >= 2)
 
         // populate queue with children nodes
         if (n->level < limit)
             for(int i=0; i<=3; i++)
-                Q.enqueue(n->child[i]);
-    } // while(!Q.isEmpty())
+                Qu.enqueue(n->child[i]);
+    } // while(!Qu.isEmpty())
 }
 
 
@@ -174,22 +151,9 @@ int fmm_calc(Box *root, const unsigned int limit) {
     printf("N = %d, log4(N) = %d, sqrt(N) = %d, P = %d\n", N, limit, H, P);
     int status = 0;
 
-    // printf("#################\n");    
-    // printf("#      BFS      #\n");
-    // printf("#################\n");    
-    // traverse_tree_bfs(root, limit);
-    // printf("#################\n");    
-    // printf("#      DFS      #\n");
-    // printf("#################\n");    
-    // traverse_tree_dfs(root, limit);
-    // return 0;
-
-
-
 // charge matrix
     float *charge = new float[N]();
     
-
 // Charge configuration
 // ===========================
 // dipole
@@ -204,8 +168,8 @@ int fmm_calc(Box *root, const unsigned int limit) {
     int xx = H/2;
     int yy = H/2;
     charge[yy*H + xx] = 1;
-    charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
-    charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
+    // charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
+    // charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
     // for(int i=0; i<(int)(N*charge_probability); i++)
         // charge[rand_atob(0,H)*H + rand_atob(0,H)] = 1;
         // charge[rand_atob(0,H)*H + rand_atob(0,H)] = frand_atob(1, 10);
@@ -219,8 +183,9 @@ int fmm_calc(Box *root, const unsigned int limit) {
         // }
     // }
 
-// write potential matrix to file
+// write charge matrix to file
     status |= matrix2file(charge, H, H, "charge.dat");
+    // status |= matrix2stdout(charge, H, H, "charge");
 
 // Run the FMM algorithm on tree
     fmm_bfs(root, limit, limit, H, charge, P);
