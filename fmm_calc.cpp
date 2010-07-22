@@ -88,45 +88,37 @@ void fmm_bfs(   Box *n,
             // printf("width=%d ", (int)width);
             // printf("Xrange=[%.0f,%.0f] Yrange=[%.0f,%.0f]", ceil(n->cx-width/2), floor(n->cx+width/2), 
                                                             // ceil(n->cy-width/2), floor(n->cy+width/2));
-        // calculation with interaction list 
+
+        // Calculate multipole moments for the source box
+            float *multipole_coeff = new float[P+1]();
+            // checking for source charges in the source box
+            for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
+                for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
+                    float q = charge[yy*H+xx];
+                    if (q != 0) { // if charge found
+                        float rx_ = xx - n->cx;
+                        float ry_ = yy - n->cy;
+                        for(unsigned int k=0; k<=P; k++)
+                            multipole_coeff[k] += q * pow(cmpx_magnitude(rx_, ry_), k);
+                    } // if (q != 0)
+                } // source charge loop
+            } // source charge loop
+            // printf("multipole_coeff = {");
+            // for(unsigned int k=0; k<=P; k++)
+                // printf("%f ", multipole_coeff[k]);
+            // printf("}");
+            // NEWLINE;
+
+        // calculation of potential at the boxes in interaction list 
             for(int i=0; i<27; i++) {
                 Box *ni = n->interaction[i];
                 if (ni != NULL) {
                     float rx = ni->cx - n->cx;
                     float ry = ni->cy - n->cy;
                     float potential_tmp = 0;
-                    if(n->level < limit) // if (except last level), do the multipole expansion
-                    {
-                        // checking for source charges in the source box
-                        for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
-                            for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                                float q = charge[yy*H+xx];
-                                if (q != 0) { // if charge found
-                                    float rx_ = xx - n->cx;
-                                    float ry_ = yy - n->cy;
-                                    float cos_dtheta = cmpx_costheta_between(rx,ry,rx_,ry_);
-                                    // printf("cos_theta=%f ", cos_dtheta);
-                                    float multipole_series = 0;
-                                    // multipole series
-                                    for(unsigned int k=0; k<=P; k++) {
-                                        float num = pow(cmpx_magnitude(rx_, ry_), k);
-                                        float den = pow(cmpx_magnitude(rx, ry), k+1);
-                                        float leg = legendre(k, cos_dtheta);
-                                        multipole_series += num / den * leg;
-                                    }
-                                        potential_tmp += q * multipole_series / meshwidth;
-                                } // if (q != 0)
-                            } // source charge loop
-                        } // source charge loop
-                    } // if (except last level)
-                    else // if (last level), multipole expansions is not possible. 
-                         // do exact calculation instead
-                    {
-                        assert(n->cx == n->x && n->cy == n->y);
-                        float q = charge[(int)(n->cy*H + n->cx)];
-                        potential_tmp += q / cmpx_magnitude(rx, ry) / meshwidth;
-                    } // if (last level)
-                    ni->potential += potential_tmp;
+                    for(unsigned int k=0; k<=P; k++)
+                        potential_tmp += multipole_coeff[k] * legendre(k, atan2(ry, rx)) * 1/pow(cmpx_magnitude(rx, ry), k+1);
+                    ni->potential += potential_tmp / meshwidth;
                 } // if (ni != NULL) 
             } // interaction loop
             // NEWLINE;
