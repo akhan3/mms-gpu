@@ -6,18 +6,18 @@ typedef unsigned char byte;
 class Box {
 // data members
 public:
-	char ch; // temporary
-	byte *id;
-	Box *parent;	    // pointer to parent
-	Box *child[4];     // pointers to 4 children
-	Box *neighbor[8];  // pointers to 8 neighbors
-	Box *interaction[27];  // pointers to 27 interaction Boxs
-	unsigned int level;
-	unsigned int x;
-	unsigned int y;
-	float cx;
-	float cy;
-	float potential;
+    char ch; // temporary
+    byte *id;
+    Box *parent;        // pointer to parent
+    Box *child[4];     // pointers to 4 children
+    Box *neighbor[8];  // pointers to 8 neighbors
+    Box *interaction[27];  // pointers to 27 interaction Boxs
+    unsigned int level;
+    unsigned int x;
+    unsigned int y;
+    float cx;
+    float cy;
+    float potential;
 
 // constructors and destructor
     Box(char ch1);   // temporary

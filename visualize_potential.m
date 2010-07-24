@@ -14,20 +14,20 @@
     minV = min(potential_fmm(:));
 
 % FMM stages animation
-    %figure; 
+    %figure;
     %imagesc(x,y,charge); axis image xy; colorbar;
     %spy(flipud(charge));
     %title('Charge distribution');
 
-    for l = 2:log(N)/log(4)
-        filename = ['potential_L', num2str(l), '.dat'];
-        potential_fmm_L = load(filename); 
-        figure; 
-        imagesc(x,y,potential_fmm_L); 
-        %caxis([minV, maxV]);
-        axis image xy;
-        title(['FMM at Level ', num2str(l)]);
-    end
+    %for l = 2:log(N)/log(4)
+        %filename = ['potential_L', num2str(l), '.dat'];
+        %potential_fmm_L = load(filename);
+        %figure;
+        %imagesc(x,y,potential_fmm_L);
+        %%caxis([minV, maxV]);
+        %axis image xy;
+        %title(['FMM at Level ', num2str(l)]);
+    %end
 
 
 % =========================================
@@ -58,41 +58,43 @@
     %relerr(find(relerr == inf)) = 0;
     max_error = max(relerr(:))
     rms_eror = sqrt(mean(relerr(:).^2))
-    
+
 
 % find out the upper and lower limits
     maxV = max([potential_fmm(:);  potential_exact(:)]);
     minV = min([potential_fmm(:);  potential_exact(:)]);
 
 % plotting
-    figure; 
-        imagesc(x,y,potential_exact); 
-        %caxis([minV, maxV]);
-        axis image xy;
-        title('Potential from exact calculation');
-    figure; 
-        %imagesc(x,y,relerr); axis image xy; colorbar
-        %title('Relative Error');
-        imagesc(x,y,log10(relerr)); axis image xy; colorbar;
-        title('log_{10} of Relative Error');
-
     %figure;
-    %subplot(221);
-        %imagesc(x,y,charge); axis image xy;
-        %%spy(flipud(charge));
-        %title('Charge distribution');
-    %subplot(222);
-        %imagesc(x,y,potential_fmm); axis image xy;
-        %caxis([minV, maxV]);
-        %colorbar;
-        %title('Potential from FMM algorithm');
-    %subplot(223);
-        %imagesc(x,y,potential_exact); axis image xy;
-        %caxis([minV, maxV]);
-        %colorbar;
+        %imagesc(x,y,potential_exact);
+        %%caxis([minV, maxV]);
+        %axis image xy;
         %title('Potential from exact calculation');
-    %subplot(224);
+    %figure;
         %%imagesc(x,y,relerr); axis image xy; colorbar
         %%title('Relative Error');
         %imagesc(x,y,log10(relerr)); axis image xy; colorbar;
         %title('log_{10} of Relative Error');
+
+    fh = figure;
+    set(fh, 'OuterPosition', [0 0 1280 800]);
+    subplot(221);
+        imagesc(x,y,charge); axis image xy;
+        %spy(flipud(charge));
+        colorbar;
+        title('Charge distribution');
+    subplot(222);
+        imagesc(x,y,potential_fmm); axis image xy;
+        caxis([minV, maxV]);
+        colorbar;
+        title('Potential from FMM algorithm');
+    subplot(223);
+        imagesc(x,y,potential_exact); axis image xy;
+        caxis([minV, maxV]);
+        colorbar;
+        title('Potential from exact calculation');
+    subplot(224);
+        %imagesc(x,y,relerr); axis image xy; colorbar
+        %title('Relative Error');
+        imagesc(x,y,log10(relerr)); axis image xy; colorbar;
+        title('log_{10} of Relative Error');

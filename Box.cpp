@@ -13,15 +13,15 @@ Box::Box(char ch1) { // temporary
 Box::Box(unsigned int level1, unsigned int limit) {
     level = level1;
     parent = NULL;
-    for(int i=0; i<4; i++) 
+    for(int i=0; i<4; i++)
         child[i] = NULL;
-    for(int i=0; i<8; i++) 
+    for(int i=0; i<8; i++)
         neighbor[i] = NULL;
-    for(int i=0; i<27; i++) 
+    for(int i=0; i<27; i++)
         interaction[i] = NULL;
     x = 0;
     y = 0;
-    // cx = 0;    
+    // cx = 0;
     // cy = 0;
     cx = (unsigned int)pow(2, limit-level) * x + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
     cy = (unsigned int)pow(2, limit-level) * y + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
@@ -33,7 +33,7 @@ Box::Box(unsigned int level1, unsigned int limit) {
 // destructor
 Box::~Box() {
     delete []id;
-    for(int i=0; i<4; i++) 
+    for(int i=0; i<4; i++)
         if (child[0] != NULL)
             delete child[i];
 }
@@ -62,7 +62,7 @@ void Box::split(unsigned int limit) {
 // construct neighbors and intercation list
 void Box::find_neighbors(Box* root) {
     unsigned int Nx[8];
-    unsigned int Ny[8];        
+    unsigned int Ny[8];
     byte *Nid = new byte[level+1]();
     Nx[0] = x-1; Ny[0] = y-1;
     Nx[1] = x  ; Ny[1] = y-1;
@@ -85,7 +85,7 @@ void Box::find_neighbors(Box* root) {
         }
     }
     delete []Nid;
-    
+
     // Now construct the interaction list
     // by taking difference of two sets
     if (level <= 1)
@@ -101,11 +101,11 @@ void Box::find_neighbors(Box* root) {
     }
     int c1 = 0;
     for (int i=0; i<c; i++) {
-        int foundInNeighbor = 0; 
-        for (int j=0; j<8; j++) { 
+        int foundInNeighbor = 0;
+        for (int j=0; j<8; j++) {
             if (fullList[i] == neighbor[j]) {
-                foundInNeighbor = 1; 
-                break; 
+                foundInNeighbor = 1;
+                break;
             }
         }
         if (!foundInNeighbor)

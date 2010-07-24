@@ -39,7 +39,7 @@ void* Queue::dequeue() {
     void *n1 = contents[front];
     count--;
     front++; front = front % size;
-    return n1;    
+    return n1;
 }
 
 int Queue::isEmpty() {
@@ -56,10 +56,10 @@ int Queue::isEmpty() {
     // printf("] count = %d\n", count);
     // printf("     ");
     // for(int i=0; i<size; i++) {
-        // if (i == front) 
+        // if (i == front)
             // printf("^");
         // else
             // printf(" ");
     // }
-    // printf("\n");    
+    // printf("\n");
 // }

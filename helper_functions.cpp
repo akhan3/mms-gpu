@@ -61,8 +61,10 @@ float cmpx_costheta_between(    const float a, const float b,
 
 
 // Legendre function (recursive implementation)
-float legendre(unsigned int k, float x)
+float legendre(int k, float x)
 {
+    assert(k >= 0);
+    assert(x >= -1 && x <= 1);
     switch (k) {
         case 0:
             return 1;
@@ -75,7 +77,45 @@ float legendre(unsigned int k, float x)
         default:
             return ((2*k-1) * x * legendre(k-1, x) - (k-1) * legendre(k-2, x)) / k;
     }
-    
+
+}
+
+// Associated Legendre function (Lookup table for x = 0)
+float associated_legendre(int l, int m, float x)
+{
+    assert(l >= 0 && l <= 4);
+    assert(abs(m) <= l);
+    assert(x == 0);
+    switch (l) {
+        case 0:
+            switch (m)
+                {   case 0: return 1;   }
+        case 1:
+            switch (m)
+                {   case 0: return 0;
+                    case 1: return -1;  }
+        case 2:
+            switch (m)
+                {   case 0: return -0.5;
+                    case 1: return 0;
+                    case 2: return 3;   }
+        case 3:
+            switch (m)
+                {   case 0: return 0;
+                    case 1: return 1.5;
+                    case 2: return 0;
+                    case 3: return -15; }
+        case 4:
+            switch (m)
+                {   case 0: return 0.375;
+                    case 1: return 0;
+                    case 2: return -7.5;
+                    case 3: return 0;
+                    case 4: return 105; }
+        default:
+            printf("FATAL ERROR؛ associated_legendre(l=%d, m=%d, x=%f) is not implemented\n", l,m,x);
+            return 0.0/0.0;
+    }
 }
 
 // Write matrix to file
@@ -108,7 +148,7 @@ int matrix2stdout(const float* matrix, const int rows, const int cols, const cha
 
 // Depth-first tarversal
 // ===============================
-void traverse_tree_dfs(Box *n, const unsigned int limit) 
+void traverse_tree_dfs(Box *n, const unsigned int limit)
 {
     // function to perform on node
     char idstring[100];
@@ -122,22 +162,22 @@ void traverse_tree_dfs(Box *n, const unsigned int limit)
 
 // Breadth-first tarversal
 // ===============================
-void traverse_tree_bfs(Box *root, const unsigned int limit) 
+void traverse_tree_bfs(Box *root, const unsigned int limit)
 {
     const unsigned int N = (unsigned int)pow(4, limit);
     Queue Q(N);
     Q.enqueue(root);
     while(!Q.isEmpty()) {
         Box *n = (Box*)Q.dequeue();
+        if (n->level < limit)
+            for(int i=0; i<=3; i++)
+                Q.enqueue(n->child[i]);
         // function to perform on node
         char idstring[100];
         n->get_idstring(idstring);
         // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
         // NEWLINE;
         // populate queue with children nodes
-        if (n->level < limit)
-            for(int i=0; i<=3; i++)
-                Q.enqueue(n->child[i]);
     }
 }
 

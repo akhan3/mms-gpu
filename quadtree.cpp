@@ -11,7 +11,7 @@
 //*************************************************************************//
 //******************** Main function **************************************//
 //*************************************************************************//
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     unsigned int seed = time(NULL);
     unsigned int N = 256;
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     N = (unsigned int)pow(4, logN);
     printf("N = %d, log4(N) = %d\n", N, logN);
     printf("sizeof(Box) = %ld\n", sizeof(Box));
-    
+
 
 
     Box *root = new Box(0, logN);
@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 // generate the tree
     create_tree_recurse(root, logN);
     find_neighbors_recurse(root, root, logN);
-    
-    
+
+
 // // traverse to a random Box at the deepest level
 // // ============================================================================
     // // int c[5] = {0,0,0,0,0};
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
             // // printf("%s(%d,%d) ", idstring, n->interaction[i]->x, n->interaction[i]->y);
         // }
     // NEWLINE;
-    
+
 
 // // print out a matrix showing sample neighbor and interaction list
 // // ============================================================================
@@ -100,17 +100,17 @@ int main(int argc, char **argv)
         // NEWLINE;
     // }
     // free(matrix);
-    
 
 
 
-// call the function for main FMM calculation 
+
+// call the function for main FMM calculation
     fmm_calc(root, logN);
 
-    
+
 
 
     delete root;
     printf("SEED = %d\n", seed);
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

@@ -3,7 +3,7 @@ CC         	:=	gcc
 LINKER     	:= 	g++ -fPIC
 
 #INCPATH     := -I./ $(MATLAB_INCLUDES)
-#LIBPATH		:= $(MATLAB_LIBRARIES)	
+#LIBPATH		:= $(MATLAB_LIBRARIES)
 ifeq ($(dbg),1)
 	COMMONFLAGS += -g
 else
