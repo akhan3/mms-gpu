@@ -1,23 +1,16 @@
 #ifndef _HELPER_FUNCTIONS_H_
 #define _HELPER_FUNCTIONS_H_
 
+#include "Box.hpp"
+#include "Queue.hpp"
+#include "Cmpx.hpp"
+
 int rand_atob(const int a, const int b);
 float frand_atob(const float a, const float b);
+int factorial(int x);
 float legendre(int k, float x);
 float associated_legendre(int l, int m, float x);
-
-// ==== Complex number functions ===========================================
-// =========================================================================
-float cmpx_magnitude(const float x, const float y);
-void cmpx_pow(  const float x, const float y, const unsigned int p,
-                float *xo, float *yo);
-void cmpx_ln(   const float x, const float y,
-                float *xo, float *yo);
-void cmpx_div(  const float a, const float b,
-                const float c, const float d,
-                float *xo, float *yo);
-float cmpx_costheta_between(    const float a, const float b,
-                                const float c, const float d    );
+Cmpx spherical_harmonic(int l, int m, float theta, float phi);
 
 int matrix2file(const float* matrix, const int rows, const int cols, const char* filename);
 int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname);

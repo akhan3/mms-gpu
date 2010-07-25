@@ -15,6 +15,7 @@ int main(int argc, char **argv)
 {
     unsigned int seed = time(NULL);
     unsigned int N = 256;
+    unsigned int P = 3;
     if(argc >= 2) {
         sscanf(argv[1], "%u", &N);
         assert(N > 0);
@@ -23,6 +24,11 @@ int main(int argc, char **argv)
         sscanf(argv[2], "%u", &seed);
         assert(seed > 0);
     }
+    if(argc >= 4) {
+        sscanf(argv[3], "%u", &P);
+        assert(seed > 0);
+    }
+    assert(P <= 4);
     srand(seed);
     const unsigned int logN = ceil(log2(N) / log2(4));
     N = (unsigned int)pow(4, logN);

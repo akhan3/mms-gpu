@@ -2,63 +2,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <cmath>
-#include "Box.hpp"
-#include "Queue.hpp"
 #include "helper_functions.hpp"
 
 #define NEWLINE printf("\n");
 
 
-// =========================================================================
-// ==== Complex number functions ===========================================
-// =========================================================================
-// inline
-float cmpx_magnitude(const float x, const float y)
+int factorial(int x)
 {
-    return sqrt(x*x + y*y);
+    return (x == 0) ? 1 : x*factorial(x-1);
 }
-
-void cmpx_pow(  const float x, const float y, const unsigned int p,
-                float *xo, float *yo)
-{
-    *xo = 1;
-    *yo = 0;
-    for(unsigned int i=1; i<=p; i++) {
-        float x1;
-        float y1;
-        x1 = x*(*xo) - y*(*yo);
-        y1 = y*(*xo) + x*(*yo);
-        *xo = x1;
-        *yo = y1;
-    }
-}
-
-void cmpx_ln(  const float x, const float y,
-                float *xo, float *yo)
-{
-    float r = sqrt(x*x + y*y);
-    float theta = atan2(y, x);
-    *xo = log(r);
-    *yo = theta;
-}
-
-void cmpx_div(  const float a, const float b,
-                const float c, const float d,
-                float *xo, float *yo)
-{
-    float denominator = c*c + d*d;
-    *xo = (a*c + b*d) / denominator;
-    *yo = (b*c - a*d) / denominator;
-}
-
-float cmpx_costheta_between(    const float a, const float b,
-                                const float c, const float d    )
-{
-    float dot_product = a*c + b*d;
-    return dot_product / cmpx_magnitude(a,b) / cmpx_magnitude(c,d);
-}
-// =========================================================================
-
 
 // Legendre function (recursive implementation)
 float legendre(int k, float x)
@@ -85,37 +37,64 @@ float associated_legendre(int l, int m, float x)
 {
     assert(l >= 0 && l <= 4);
     assert(abs(m) <= l);
-    assert(x == 0);
+    // printf("associated_legendre(l=%d, m=%d, x=%g) is being calculated...\n", l,m,x);
+    assert(fabs(x) <= 1e-7);    // assert(fabs(x) == 0.0);
     switch (l) {
         case 0:
-            switch (m)
-                {   case 0: return 1;   }
+            switch (m) {
+                case 0:  return 1;
+                default: return 0;
+            }
         case 1:
-            switch (m)
-                {   case 0: return 0;
-                    case 1: return -1;  }
+            switch (m) {
+                case -1: return -1/2.0 * associated_legendre(l, -m, x);
+                case 0:  return 0;
+                case 1:  return -1;
+                default: return 0;
+            }
         case 2:
-            switch (m)
-                {   case 0: return -0.5;
-                    case 1: return 0;
-                    case 2: return 3;   }
+            switch (m) {
+                case -2: return 1/24.0 * associated_legendre(l, -m, x);
+                case -1: return -1/6.0 * associated_legendre(l, -m, x);
+                case 0:  return -1/2.0;
+                case 1:  return 0;
+                case 2:  return 3;
+                default: return 0;
+            }
         case 3:
-            switch (m)
-                {   case 0: return 0;
-                    case 1: return 1.5;
-                    case 2: return 0;
-                    case 3: return -15; }
+            switch (m) {
+                case -3: return -1/720.0 * associated_legendre(l, -m, x);
+                case -2: return 1/120.0 * associated_legendre(l, -m, x);
+                case -1: return -1/12.0 * associated_legendre(l, -m, x);
+                case 0:  return 0;
+                case 1:  return 3/2.0;
+                case 2:  return 0;
+                case 3:  return -15;
+                default: return 0;
+            }
         case 4:
-            switch (m)
-                {   case 0: return 0.375;
-                    case 1: return 0;
-                    case 2: return -7.5;
-                    case 3: return 0;
-                    case 4: return 105; }
+            switch (m) {
+                case -4: return 1/40320.0 * associated_legendre(l, -m, x);
+                case -3: return -1/5040.0 * associated_legendre(l, -m, x);
+                case -2: return 1/360.0 * associated_legendre(l, -m, x);
+                case -1: return -1/20.0 * associated_legendre(l, -m, x);
+                case 0:  return 3/8.0;
+                case 1:  return 0;
+                case 2:  return -15/2.0;
+                case 3:  return 0;
+                case 4:  return 105;
+                default: return 0;
+            }
         default:
             printf("FATAL ERROR؛ associated_legendre(l=%d, m=%d, x=%f) is not implemented\n", l,m,x);
-            return 0.0/0.0;
+            return 0.0/0.0; // NaN
     }
+}
+
+// Spherical harmonics
+Cmpx spherical_harmonic(int l, int m, float theta, float phi)
+{
+    return Cmpx(sqrt((1.0*factorial(l-m)) / factorial(l+m)) * associated_legendre(l,m,cos(theta)), m*phi, 1);
 }
 
 // Write matrix to file
@@ -214,3 +193,26 @@ float frand_atob(const float a, const float b) {
     return (float)r;
 }
 
+// void cmpx_pow(  const float x, const float y, const unsigned int p,
+                // float *xo, float *yo)
+// {
+    // *xo = 1;
+    // *yo = 0;
+    // for(unsigned int i=1; i<=p; i++) {
+        // float x1;
+        // float y1;
+        // x1 = x*(*xo) - y*(*yo);
+        // y1 = y*(*xo) + x*(*yo);
+        // *xo = x1;
+        // *yo = y1;
+    // }
+// }
+
+// void cmpx_ln(  const float x, const float y,
+                // float *xo, float *yo)
+// {
+    // float r = sqrt(x*x + y*y);
+    // float theta = atan2(y, x);
+    // *xo = log(r);
+    // *yo = theta;
+// }

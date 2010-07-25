@@ -6,7 +6,6 @@ typedef unsigned char byte;
 class Box {
 // data members
 public:
-    char ch; // temporary
     byte *id;
     Box *parent;        // pointer to parent
     Box *child[4];     // pointers to 4 children
@@ -20,7 +19,6 @@ public:
     float potential;
 
 // constructors and destructor
-    Box(char ch1);   // temporary
     Box(unsigned int level1, unsigned int limit);
     ~Box();
 

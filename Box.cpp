@@ -5,11 +5,6 @@
 #include "Box.hpp"
 
 // constructor
-Box::Box(char ch1) { // temporary
-    ch = ch1;
-    id = new byte[4]();
-}
-
 Box::Box(unsigned int level1, unsigned int limit) {
     level = level1;
     parent = NULL;

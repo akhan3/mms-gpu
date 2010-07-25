@@ -56,8 +56,9 @@
     relerr = abs(potential_fmm - potential_exact) ./ abs((potential_fmm + potential_exact)/2);
     relerr(isnan(relerr)) = 0;
     %relerr(find(relerr == inf)) = 0;
-    max_error = max(relerr(:))
-    rms_eror = sqrt(mean(relerr(:).^2))
+    max_error = max(relerr(:));
+    rms_eror = sqrt(mean(relerr(:).^2));
+    fprintf('Error (max = %.1e, rms = %.1e)\n', max_error, rms_eror);
 
 
 % find out the upper and lower limits
@@ -79,22 +80,33 @@
     fh = figure;
     set(fh, 'OuterPosition', [0 0 1280 800]);
     subplot(221);
+        imagesc(x,y,potential_exact); axis image xy;
+        %caxis([minV, maxV]);
+        colorbar;
+        title('Potential from exact calculation');
+    subplot(222);
+        imagesc(x,y,potential_fmm); axis image xy;
+        %caxis([minV, maxV]);
+        colorbar;
+        title('Potential from FMM algorithm');
+    subplot(223);
         imagesc(x,y,charge); axis image xy;
         %spy(flipud(charge));
         colorbar;
         title('Charge distribution');
-    subplot(222);
-        imagesc(x,y,potential_fmm); axis image xy;
-        caxis([minV, maxV]);
-        colorbar;
-        title('Potential from FMM algorithm');
-    subplot(223);
-        imagesc(x,y,potential_exact); axis image xy;
-        caxis([minV, maxV]);
-        colorbar;
-        title('Potential from exact calculation');
     subplot(224);
-        %imagesc(x,y,relerr); axis image xy; colorbar
-        %title('Relative Error');
-        imagesc(x,y,log10(relerr)); axis image xy; colorbar;
-        title('log_{10} of Relative Error');
+        imagesc(x,y,relerr); axis image xy; colorbar
+        title_string = sprintf('Relative Error (RMS = %.1e)', rms_eror);
+        title(title_string);
+        %imagesc(x,y,log10(relerr)); axis image xy; colorbar;
+        %title('log_{10} of Relative Error');
+
+
+
+%figure;
+%ph = semilogy(P, rms_error, 's-'); title(['FMM relative error (RMS)']);
+%set(ph, 'linewidth',3);
+%grid on
+%set(gca,'XLim',[P(1)-1/2, P(end)+1/2]);
+%set(gca,'XTick',P);
+%set(gca,'XTickLabel',{'Monopole';'Dipole';'Quadrupole';'Octupole';'Sexdecuple'});
