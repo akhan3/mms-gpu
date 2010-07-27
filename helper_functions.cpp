@@ -9,7 +9,25 @@
 
 int factorial(int x)
 {
-    return (x == 0) ? 1 : x*factorial(x-1);
+    // int fac = 1;
+    // for(int i = 2; i <= x; i++)
+        // fac *= i;
+    // return fac;
+    // return (x == 0) ? 1 : x*factorial(x-1);
+    // assert(x >= 0 && x <= 8);
+    switch (x) {
+        case 0: return     1;
+        case 1: return     1;
+        case 2: return     2;
+        case 3: return     6;
+        case 4: return    24;
+        case 5: return   120;
+        case 6: return   720;
+        case 7: return  5040;
+        case 8: return 40320;
+        default:
+            return (x == 0) ? 1 : x*factorial(x-1);
+    }
 }
 
 // Legendre function (recursive implementation)
@@ -29,7 +47,6 @@ float legendre(int k, float x)
         default:
             return ((2*k-1) * x * legendre(k-1, x) - (k-1) * legendre(k-2, x)) / k;
     }
-
 }
 
 // Associated Legendre function (Lookup table for x = 0)
@@ -37,7 +54,7 @@ float associated_legendre(int l, int m, float x)
 {
     assert(l >= 0 && l <= 4);
     assert(abs(m) <= l);
-    // printf("associated_legendre(l=%d, m=%d, x=%g) is being calculated...\n", l,m,x);
+    assert(m == abs(m));
     assert(fabs(x) <= 1e-7);    // assert(fabs(x) == 0.0);
     switch (l) {
         case 0:
@@ -47,15 +64,12 @@ float associated_legendre(int l, int m, float x)
             }
         case 1:
             switch (m) {
-                case -1: return -1/2.0 * associated_legendre(l, -m, x);
                 case 0:  return 0;
                 case 1:  return -1;
                 default: return 0;
             }
         case 2:
             switch (m) {
-                case -2: return 1/24.0 * associated_legendre(l, -m, x);
-                case -1: return -1/6.0 * associated_legendre(l, -m, x);
                 case 0:  return -1/2.0;
                 case 1:  return 0;
                 case 2:  return 3;
@@ -63,9 +77,6 @@ float associated_legendre(int l, int m, float x)
             }
         case 3:
             switch (m) {
-                case -3: return -1/720.0 * associated_legendre(l, -m, x);
-                case -2: return 1/120.0 * associated_legendre(l, -m, x);
-                case -1: return -1/12.0 * associated_legendre(l, -m, x);
                 case 0:  return 0;
                 case 1:  return 3/2.0;
                 case 2:  return 0;
@@ -74,10 +85,6 @@ float associated_legendre(int l, int m, float x)
             }
         case 4:
             switch (m) {
-                case -4: return 1/40320.0 * associated_legendre(l, -m, x);
-                case -3: return -1/5040.0 * associated_legendre(l, -m, x);
-                case -2: return 1/360.0 * associated_legendre(l, -m, x);
-                case -1: return -1/20.0 * associated_legendre(l, -m, x);
                 case 0:  return 3/8.0;
                 case 1:  return 0;
                 case 2:  return -15/2.0;
@@ -94,7 +101,8 @@ float associated_legendre(int l, int m, float x)
 // Spherical harmonics
 Cmpx spherical_harmonic(int l, int m, float theta, float phi)
 {
-    return Cmpx(sqrt((1.0*factorial(l-m)) / factorial(l+m)) * associated_legendre(l,m,cos(theta)), m*phi, 1);
+    // return Cmpx(sqrt((1.0*factorial(l-abs(m))) / factorial(l+abs(m))) * associated_legendre(l,abs(m),cos(theta)), m*phi, 1);
+    return Cmpx(associated_legendre(l,abs(m),cos(theta)), m*phi, 1);
 }
 
 // Write matrix to file

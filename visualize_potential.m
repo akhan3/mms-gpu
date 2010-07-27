@@ -40,6 +40,7 @@
     meshwidth = lengthBox / sqrt(N);
     % charge setup
     [yy,xx] = find(charge ~= 0);
+tic;
     for k = 1:length(yy)
         potential_tmp = zeros(H,H);
         q = charge(yy(k), xx(k));
@@ -51,14 +52,16 @@
         %potential_exact(find(abs(potential_exact) == inf)) = 0;
         potential_exact = potential_exact + potential_tmp;
     end
+time_taken = toc;
 
 % error calculation
-    relerr = abs(potential_fmm - potential_exact) ./ abs((potential_fmm + potential_exact)/2);
+    %relerr = abs(potential_fmm - potential_exact) ./ abs((potential_fmm + potential_exact)/2);
+    relerr = abs(potential_fmm - potential_exact) ./ abs(potential_fmm);
     relerr(isnan(relerr)) = 0;
     %relerr(find(relerr == inf)) = 0;
     max_error = max(relerr(:));
     rms_eror = sqrt(mean(relerr(:).^2));
-    fprintf('Error (max = %.1e, rms = %.1e)\n', max_error, rms_eror);
+    fprintf('Error (max = %.1e, rms = %.1e). Time taken = %g seconds\n', max_error, rms_eror, time_taken);
 
 
 % find out the upper and lower limits

@@ -5,8 +5,10 @@ LINKER     	:= 	g++ -fPIC
 #INCPATH     := -I./ $(MATLAB_INCLUDES)
 #LIBPATH		:= $(MATLAB_LIBRARIES)
 ifeq ($(dbg),1)
+	#COMMONFLAGS += -g -pg
 	COMMONFLAGS += -g
 else
+	#COMMONFLAGS += -O3 -pg
 	COMMONFLAGS += -O3
 endif
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)
@@ -26,4 +28,4 @@ fmm_calc.o	: fmm_calc.cpp Box.hpp Queue.hpp Cmpx.hpp helper_functions.hpp
 helper_functions.o : helper_functions.cpp helper_functions.hpp
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) gmon.out

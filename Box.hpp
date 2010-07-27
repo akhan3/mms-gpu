@@ -16,7 +16,7 @@ public:
     unsigned int y;
     float cx;
     float cy;
-    float potential;
+    // float potential;
 
 // constructors and destructor
     Box(unsigned int level1, unsigned int limit);

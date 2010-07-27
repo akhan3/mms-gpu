@@ -20,7 +20,7 @@ Box::Box(unsigned int level1, unsigned int limit) {
     // cy = 0;
     cx = (unsigned int)pow(2, limit-level) * x + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
     cy = (unsigned int)pow(2, limit-level) * y + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
-    potential = 0;
+    // potential = 0;
     id = new byte[level+1]();
     id[0] = 0;
 }
