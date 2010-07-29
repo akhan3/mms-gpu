@@ -13,7 +13,7 @@
 
 // FMM algorithm in BFS
 // ===============================
-int fmm_bfs(   Box *root,
+int fmm_bfs(        const Box *root,
                     const unsigned int limit,
                     const unsigned int actual_limit,
                     const unsigned int H,
@@ -31,10 +31,8 @@ int fmm_bfs(   Box *root,
     unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
-    const float lengthBox = 10;
-    const float meshwidth = lengthBox / sqrt(N);
     Queue Q_tree(N);
-    Q_tree.enqueue(root);
+    Q_tree.enqueue((void*)root);
     while(!Q_tree.isEmpty()) {
         Box *n = (Box*)Q_tree.dequeue();
         // populate queue with children nodes
@@ -50,6 +48,11 @@ int fmm_bfs(   Box *root,
                     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
                     status |= gettimeofday(&time1, NULL);
                     printf("done in %f seconds.\n", deltatime); fflush(NULL);
+                    // collect successive stages of FMM in matrices and write them to files for pedagogical purpose only
+                    // char filename[100];
+                    // sprintf(filename, "potential_L%d.dat", prev_level);
+                    // status |= matrix2file(potential, H, H, filename);
+                    // if(status) return EXIT_FAILURE;
                 }
                 prev_level = n->level;
                 printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
@@ -72,7 +75,7 @@ int fmm_bfs(   Box *root,
                             if (q != 0) { // if charge found
                                 charge_found = 1;
                                 Cmpx r_ = Cmpx(xx - n->cx, yy - n->cy, 0);
-                                multipole_coeff[l][m+l] += q * pow(r_.mag, l) * spherical_harmonic(l, m, M_PI/2, r_.ang).conjugate();
+                                multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
                             } // if (q != 0)
                         } // source charge loop
                     } // source charge loop
@@ -93,12 +96,14 @@ int fmm_bfs(   Box *root,
                                 for(int l=0; l<=P; l++) {
                                     Cmpx sum_over_m;
                                     for(int m=-l; m<=l; m++) {
-                                        sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, M_PI/2, r.ang);
+                                        sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, M_PI/2, r.get_ang());
                                     }
-                                    sum_over_lm += 1 / pow(r.mag, l+1) * sum_over_m;
+                                    sum_over_lm += 1 / pow(r.get_mag(), l+1) * sum_over_m;
                                 }
-                                assert(fabs(sum_over_lm.im) <= 1e-4);   // make sure there is no imaginary part remaining
-                                potential[yy*H+xx] += sum_over_lm.re / meshwidth;
+                                // printf("(sum_over_lm = %s = %s (ang=%fr) \n", sum_over_lm.cartesian(), sum_over_lm.polar(), sum_over_lm.get_ang());
+                                const float threshold = 1e-6;
+                                assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
+                                potential[yy*H+xx] += sum_over_lm.get_re();
                             }
                         }
                     } // if (ni != NULL)
@@ -117,7 +122,7 @@ int fmm_bfs(   Box *root,
                             assert(n->cx == n->x && n->cy == n->y);
                             float q = charge[(int)(n->cy*H + n->cx)];
                             Cmpx r = Cmpx(nb->cx - n->cx, nb->cy - n->cy, 0);
-                            potential[(int)(nb->cy*H+nb->cx)] += q / r.mag / meshwidth;
+                            potential[(int)(nb->cy*H+nb->cx)] += q / r.get_mag();
                         }
                     } // neighbor loop
                 } // if deepest level
@@ -127,11 +132,16 @@ int fmm_bfs(   Box *root,
     status |= gettimeofday(&time2, NULL);
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
     printf("done in %f seconds.\n", deltatime);
+    // collect successive stages of FMM in matrices and write them to files for pedagogical purpose only
+    // char filename[100];
+    // sprintf(filename, "potential_L%d.dat", prev_level);
+    // status |= matrix2file(potential, H, H, filename);
+    // if(status) return EXIT_FAILURE;
     return status;
 }
 
 
-int fmm_calc(Box *root, const unsigned int limit) {
+int fmm_calc(const Box *root, const unsigned int limit, const float *charge, float *potential) {
     const unsigned int N = (unsigned int)pow(4, limit);
     const unsigned int H = (unsigned int)sqrt(N);
     const          int P = 3;   // multipole series truncation (k = 1...P)
@@ -141,46 +151,7 @@ int fmm_calc(Box *root, const unsigned int limit) {
     printf("N = %d, log4(N) = %d, sqrt(N) = %d, P = %d\n", N, limit, H, P);
     int status = 0;
 
-// charge matrix
-    float *charge = new float[N]();
-
-// Charge configuration
-// ===========================
-// dipole
-    // int l = H/8;
-    // int x0 = H/2;
-    // int y1 = (H+l)/2;
-    // int y2 = (H-l)/2;
-    // charge[y1*H + x0] = +1.001;
-    // charge[y2*H + x0] = -1.001;
-
-// place a charge at the center
-    // int xx = H/2;
-    // int yy = H/2;
-    // charge[yy*H + xx] = 1.00001;
-    // charge[yy*H + xx] = 1/4.0;
-    // charge[(yy-1)*H + xx] = 1/4.0;
-    // charge[yy*H + xx-1] = 1/4.0;
-    // charge[(yy-1)*H + xx-1] = 1/4.0;
-
-// Few random charges at random locations
-    // const float charge_probability = .01;
-    // for(unsigned int yy=0; yy<H; yy++)
-        // for(unsigned int xx=0; xx<H; xx++)
-            // if(frand_atob(0, 1) < charge_probability)
-                // charge[yy*H + xx] = frand_atob(-10, 10);
-
-// random charges throughut
-    for(unsigned int yy=0; yy<H; yy++)
-        for(unsigned int xx=0; xx<H; xx++)
-            charge[yy*H + xx] = frand_atob(0, 10);
-
-// write charge matrix to file
-    status |= matrix2file(charge, H, H, "charge.dat");
-    // status |= matrix2stdout(charge, H, H, "charge");
-
 // Run the FMM algorithm on tree
-    float *potential = new float[N]();    // potential matrix
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
         status |= fmm_bfs(root, limit, limit, H, charge, P, potential);
@@ -188,11 +159,6 @@ int fmm_calc(Box *root, const unsigned int limit) {
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
     printf("fmm_bfs() took %f seconds\n", deltatime);
 
-// write potential matrix to file
-    status |= matrix2file(potential, H, H, "potential.dat");
-
 // closing
-    delete []potential;
-    delete []charge;
     return status;
 }

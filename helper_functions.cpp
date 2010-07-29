@@ -105,12 +105,35 @@ Cmpx spherical_harmonic(int l, int m, float theta, float phi)
     return Cmpx(associated_legendre(l,abs(m),cos(theta)), m*phi, 1);
 }
 
+// Read matrix from file
+// ===============================
+int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix)
+{
+    int status = 0;
+    FILE *fh = fopen(filename, "r");
+    if(fh == NULL) {
+        printf("FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    int dummy;
+    for(int r=0; r<rows; r++) {     // axis ij
+        for(int c=0; c<cols; c++)
+            dummy = fscanf(fh, "%d ", &matrix[r*cols+c]);
+        dummy = fscanf(fh, "\n");
+    }
+    fclose(fh);
+    printf("INFO: Read file %s with status=%d\n", filename, status);
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
 // Write matrix to file
 // ===============================
-int matrix2file(const float* matrix, const int rows, const int cols, const char* filename) {
+int matrix2file(const float* matrix, const int rows, const int cols, const char* filename)
+{
+    int status = 0;
     FILE *fh = fopen(filename, "w");
     if(fh == NULL) {
-        printf("FATAL ERROR: Erro opening file %s\n", filename);
+        printf("FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
     for(int r=0; r<rows; r++) {     // axis ij
@@ -119,7 +142,8 @@ int matrix2file(const float* matrix, const int rows, const int cols, const char*
         fprintf(fh, "\n");
     }
     fclose(fh);
-    return EXIT_SUCCESS;
+    printf("INFO: Written file %s with status=%d\n", filename, status);
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname) {
@@ -191,7 +215,7 @@ void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit) {
 
 int rand_atob(const int a, const int b) {
     double r = rand() / (double)RAND_MAX;
-    r = a + (b-a) * r;
+    r = a + (b-a+1) * r;
     return (int)r;
 }
 
@@ -201,26 +225,77 @@ float frand_atob(const float a, const float b) {
     return (float)r;
 }
 
-// void cmpx_pow(  const float x, const float y, const unsigned int p,
-                // float *xo, float *yo)
-// {
-    // *xo = 1;
-    // *yo = 0;
-    // for(unsigned int i=1; i<=p; i++) {
-        // float x1;
-        // float y1;
-        // x1 = x*(*xo) - y*(*yo);
-        // y1 = y*(*xo) + x*(*yo);
-        // *xo = x1;
-        // *yo = y1;
-    // }
-// }
+void divergence_2d( const Cmpx *V,
+                    const int xdim, const int ydim, const float meshwidth,
+                    float *S )
+{
+    int x, y;
+    for(y = 1; y <= ydim-2; y++) // everything except boundaries
+        for(x = 1; x <= xdim-2; x++)
+            S[y*xdim+x] = (V[y*xdim+x+1].get_re() - V[y*xdim+x-1].get_re() + V[(y+1)*xdim+x].get_im() - V[(y-1)*xdim+x].get_im()) / (2.0 * meshwidth);
+    y = 0; // bottom boundary
+    for(x = 1; x <= xdim-2; x++)
+        S[y*xdim+x] = (V[y*xdim+x+1].get_re() - V[y*xdim+x-1].get_re()) / (2.0 * meshwidth) + (V[(y+1)*xdim+x].get_im() - V[y*xdim+x].get_im()) / (1.0 * meshwidth);
+    y = ydim-1; // top boundary
+    for(x = 1; x <= xdim-2; x++)
+        S[y*xdim+x] = (V[y*xdim+x+1].get_re() - V[y*xdim+x-1].get_re()) / (2.0 * meshwidth) + (V[y*xdim+x].get_im() - V[(y-1)*xdim+x].get_im()) / (1.0 * meshwidth);
+    x = 0; // left boundary
+    for(y = 1; y <= ydim-2; y++)
+        S[y*xdim+x] = (V[y*xdim+x+1].get_re() - V[y*xdim+x].get_re()) / (1.0 * meshwidth) + (V[(y+1)*xdim+x].get_im() - V[(y-1)*xdim+x].get_im()) / (2.0 * meshwidth);
+    x = xdim-1; // right boundary
+    for(y = 1; y <= ydim-2; y++)
+        S[y*xdim+x] = (V[y*xdim+x].get_re() - V[y*xdim+x-1].get_re()) / (1.0 * meshwidth) + (V[(y+1)*xdim+x].get_im() - V[(y-1)*xdim+x].get_im()) / (2.0 * meshwidth);
+    x = 0; y = 0; // bottom-left corner
+    S[y*xdim+x] = (V[y*xdim+x+1].get_re() - V[y*xdim+x].get_re() + V[(y+1)*xdim+x].get_im() - V[y*xdim+x].get_im()) / (1.0 * meshwidth);
+    x = xdim-1; y = 0; // bottom-right corner
+    S[y*xdim+x] = (V[y*xdim+x].get_re() - V[y*xdim+x-1].get_re() + V[(y+1)*xdim+x].get_im() - V[y*xdim+x].get_im()) / (1.0 * meshwidth);
+    x = 0; y = ydim-1; // top-left corner
+    S[y*xdim+x] = (V[y*xdim+x+1].get_re() - V[y*xdim+x].get_re() + V[y*xdim+x].get_im() - V[(y-1)*xdim+x].get_im()) / (1.0 * meshwidth);
+    x = xdim-1; y = ydim-1; // top-right corner
+    S[y*xdim+x] = (V[y*xdim+x].get_re() - V[y*xdim+x-1].get_re() + V[y*xdim+x].get_im() - V[(y-1)*xdim+x].get_im()) / (1.0 * meshwidth);
+}
 
-// void cmpx_ln(  const float x, const float y,
-                // float *xo, float *yo)
-// {
-    // float r = sqrt(x*x + y*y);
-    // float theta = atan2(y, x);
-    // *xo = log(r);
-    // *yo = theta;
-// }
+void gradient_2d(   const float *S,
+                    int xdim, int ydim, float meshwidth,
+                    Cmpx *V )
+{
+    int x, y;
+    for(y = 1; y <= ydim-2; y++) // everything except boundaries
+        for(x = 1; x <= xdim-2; x++) {
+            V[y*xdim+x].set_re((S[y*xdim+x+1] - S[y*xdim+x-1]) / (2.0 * meshwidth));
+            V[y*xdim+x].set_im((S[(y+1)*xdim+x] - S[(y-1)*xdim+x]) / (2.0 * meshwidth));
+        }
+    y = 0; // bottom boundary
+    for(x = 1; x <= xdim-2; x++) {
+        V[y*xdim+x].set_re((S[y*xdim+x+1] - S[y*xdim+x-1]) / (2.0 * meshwidth));
+        V[y*xdim+x].set_im((S[(y+1)*xdim+x] - S[y*xdim+x]) / (1.0 * meshwidth));
+    }
+    y = ydim-1; // top boundary
+    for(x = 1; x <= xdim-2; x++) {
+        V[y*xdim+x].set_re((S[y*xdim+x+1] - S[y*xdim+x-1]) / (2.0 * meshwidth));
+        V[y*xdim+x].set_im((S[y*xdim+x] - S[(y-1)*xdim+x]) / (1.0 * meshwidth));
+    }
+    x = 0; // left boundary
+    for(y = 1; y <= ydim-2; y++) {
+        V[y*xdim+x].set_re((S[y*xdim+x+1] - S[y*xdim+x]) / (1.0 * meshwidth));
+        V[y*xdim+x].set_im((S[(y+1)*xdim+x] - S[(y-1)*xdim+x]) / (2.0 * meshwidth));
+    }
+    x = xdim-1; // right boundary
+    for(y = 1; y <= ydim-2; y++) {
+        V[y*xdim+x].set_re((S[y*xdim+x] - S[y*xdim+x-1]) / (1.0 * meshwidth));
+        V[y*xdim+x].set_im((S[(y+1)*xdim+x] - S[(y-1)*xdim+x]) / (2.0 * meshwidth));
+    }
+    x = 0; y = 0; // bottom-left corner
+        V[y*xdim+x].set_im((S[(y+1)*xdim+x] - S[y*xdim+x]) / (1.0 * meshwidth));
+        V[y*xdim+x].set_re((S[y*xdim+x+1] - S[y*xdim+x]) / (1.0 * meshwidth));
+    x = xdim-1; y = 0; // bottom-right corner
+        V[y*xdim+x].set_im((S[(y+1)*xdim+x] - S[y*xdim+x]) / (1.0 * meshwidth));
+        V[y*xdim+x].set_re((S[y*xdim+x] - S[y*xdim+x-1]) / (1.0 * meshwidth));
+    x = 0; y = ydim-1; // top-left corner
+        V[y*xdim+x].set_im((S[y*xdim+x] - S[(y-1)*xdim+x]) / (1.0 * meshwidth));
+        V[y*xdim+x].set_re((S[y*xdim+x+1] - S[y*xdim+x]) / (1.0 * meshwidth));
+    x = xdim-1; y = ydim-1; // top-right corner
+        V[y*xdim+x].set_im((S[y*xdim+x] - S[(y-1)*xdim+x]) / (1.0 * meshwidth));
+        V[y*xdim+x].set_re((S[y*xdim+x] - S[y*xdim+x-1]) / (1.0 * meshwidth));
+}
+
