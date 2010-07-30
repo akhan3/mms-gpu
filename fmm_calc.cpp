@@ -58,15 +58,19 @@ int fmm_bfs(        const Box *root,
                 printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
             }
 
-            float width = pow(2, actual_limit-n->level);
+            if(n->is_pruned()) {
+                continue;
+            }
+
             // char idstring[100];
             // n->get_idstring(idstring);
-            // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) ", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
+            // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) \n", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
 
         // Calculate multipole moments for the source box
             Cmpx multipole_coeff[P+1][2*P+1];
             // checking for source charges in the source box
             float charge_found = 0;
+            float width = pow(2, actual_limit-n->level);
             for(int l=0; l<=P; l++) {
                 for(int m=-l; m<=l; m++) {
                     for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
@@ -83,9 +87,14 @@ int fmm_bfs(        const Box *root,
             } // l loop
             // NEWLINE;
 
-        // calculation of potential at the boxes in interaction list
+            if(! charge_found) {
+                n->prune();
+                continue;
+            }
+
             if(charge_found)
             {
+            // calculation of potential at the boxes in interaction list
                 for(int i=0; i<27; i++) {
                     Box *ni = n->interaction[i];
                     if (ni != NULL) {
@@ -100,21 +109,21 @@ int fmm_bfs(        const Box *root,
                                     }
                                     sum_over_lm += 1 / pow(r.get_mag(), l+1) * sum_over_m;
                                 }
-                                // printf("(sum_over_lm = %s = %s (ang=%fr) \n", sum_over_lm.cartesian(), sum_over_lm.polar(), sum_over_lm.get_ang());
-                                const float threshold = 1e-6;
-                                assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
                                 potential[yy*H+xx] += sum_over_lm.get_re();
+
+                                const float threshold = 1e-2;
+                                float modangle = fabs(sum_over_lm.get_ang());
+                                modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
+                                if(modangle > threshold)
+                                    printf("PANIC!! sum_over_lm.ang=%g , modangle=%g \n", sum_over_lm.get_ang(), modangle);
+                                // assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
                             }
                         }
                     } // if (ni != NULL)
                 } // interaction loop
-                // NEWLINE;
-            } // if(charge_found)
 
-        // calculation with neighbor list at the deepest level
-            if(charge_found)
-            {
-                if(n->level == limit) {
+            // calculation with neighbor list at the deepest level
+                if(n->level == actual_limit) {
                     for(int i=0; i<8; i++) {
                         Box *nb = n->neighbor[i];
                         if (nb != NULL)
@@ -129,6 +138,7 @@ int fmm_bfs(        const Box *root,
             } // if(charge_found)
         }   // if(n->level >= 2)
     } // while(!Q_tree.isEmpty())
+
     status |= gettimeofday(&time2, NULL);
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
     printf("done in %f seconds.\n", deltatime);

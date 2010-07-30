@@ -299,3 +299,50 @@ void gradient_2d(   const float *S,
         V[y*xdim+x].set_re((S[y*xdim+x] - S[y*xdim+x-1]) / (1.0 * meshwidth));
 }
 
+void exchange_field(const Cmpx *M,
+                    const float Ms, const float A, const float mu,
+                    const int xdim, const int ydim, const float meshwidth,
+                    Cmpx *H)
+{
+    int x, y;
+    const float constant_multiple = 2*A/Ms/Ms/mu/meshwidth;
+    for(y = 1; y <= ydim-2; y++) // everything except boundaries
+        for(x = 1; x <= xdim-2; x++) {
+            H[y*xdim+x].set_re( (M[y*xdim+x+1].get_re() + M[y*xdim+x-1].get_re() + M[(y+1)*xdim+x].get_re() + M[(y-1)*xdim+x].get_re()) * constant_multiple );
+            H[y*xdim+x].set_im( (M[y*xdim+x+1].get_im() + M[y*xdim+x-1].get_im() + M[(y+1)*xdim+x].get_im() + M[(y-1)*xdim+x].get_im()) * constant_multiple );
+        }
+    y = 0; // bottom boundary
+    for(x = 1; x <= xdim-2; x++) {
+        H[y*xdim+x].set_re( (M[y*xdim+x+1].get_re() + M[y*xdim+x-1].get_re() + M[(y+1)*xdim+x].get_re()                           ) * constant_multiple );
+        H[y*xdim+x].set_im( (M[y*xdim+x+1].get_im() + M[y*xdim+x-1].get_im() + M[(y+1)*xdim+x].get_im()                           ) * constant_multiple );
+    }
+    y = ydim-1; // top boundary
+    for(x = 1; x <= xdim-2; x++) {
+        H[y*xdim+x].set_re( (M[y*xdim+x+1].get_re() + M[y*xdim+x-1].get_re() +                          + M[(y-1)*xdim+x].get_re()) * constant_multiple );
+        H[y*xdim+x].set_im( (M[y*xdim+x+1].get_im() + M[y*xdim+x-1].get_im() +                          + M[(y-1)*xdim+x].get_im()) * constant_multiple );
+    }
+    x = 0; // left boundary
+    for(x = 1; x <= xdim-2; x++) {
+        H[y*xdim+x].set_re( (M[y*xdim+x+1].get_re() +                        + M[(y+1)*xdim+x].get_re() + M[(y-1)*xdim+x].get_re()) * constant_multiple );
+        H[y*xdim+x].set_im( (M[y*xdim+x+1].get_im() +                        + M[(y+1)*xdim+x].get_im() + M[(y-1)*xdim+x].get_im()) * constant_multiple );
+    }
+    x = xdim-1; // right boundary
+    for(x = 1; x <= xdim-2; x++) {
+        H[y*xdim+x].set_re( (                         M[y*xdim+x-1].get_re() + M[(y+1)*xdim+x].get_re() + M[(y-1)*xdim+x].get_re()) * constant_multiple );
+        H[y*xdim+x].set_im( (                         M[y*xdim+x-1].get_im() + M[(y+1)*xdim+x].get_im() + M[(y-1)*xdim+x].get_im()) * constant_multiple );
+    }
+    x = 0; y = 0; // bottom-left corner
+        H[y*xdim+x].set_re( (M[y*xdim+x+1].get_re() +                        + M[(y+1)*xdim+x].get_re()                           ) * constant_multiple );
+        H[y*xdim+x].set_im( (M[y*xdim+x+1].get_im() +                        + M[(y+1)*xdim+x].get_im()                           ) * constant_multiple );
+    x = xdim-1; y = 0; // bottom-right corner
+        H[y*xdim+x].set_re( (                         M[y*xdim+x-1].get_re() + M[(y+1)*xdim+x].get_re()                           ) * constant_multiple );
+        H[y*xdim+x].set_im( (                         M[y*xdim+x-1].get_im() + M[(y+1)*xdim+x].get_im()                           ) * constant_multiple );
+    x = 0; y = ydim-1; // top-left corner
+        H[y*xdim+x].set_re( (M[y*xdim+x+1].get_re() +                        +                          + M[(y-1)*xdim+x].get_re()) * constant_multiple );
+        H[y*xdim+x].set_im( (M[y*xdim+x+1].get_im() +                        +                          + M[(y-1)*xdim+x].get_im()) * constant_multiple );
+    x = xdim-1; y = ydim-1; // top-right corner
+        H[y*xdim+x].set_re( (                         M[y*xdim+x-1].get_re() +                          + M[(y-1)*xdim+x].get_re()) * constant_multiple );
+        H[y*xdim+x].set_im( (                         M[y*xdim+x-1].get_im() +                          + M[(y-1)*xdim+x].get_im()) * constant_multiple );
+}
+
+

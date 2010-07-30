@@ -21,6 +21,7 @@ Box::Box(unsigned int level1, unsigned int limit) {
     cx = (unsigned int)pow(2, limit-level) * x + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
     cy = (unsigned int)pow(2, limit-level) * y + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
     // potential = 0;
+    pruned = 0;
     id = new byte[level+1]();
     id[0] = 0;
 }
@@ -51,6 +52,16 @@ void Box::split(unsigned int limit) {
         n->cx = (unsigned int)pow(2, limit-n->level) * n->x + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
         n->cy = (unsigned int)pow(2, limit-n->level) * n->y + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
     }
+}
+
+
+// Prune the tree from this node downward
+void Box::prune() {
+    pruned = 1;
+    if (child[0] != NULL)
+        for(int i=0; i<=3; i++) {
+            child[i]->prune();
+        }
 }
 
 

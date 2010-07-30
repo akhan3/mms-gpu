@@ -43,7 +43,7 @@ public:
     inline Cmpx operator/(const Cmpx &z) const  { return Cmpx(*this) /= z; }
     inline Cmpx operator*(const float k) const  { return Cmpx(*this) *= k; }
 
-    inline char* polar() const  { char *ch = new char[100]; sprintf(ch, "%10.6f<%4.0fd", mag, ang*180/M_PI); return ch; }
+    inline char* polar() const  { char *ch = new char[100]; sprintf(ch, "%g<%gr", mag, ang); return ch; }
     inline char* cartesian() const  { char *ch = new char[100]; sprintf(ch, "%g+%gj", re, im); return ch; }
 
 private:

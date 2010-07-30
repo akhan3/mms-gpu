@@ -59,66 +59,103 @@ H_mat = sqrt(Hx_mat.^2 + Hy_mat.^2);
     maxV = max([potential_fmm(:);  potential_mat(:)]);
     minV = min([potential_fmm(:);  potential_mat(:)]);
 
-    fh = figure;
-    set(fh, 'OuterPosition', [0 0 1280 800]);
-    subplot(221);
-        imagesc(x,y,potential_mat); axis image xy;
-        %caxis([minV, maxV]);
-        colorbar;
-        title('Potential from exact calculation');
-    subplot(222);
-        imagesc(x,y,potential_fmm); axis image xy;
-        %caxis([minV, maxV]);
-        colorbar;
-        title('Potential from FMM algorithm');
-    subplot(223);
-        imagesc(x,y,charge); axis image xy;
-        %spy(flipud(charge));
-        colorbar;
-        title('Charge distribution');
-    subplot(224);
-        imagesc(x,y,relerr); axis image xy; colorbar
-        title_string = sprintf('Relative Error (RMS = %.1e)', rms_eror);
-        title(title_string);
-        %imagesc(x,y,log10(relerr)); axis image xy; colorbar;
-        %title('log_{10} of Relative Error');
+    %fh = figure;
+    %set(fh, 'OuterPosition', [0 0 1280 800]);
+    %subplot(221);
+        %imagesc(x,y,potential_mat); axis image xy;
+        %%caxis([minV, maxV]);
+        %colorbar;
+        %title('Potential from exact calculation');
+    %subplot(222);
+        %imagesc(x,y,potential_fmm); axis image xy;
+        %%caxis([minV, maxV]);
+        %colorbar;
+        %title('Potential from FMM algorithm');
+    %subplot(223);
+        %imagesc(x,y,charge); axis image xy;
+        %%spy(flipud(charge));
+        %colorbar;
+        %title('Charge distribution');
+    %subplot(224);
+        %imagesc(x,y,relerr); axis image xy; colorbar
+        %title_string = sprintf('Relative Error (RMS = %.1e)', rms_eror);
+        %title(title_string);
+        %%imagesc(x,y,log10(relerr)); axis image xy; colorbar;
+        %%title('log_{10} of Relative Error');
 
 
 % find out the upper and lower limits
     maxH = max([H_fmm(:);  H_mat(:)]);
     minH = min([H_fmm(:);  H_mat(:)]);
 
-figure;
+fh = figure;
+set(fh, 'OuterPosition', [0 0 1280 800]);
+%subplot(121);
+    %Hx = Hx_mat;
+    %Hy = Hy_mat;
+    %H = H_mat;
+    %imagesc(x, y, H); axis image xy;
+    %caxis([minH, maxH]);
+    %%imagesc(x, y, log10(H)); axis image xy;
+    %%caxis(log10([minH, maxH]));
+    %hold on;
+    %sh = streamslice(x,y, Hx,Hy);
+    %set(sh, 'color', 'w', 'linewidth', 2);
+    %hold off;
+    %xlabel('x'); ylabel('y'); title('Magnetic field (H) from exact calculation');
+    %colorbar;
 subplot(121);
-    Hx = Hx_mat;
-    Hy = Hy_mat;
-    H = H_mat;
+    Hx = Hx_fmm;
+    Hy = Hy_fmm;
+    H = H_fmm;
     imagesc(x, y, H); axis image xy;
-    hold on;
-    sh = streamslice(x,y, Hx,Hy);
-    set(sh, 'color', 'w');
-    hold off;
-    xlabel('x'); ylabel('y'); title('Magnetic field (H) from exact calculation');
     caxis([minH, maxH]);
+    %imagesc(x, y, log10(H)); axis image xy;
+    %caxis(log10([minH, maxH]));
+    hold on;
+    sf = 3;
+    qh = quiver(x(1:sf:end), y(1:sf:end), Hx(1:sf:end,1:sf:end)./H(1:sf:end,1:sf:end), Hy(1:sf:end,1:sf:end)./H(1:sf:end,1:sf:end), 0.5);
+    set(qh, 'color', 'w', 'linewidth', 1.5);
+    hold off;
+    xlabel('x'); ylabel('y'); title('Magnetic field (H) from FMM algorithm');
     colorbar;
 subplot(122);
     Hx = Hx_fmm;
     Hy = Hy_fmm;
     H = H_fmm;
     imagesc(x, y, H); axis image xy;
+    caxis([minH, maxH]);
+    %imagesc(x, y, log10(H)); axis image xy;
+    %caxis(log10([minH, maxH]));
     hold on;
     sh = streamslice(x,y, Hx,Hy);
-    set(sh, 'color', 'w');
+    set(sh, 'color', 'w', 'linewidth', 2);
     hold off;
     xlabel('x'); ylabel('y'); title('Magnetic field (H) from FMM algorithm');
-    caxis([minH, maxH]);
     colorbar;
+
+
 
 return
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 % compare with ohf
 % =================================================
-fname = ['ohf/H_',num2str(h),'x',num2str(h),'.mat'];
+fname = ['mat_ohf/H_updown.mat'];
+%fname = ['mat_ohf/H_',num2str(h),'x',num2str(h),'.mat'];
 load(fname);
 Hx_omf = Hx;
 Hy_omf = Hy;
@@ -151,26 +188,30 @@ subplot(121);
     Hx = Hx_omf;
     Hy = Hy_omf;
     H = H_omf;
+    %imagesc(x, y, H); axis image xy;
     imagesc(x, y, log10(H)); axis image xy;
     hold on;
     sh = streamslice(x,y, Hx,Hy);
     set(sh, 'color', 'w');
     hold off;
     xlabel('x'); ylabel('y'); title('log_{10} of Magnetic field (H) from OOMMF');
-    caxis(log10([minH, maxH]));
     colorbar;
+    %caxis([minH, maxH]);
+    caxis(log10([minH, maxH]));
 subplot(122);
     Hx = Hx_fmm;
     Hy = Hy_fmm;
     H = H_fmm;
+    %imagesc(x, y, H); axis image xy;
     imagesc(x, y, log10(H)); axis image xy;
     hold on;
     sh = streamslice(x,y, Hx,Hy);
     set(sh, 'color', 'w');
     hold off;
     xlabel('x'); ylabel('y'); title('log_{10} of Magnetic field (H) from FMM algorithm');
-    caxis(log10([minH, maxH]));
     colorbar;
+    %caxis([minH, maxH]);
+    caxis(log10([minH, maxH]));
 
 
 

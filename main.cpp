@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstring>
 #include <assert.h>
 #include <iostream>
 #include <cmath>
@@ -7,7 +8,50 @@
 #include "Box.hpp"
 #include "helper_functions.hpp"
 #define NEWLINE printf("\n");
+using std::cout;
+using std::endl;
 
+
+int load_mask(const char *filename, BYTE **mask, unsigned *dimx, unsigned *dimy) {
+    assert( !strcmp(filename+strlen(filename)-3, "png") || !strcmp(filename+strlen(filename)-3, "PNG") );
+    FIBITMAP *myimage = FreeImage_Load(FIF_PNG, filename, PNG_DEFAULT);
+    assert(FreeImage_GetWidth(myimage) == FreeImage_GetHeight(myimage));
+    assert(FreeImage_GetColorType(myimage) != FIC_RGBALPHA);
+
+    // cout << "type = "       << FreeImage_GetImageType(myimage) << endl;
+    // cout << "#colors = "    << FreeImage_GetColorsUsed(myimage) << endl;
+    // cout << "bpp = "        << FreeImage_GetBPP(myimage) << endl;
+    cout << "width = "        << FreeImage_GetWidth(myimage) << endl;
+    cout << "height = "        << FreeImage_GetHeight(myimage) << endl;
+    // cout << "color type = "        << FreeImage_GetColorType(myimage) << endl;
+    // cout << "red mask = "        << FreeImage_GetRedMask(myimage) << endl;
+    // cout << "green mask = "        << FreeImage_GetGreenMask(myimage) << endl;
+    // cout << "blue mask = "        << FreeImage_GetBlueMask(myimage) << endl;
+    // cout << "is transparent = "        << FreeImage_IsTransparent(myimage) << endl;
+    // cout << "file type = "        << FreeImage_GetFileType(filename) << endl;
+
+    *dimx = FreeImage_GetWidth(myimage);
+    *dimy = FreeImage_GetHeight(myimage);
+    *mask = new BYTE[FreeImage_GetHeight(myimage) * FreeImage_GetWidth(myimage)]();
+    // Calculate the number of bytes per pixel (3 for 24-bit or 4 for 32-bit)
+    int bytespp = FreeImage_GetLine(myimage) / FreeImage_GetWidth(myimage);
+    for(unsigned y = 0; y < FreeImage_GetHeight(myimage); y++) {
+        BYTE *bits = FreeImage_GetScanLine(myimage, y);
+        for(unsigned x = 0; x < FreeImage_GetWidth(myimage); x++) {
+            // read pixel color
+            BYTE r = bits[FI_RGBA_RED];
+            BYTE g = bits[FI_RGBA_GREEN];
+            BYTE b = bits[FI_RGBA_BLUE];
+            BYTE gray = (BYTE)(.3*r + .59*g + .11*b);
+            (*mask)[y*FreeImage_GetWidth(myimage) + x] = gray;
+            // jump to next pixel
+            bits += bytespp;
+        }
+    }
+
+    FreeImage_Unload(myimage);
+    return EXIT_SUCCESS;
+}
 
 //*************************************************************************//
 //******************** Main function **************************************//
@@ -15,37 +59,21 @@
 int main(int argc, char **argv)
 {
     int status = 0;
+    char filename_arg[1000];
     unsigned int seed = time(NULL);
-    unsigned int N1 = 256*256;
     unsigned int P = 3;
+    assert(argc >= 2);
     if(argc >= 2) {
-        sscanf(argv[1], "%u", &N1);
-        assert(N1 > 0);
+        sscanf(argv[1], "%s", filename_arg);
     }
     if(argc >= 3) {
-        sscanf(argv[2], "%u", &seed);
-        assert(seed > 0);
+        sscanf(argv[2], "%u", &P);
+        assert(P <= 4);
     }
     if(argc >= 4) {
-        sscanf(argv[3], "%u", &P);
-        assert(seed > 0);
+        sscanf(argv[3], "%u", &seed);
     }
-    assert(P <= 4);
     srand(seed);
-    const unsigned int logN = ceil(log2(N1) / log2(4));
-    const unsigned int N = (unsigned int)pow(4, logN);
-    const unsigned int h = (unsigned int)sqrt(N);
-    printf("N = %d, log4(N) = %d\n", N, logN);
-    // printf("sizeof(Box) = %ld\n", sizeof(Box));
-
-
-
-    Box *root = new Box(0, logN);
-
-// generate the tree
-    create_tree_recurse(root, logN);
-    find_neighbors_recurse(root, root, logN);
-
 
 
 // Material parameters
@@ -55,41 +83,32 @@ int main(int argc, char **argv)
     const float meshdepth = 1e-9; // depth of material in z-dimension
 
 // Mask configuration for magnetic material
-// ==========================================
-    int *mask = new int[N]();    // mask matrix
+    BYTE *mask = NULL; // mask matrix
+    unsigned dimx = 0, dimy = 0;
+    char filename[1000];
+    sprintf(filename, "%s", filename_arg);
 // read the mask from file
-    char filename[100];
-    sprintf(filename, "barmagnet_60x90_%dx%d_mask.data", h,h);
-    status |= matrix4mfile(filename, h, h, mask);
-    if(status) return EXIT_FAILURE;
-// dipole
-    // int l = h/8;
-    // int x0 = h/2;
-    // int y1 = (h+l)/2;
-    // int y2 = (h-l)/2;
-    // mask[y1*h + x0] = 1;
-    // mask[y2*h + x0] = 1;
-// place a charge at the center
-    // int xx = h/2;
-    // int yy = h/2;
-    // mask[yy*h + xx] = 1;
-    // mask[(yy-1)*h + xx] = 1;
-    // mask[yy*h + xx-1] = 1;
-    // mask[(yy-1)*h + xx-1] = 1;
-// Few random charges at random locations
-    // const float mask_probability = .1;
-    // for(unsigned int yy=0; yy<h; yy++)
-        // for(unsigned int xx=0; xx<h; xx++)
-            // if(frand_atob(0, 1) < mask_probability)
-                // mask[yy*h + xx] = 1;
+    load_mask(filename, &mask, &dimx, &dimy);
+    assert(dimx == dimy);
 
+// set up grid
+    const unsigned int N = dimx * dimy;
+    const unsigned int logN = ceil(log2(N) / log2(4));
+    const unsigned int h = (unsigned int)sqrt(N);
+    printf("N = %d, log4(N) = %d\n", N, logN);
+
+// generate the tree
+    Box *root = new Box(0, logN);
+    create_tree_recurse(root, logN);
+    find_neighbors_recurse(root, root, logN);
 
 // generate the initial magnetization distribution
     Cmpx *M = new Cmpx[N]();    // magnetization matrix
     for(unsigned int y = 0; y < h; y++)
         for(unsigned int x = 0; x < h; x++)
             if (!mask[y*h + x])
-                M[y*h + x].init(0, Ms, 0);
+                M[y*h + x].init(Ms, 1*M_PI/2, 1);
+                // M[y*h + x].init(Ms, frand_atob(0, 2*M_PI), 1);
 
 // magnetic volume charge density
     float *charge = new float[N]();
@@ -137,6 +156,7 @@ int main(int argc, char **argv)
     delete []Hy;
     delete []H;
     delete []charge;
+    delete []mask;
 
     printf("SEED = %d\n", seed);
     return EXIT_SUCCESS;

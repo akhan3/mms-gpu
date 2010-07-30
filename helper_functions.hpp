@@ -36,5 +36,9 @@ void divergence_2d( const Cmpx *V,
 void gradient_2d(   const float *S,
                     int xdim, int ydim, float meshwidth,
                     Cmpx *V );
+void exchange_field(const Cmpx *M,
+                    const float Ms, const float A, const float mu,
+                    const int xdim, const int ydim, const float meshwidth,
+                    Cmpx *H);
 
 #endif // #ifndef  _HELPER_FUNCTIONS_H_

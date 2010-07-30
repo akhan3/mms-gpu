@@ -4,6 +4,7 @@ LINKER     	:= 	g++ -fPIC
 
 #INCPATH     := -I./ $(MATLAB_INCLUDES)
 #LIBPATH		:= $(MATLAB_LIBRARIES)
+LIBRARIES	:= -lfreeimage
 ifeq ($(dbg),1)
 	#COMMONFLAGS += -g -pg
 	COMMONFLAGS += -g
@@ -18,7 +19,7 @@ TARGET    	:= main
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBPATH)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBPATH) $(LIBRARIES)
 
 main.o		: main.cpp Box.hpp Queue.hpp helper_functions.hpp
 Box.o 		: Box.cpp Box.hpp

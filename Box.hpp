@@ -16,14 +16,19 @@ public:
     unsigned int y;
     float cx;
     float cy;
+private:
+    int pruned;
     // float potential;
 
+public:
 // constructors and destructor
     Box(unsigned int level1, unsigned int limit);
     ~Box();
 
 // member functions
     void            split(unsigned int limit);
+    void            prune();
+    inline int      is_pruned() { return pruned; }
     void            find_neighbors(Box* root);
     unsigned int    calc_x(unsigned int level1, byte *id1);
     unsigned int    calc_y(unsigned int level1, byte *id1);
