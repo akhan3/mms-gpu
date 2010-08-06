@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <cmath>
 #include "vector_functions.hpp"
 #define NEWLINE printf("\n");

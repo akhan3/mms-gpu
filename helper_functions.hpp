@@ -12,7 +12,14 @@ int factorial(int x);
 
 float legendre(int k, float x);
 float associated_legendre(int l, int m, float x);
-Cmpx spherical_harmonic(int l, int m, float theta, float phi);
+inline Cmpx spherical_harmonic(int l, int m, float theta, float phi)
+{
+    float r = associated_legendre(l, abs(m), cos(theta));
+    float a = m*phi;
+    return Cmpx(r*cos(a), r*sin(a));
+}
+
+
 
 // int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbose_level);
 // int matrix2file(const float* matrix, const int rows, const int cols, const char* filename, int verbose_level);

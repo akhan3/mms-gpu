@@ -5,7 +5,6 @@
 #include <iostream>
 #include <cmath>
 #include <FreeImage.h>
-#include "Box.hpp"
 #include "Cmpx.hpp"
 #include "Vector3.hpp"
 #include "helper_functions.hpp"
@@ -58,7 +57,7 @@ int main(int argc, char **argv)
 // read the mask from file
     load_mask(filename, &mask, &xdim, &ydim);
     assert(xdim == ydim);
-    unsigned int zdim = 1;
+    unsigned int zdim = 5;
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
 
 // generate the initial magnetization distribution
@@ -68,7 +67,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    for(unsigned int z = 0; z <= 0; z++)
+    for(unsigned int z = 0; z <= zdim-1; z++)
     {
         for(unsigned int y = 0; y < ydim; y++) {
             for(unsigned int x = 0; x < xdim; x++) {
@@ -91,7 +90,7 @@ int main(int argc, char **argv)
 // set up grid and simulation time
     const float meshwidth = 1e-9;
     const float dt = 1e-12;           // time step = 1ps
-    const int tdim = 10;
+    const int tdim = 2;
     const float finaltime = 1e-9;     // final time = 1ns
     // const int tdim = (int)ceil(finaltime / dt);
 

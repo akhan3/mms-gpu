@@ -1,6 +1,3 @@
-// #include <stdio.h>
-// #include <assert.h>
-// #include <cmath>
 #include <stdlib.h>
 #include "ode_functions.hpp"
 #include "helper_functions.hpp"
@@ -153,9 +150,11 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     // update H for current M
         status |= calc_Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, verbose_level);
 
-    // write H vectorfield to file
+    // write M and H vectorfield to file
+        status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
         status |= save_vector3d(H, zdim, ydim, xdim, "H", verbose_level);
         if(status) return EXIT_FAILURE;
+        fflush(NULL);
 
     // calculate energy and average magnetization
         float energy = 0;
@@ -176,12 +175,8 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         fprintf(fh, "%d, %g, %g, %g, %g, %g, %g\n", t, t*dt, energy, M_avg.x, M_avg.y, M_avg.z, Ms_avg);
 
     // update M from current value of M by executing one step of RK
+        if(t == tdim-1) break;
         status |= rk4_step(M, false, dt, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma, verbose_level);
-
-    // write M vectorfield to file
-        status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
-        if(status) return EXIT_FAILURE;
-        fflush(NULL);
     } // time loop
 
 // freeing up memory

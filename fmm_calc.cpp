@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+// #include <assert.h>
 #include <time.h>
 #include <sys/time.h>
 #include <cmath>
@@ -26,7 +26,7 @@ int fmm_bfs(        const float *charge,
                 )
 {
     int status = 0;
-    assert(limit == actual_limit);  // unable to support arbitrary depth calculations.
+    // assert(limit == actual_limit);  // unable to support arbitrary depth calculations.
     // assert(limit <= actual_limit);
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
@@ -59,9 +59,9 @@ int fmm_bfs(        const float *charge,
                     printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
             }
 
-            if(n->is_pruned()) {
+            if(n->is_pruned())
                 continue;
-            }
+
 
             // char idstring[100];
             // n->get_idstring(idstring);
@@ -79,8 +79,8 @@ int fmm_bfs(        const float *charge,
                             float q = charge[yy*xdim + xx];
                             if (q != 0) { // if charge found
                                 charge_found = 1;
-                                Cmpx r_(xx - n->cx, yy - n->cy, 0);
-                                multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
+                                Cmpx r_(xx - n->cx, yy - n->cy);
+                                multipole_coeff[l][m+l] += q * pow(r_.magnitude(), l) * spherical_harmonic(l, m, M_PI/2, r_.angle()).conjugate();
                             } // if (q != 0)
                         } // source charge loop
                     } // source charge loop
@@ -104,7 +104,6 @@ int fmm_bfs(        const float *charge,
                         if (ni != NULL) {
                             for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
                                 for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
-                                    // Cmpx r(xx - n->cx, yy - n->cy, 0);
                                     Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
                                     Cmpx sum_over_lm;
                                     for(int l=0; l<=P; l++) {
@@ -114,16 +113,16 @@ int fmm_bfs(        const float *charge,
                                         }
                                         sum_over_lm += 1 / pow(r.magnitude(), l+1) * sum_over_m;
                                     }
-                                    potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
-                                    // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
+                                    potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.x;
+                                    // potential[zp*ydim*xdim + yy*xdim + xx] += (sum_over_lm.x > 0) ? sum_over_lm.magnitude() : -sum_over_lm.magnitude();
 
                                     const float threshold = 1e-1;
-                                    float modangle = fabs(sum_over_lm.get_ang());
+                                    float modangle = fabs(sum_over_lm.angle());
                                     modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
                                     if(modangle > threshold)
                                         if(verbose_level >= 0)
-                                            printf("PANIC!! sum_over_lm.ang=%g , modangle=%g \n", sum_over_lm.get_ang(), modangle);
-                                    // assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
+                                            printf("PANIC!! sum_over_lm.ang=%g , modangle=%g \n", sum_over_lm.angle(), modangle);
+                                    // assert(fabs(sum_over_lm.angle()) <= threshold || (M_PI-fabs(sum_over_lm.angle())) <= threshold);   // make sure there is no imaginary part remaining
                                 }
                             }
                         } // if (ni != NULL)
@@ -131,7 +130,7 @@ int fmm_bfs(        const float *charge,
 
                 // calculation with neighbor list at the deepest level
                     if(n->level == actual_limit) {
-                        assert(n->cx == n->x && n->cy == n->y);
+                        // assert(n->cx == n->x && n->cy == n->y);
                         float q = charge[(int)(n->cy*xdim + n->cx)];
                         if(zp != zc) { // neighbor on other layers at self position
                             Vector3 r(0, 0, zp - zc);

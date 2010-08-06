@@ -6,11 +6,11 @@ LINKER     	:= 	g++ -fPIC
 #LIBPATH		:= $(MATLAB_LIBRARIES)
 LIBRARIES	:= -lfreeimage
 ifeq ($(dbg),1)
-	#COMMONFLAGS += -g -pg
-	COMMONFLAGS += -g
+	COMMONFLAGS += -g -pg
+	#COMMONFLAGS += -g
 else
-	#COMMONFLAGS += -O3 -pg
-	COMMONFLAGS += -O3
+	COMMONFLAGS += -O3 -pg
+	#COMMONFLAGS += -O3
 endif
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)
 OBJS        := 	Box.o \
