@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 // #include <iostream>
 // #include <string.h>
 #include <cmath>
@@ -23,6 +24,10 @@ Box::Box(unsigned int level1, unsigned int limit) {
     // potential = 0;
     pruned = 0;
     id = new byte[level+1]();
+    if(id == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return;
+    }
     id[0] = 0;
 }
 
@@ -38,6 +43,10 @@ Box::~Box() {
 void Box::split(unsigned int limit) {
     for(int i=0; i<4; i++) {
         child[i] = new Box(level+1, limit);
+        if(child[i] == NULL) {
+            fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+            return;
+        }
         Box *n = child[i];
         n->parent = this;
         n->level = level+1;
@@ -59,9 +68,16 @@ void Box::split(unsigned int limit) {
 void Box::prune() {
     pruned = 1;
     if (child[0] != NULL)
-        for(int i=0; i<=3; i++) {
+        for(int i=0; i<=3; i++)
             child[i]->prune();
-        }
+}
+
+// Grow the tree from this node downward
+void Box::grow() {
+    pruned = 0;
+    if (child[0] != NULL)
+        for(int i=0; i<=3; i++)
+            child[i]->grow();
 }
 
 
@@ -70,6 +86,10 @@ void Box::find_neighbors(Box* root) {
     unsigned int Nx[8];
     unsigned int Ny[8];
     byte *Nid = new byte[level+1]();
+    if(Nid == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return;
+    }
     Nx[0] = x-1; Ny[0] = y-1;
     Nx[1] = x  ; Ny[1] = y-1;
     Nx[2] = x+1; Ny[2] = y-1;

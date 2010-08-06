@@ -30,7 +30,10 @@ public:
     Cmpx& set_mag(const float x);
     Cmpx& set_ang(const float x);
 
+// complex number operations
     Cmpx  conjugate() const;
+
+// overloaded operators
     Cmpx& operator+=(const Cmpx &z);
     Cmpx& operator-=(const Cmpx &z);
     Cmpx& operator*=(const Cmpx &z);
@@ -43,6 +46,7 @@ public:
     inline Cmpx operator/(const Cmpx &z) const  { return Cmpx(*this) /= z; }
     inline Cmpx operator*(const float k) const  { return Cmpx(*this) *= k; }
 
+// print methods
     inline char* polar() const  { char *ch = new char[100]; sprintf(ch, "%g<%gr", mag, ang); return ch; }
     inline char* cartesian() const  { char *ch = new char[100]; sprintf(ch, "%g+%gj", re, im); return ch; }
 

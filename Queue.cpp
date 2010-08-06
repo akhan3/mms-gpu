@@ -6,16 +6,18 @@
 // constructor
 Queue::Queue(int len) {
     size = len;
-    contents = (void**)malloc(len * sizeof(void*));
-    // contents = new char[size]();
+    contents = new void*[len]();
+    if(contents == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return;
+    }
     front = 0;
     count = 0;
 }
 
 // destructor
 Queue::~Queue() {
-    free(contents);
-    // delete []contents;
+    delete []contents;
 }
 
 void Queue::enqueue(void* n) {

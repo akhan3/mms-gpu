@@ -13,7 +13,16 @@ else
 	COMMONFLAGS += -O3
 endif
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)
-OBJS        := main.o Box.o Queue.o Cmpx.o fmm_calc.o helper_functions.o
+OBJS        := 	Box.o \
+				Queue.o \
+				Cmpx.o \
+				Vector3.o \
+				helper_functions.o \
+				vector_functions.o \
+				ode_functions.o \
+				fmm_calc.o \
+				main.o
+
 TARGET    	:= main
 
 all: $(TARGET)
@@ -21,12 +30,15 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBPATH) $(LIBRARIES)
 
-main.o		: main.cpp Box.hpp Queue.hpp helper_functions.hpp
-Box.o 		: Box.cpp Box.hpp
-Queue.o		: Queue.cpp Queue.hpp
-Cmpx.o		: Cmpx.cpp Cmpx.hpp
-fmm_calc.o	: fmm_calc.cpp Box.hpp Queue.hpp Cmpx.hpp helper_functions.hpp
-helper_functions.o : helper_functions.cpp helper_functions.hpp
+Box.o 				: Box.cpp Box.hpp
+Queue.o				: Queue.cpp Queue.hpp
+Cmpx.o				: Cmpx.cpp Cmpx.hpp
+Vector3.o			: Vector3.cpp Vector3.hpp
+helper_functions.o 	: helper_functions.cpp helper_functions.hpp
+vector_functions.o 	: vector_functions.cpp vector_functions.hpp
+ode_functions.o 	: ode_functions.cpp ode_functions.hpp
+fmm_calc.o			: fmm_calc.cpp
+main.o				: main.cpp
 
 clean:
-	rm -f $(OBJS) $(TARGET) gmon.out
+	rm -f $(OBJS) gmon.out

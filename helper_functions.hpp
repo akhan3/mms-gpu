@@ -1,6 +1,7 @@
 #ifndef _HELPER_FUNCTIONS_H_
 #define _HELPER_FUNCTIONS_H_
 
+#include <FreeImage.h>
 #include "Box.hpp"
 #include "Queue.hpp"
 #include "Cmpx.hpp"
@@ -13,9 +14,11 @@ float legendre(int k, float x);
 float associated_legendre(int l, int m, float x);
 Cmpx spherical_harmonic(int l, int m, float theta, float phi);
 
-int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix);
-int matrix2file(const float* matrix, const int rows, const int cols, const char* filename);
-int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname);
+// int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbose_level);
+// int matrix2file(const float* matrix, const int rows, const int cols, const char* filename, int verbose_level);
+int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
+int save_scalar3d(const float* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
+// int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname);
 
 // Depth-first tarversal
 void traverse_tree_dfs(Box *n, const unsigned int limit);
@@ -25,20 +28,22 @@ void traverse_tree_bfs(Box *root, const unsigned int limit);
 
 
 // prototype for FMM function
-int fmm_calc(const Box *root, const unsigned int limit, const float *charge, float *potential);
+int fmm_calc(   const float *charge,
+                float *potential,
+                const int xdim, const int ydim, const int zdim,
+                const int P,    // multipole series truncation (l = 0...P)
+                const int verbose_level );
+
+void calc_potential_exact( const float *charge,
+                        const int xdim, const int ydim, const int zdim,
+                        float *potential);
+
+void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
+                                const int xdim, const int ydim, const int zdim );
 
 void create_tree_recurse(Box *thisBox, const unsigned int limit);
 void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit);
 
-void divergence_2d( const Cmpx *V,
-                    const int xdim, const int ydim, const float meshwidth,
-                    float *S );
-void gradient_2d(   const float *S,
-                    int xdim, int ydim, float meshwidth,
-                    Cmpx *V );
-void exchange_field(const Cmpx *M,
-                    const float Ms, const float A, const float mu,
-                    const int xdim, const int ydim, const float meshwidth,
-                    Cmpx *H);
+int load_mask(const char *filename, BYTE **mask, unsigned *xdim, unsigned *ydim);
 
 #endif // #ifndef  _HELPER_FUNCTIONS_H_

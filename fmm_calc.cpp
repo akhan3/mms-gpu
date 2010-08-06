@@ -7,27 +7,31 @@
 #include "Box.hpp"
 #include "Queue.hpp"
 #include "Cmpx.hpp"
+#include "Vector3.hpp"
 #include "helper_functions.hpp"
 #define NEWLINE printf("\n");
 
 
 // FMM algorithm in BFS
 // ===============================
-int fmm_bfs(        const Box *root,
+int fmm_bfs(        const float *charge,
+                    float *potential,
+                    const Box *root,
                     const unsigned int limit,
                     const unsigned int actual_limit,
-                    const unsigned int H,
-                    const float *charge,
-                    const int P,    // multipole series (l = 0...P)
-                    float *potential
+                    const int P,    // multipole series truncation (l = 0...P)
+                    const int xdim, const int ydim, const int zdim,
+                    const int zc,   // charge layer
+                    const int verbose_level
                 )
 {
     int status = 0;
-    assert(limit == actual_limit);  // unable to currently support arbitrary depth calculations.
+    assert(limit == actual_limit);  // unable to support arbitrary depth calculations.
     // assert(limit <= actual_limit);
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
-    printf("Executing FMM algorithm...\n");
+    if(verbose_level >= 6)
+        printf("Executing FMM algorithm...\n");
     unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
@@ -47,15 +51,12 @@ int fmm_bfs(        const Box *root,
                     status |= gettimeofday(&time2, NULL);
                     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
                     status |= gettimeofday(&time1, NULL);
-                    printf("done in %f seconds.\n", deltatime); fflush(NULL);
-                    // collect successive stages of FMM in matrices and write them to files for pedagogical purpose only
-                    // char filename[100];
-                    // sprintf(filename, "potential_L%d.dat", prev_level);
-                    // status |= matrix2file(potential, H, H, filename);
-                    // if(status) return EXIT_FAILURE;
+                    if(verbose_level >= 10)
+                        printf("done in %f seconds.\n", deltatime); fflush(NULL);
                 }
                 prev_level = n->level;
-                printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+                if(verbose_level >= 6)
+                    printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
             }
 
             if(n->is_pruned()) {
@@ -75,10 +76,10 @@ int fmm_bfs(        const Box *root,
                 for(int m=-l; m<=l; m++) {
                     for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
                         for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                            float q = charge[yy*H+xx];
+                            float q = charge[yy*xdim + xx];
                             if (q != 0) { // if charge found
                                 charge_found = 1;
-                                Cmpx r_ = Cmpx(xx - n->cx, yy - n->cy, 0);
+                                Cmpx r_(xx - n->cx, yy - n->cy, 0);
                                 multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
                             } // if (q != 0)
                         } // source charge loop
@@ -94,81 +95,137 @@ int fmm_bfs(        const Box *root,
 
             if(charge_found)
             {
-            // calculation of potential at the boxes in interaction list
-                for(int i=0; i<27; i++) {
-                    Box *ni = n->interaction[i];
-                    if (ni != NULL) {
-                        for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
-                            for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
-                                Cmpx r = Cmpx(xx - n->cx, yy - n->cy, 0);
-                                Cmpx sum_over_lm;
-                                for(int l=0; l<=P; l++) {
-                                    Cmpx sum_over_m;
-                                    for(int m=-l; m<=l; m++) {
-                                        sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, M_PI/2, r.get_ang());
+                for (int zp = 0; zp < zdim; zp++) // for each potential layer in zdim
+                {
+                    // printf("FMM:   charge layer %d, potential layer %d\n", zc, zp);
+                // calculation of potential at the boxes in interaction list
+                    for(int i=0; i<27; i++) {
+                        Box *ni = n->interaction[i];
+                        if (ni != NULL) {
+                            for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
+                                for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
+                                    // Cmpx r(xx - n->cx, yy - n->cy, 0);
+                                    Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
+                                    Cmpx sum_over_lm;
+                                    for(int l=0; l<=P; l++) {
+                                        Cmpx sum_over_m;
+                                        for(int m=-l; m<=l; m++) {
+                                            sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+                                        }
+                                        sum_over_lm += 1 / pow(r.magnitude(), l+1) * sum_over_m;
                                     }
-                                    sum_over_lm += 1 / pow(r.get_mag(), l+1) * sum_over_m;
+                                    potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
+                                    // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
+
+                                    const float threshold = 1e-1;
+                                    float modangle = fabs(sum_over_lm.get_ang());
+                                    modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
+                                    if(modangle > threshold)
+                                        if(verbose_level >= 0)
+                                            printf("PANIC!! sum_over_lm.ang=%g , modangle=%g \n", sum_over_lm.get_ang(), modangle);
+                                    // assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
                                 }
-                                potential[yy*H+xx] += sum_over_lm.get_re();
-
-                                const float threshold = 1e-2;
-                                float modangle = fabs(sum_over_lm.get_ang());
-                                modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
-                                if(modangle > threshold)
-                                    printf("PANIC!! sum_over_lm.ang=%g , modangle=%g \n", sum_over_lm.get_ang(), modangle);
-                                // assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
                             }
-                        }
-                    } // if (ni != NULL)
-                } // interaction loop
+                        } // if (ni != NULL)
+                    } // interaction loop
 
-            // calculation with neighbor list at the deepest level
-                if(n->level == actual_limit) {
-                    for(int i=0; i<8; i++) {
-                        Box *nb = n->neighbor[i];
-                        if (nb != NULL)
-                        {
-                            assert(n->cx == n->x && n->cy == n->y);
-                            float q = charge[(int)(n->cy*H + n->cx)];
-                            Cmpx r = Cmpx(nb->cx - n->cx, nb->cy - n->cy, 0);
-                            potential[(int)(nb->cy*H+nb->cx)] += q / r.get_mag();
+                // calculation with neighbor list at the deepest level
+                    if(n->level == actual_limit) {
+                        assert(n->cx == n->x && n->cy == n->y);
+                        float q = charge[(int)(n->cy*xdim + n->cx)];
+                        if(zp != zc) { // neighbor on other layers at self position
+                            Vector3 r(0, 0, zp - zc);
+                            potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
                         }
-                    } // neighbor loop
-                } // if deepest level
+                        for(int i=0; i<8; i++) {
+                            Box *nb = n->neighbor[i];
+                            if (nb != NULL) {
+                                Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
+                                potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
+                            }
+                        } // neighbor loop
+                    } // if deepest level
+                } // for each potential layer in zdim
             } // if(charge_found)
         }   // if(n->level >= 2)
     } // while(!Q_tree.isEmpty())
 
     status |= gettimeofday(&time2, NULL);
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    printf("done in %f seconds.\n", deltatime);
-    // collect successive stages of FMM in matrices and write them to files for pedagogical purpose only
-    // char filename[100];
-    // sprintf(filename, "potential_L%d.dat", prev_level);
-    // status |= matrix2file(potential, H, H, filename);
-    // if(status) return EXIT_FAILURE;
-    return status;
+    if(verbose_level >= 10)
+        printf("done in %f seconds.\n", deltatime);
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 
-int fmm_calc(const Box *root, const unsigned int limit, const float *charge, float *potential) {
-    const unsigned int N = (unsigned int)pow(4, limit);
-    const unsigned int H = (unsigned int)sqrt(N);
-    const          int P = 3;   // multipole series truncation (k = 1...P)
-    printf("=================\n");
-    printf("|  fmm_calc()   |\n");
-    printf("=================\n");
-    printf("N = %d, log4(N) = %d, sqrt(N) = %d, P = %d\n", N, limit, H, P);
+int fmm_calc(   const float *charge,
+                float *potential,
+                const int xdim, const int ydim, const int zdim,
+                const int P,    // multipole series truncation (l = 0...P)
+                const int verbose_level )
+{
     int status = 0;
+    const unsigned int logN = ceil(log2(xdim * ydim) / log2(4));
 
-// Run the FMM algorithm on tree
-    timeval time1, time2;
-    status |= gettimeofday(&time1, NULL);
-        status |= fmm_bfs(root, limit, limit, H, charge, P, potential);
-    status |= gettimeofday(&time2, NULL);
-    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    printf("fmm_bfs() took %f seconds\n", deltatime);
+// generate the tree
+    Box *root = new Box(0, logN);
+    create_tree_recurse(root, logN);
+    find_neighbors_recurse(root, root, logN);
+
+// for each charge layer in zdim
+    for (int zc = 0; zc < zdim; zc++) {
+        if(verbose_level >= 5)
+            printf("FMM: charge layer %d\n", zc);
+        timeval time1, time2;
+        status |= gettimeofday(&time1, NULL);
+        // call the actual function
+        status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, verbose_level);
+        status |= gettimeofday(&time2, NULL);
+        double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+        if(verbose_level >= 5)
+            printf("FMM: charge layer %d took %f seconds\n", zc, deltatime);
+        if(status) return EXIT_FAILURE;
+        root->grow();
+    }
 
 // closing
-    return status;
+    delete root;
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+
+// Exact O(N^2) calculation of potential
+void calc_potential_exact( const float *charge,
+                        const int xdim, const int ydim, const int zdim,
+                        float *potential)
+{
+    for(int z_ = 0; z_ < zdim; z_++) {  // source loop
+        for(int y_ = 0; y_ < ydim; y_++) {
+            for(int x_ = 0; x_ < xdim; x_++) {
+                float q = charge[z_*ydim*xdim + y_*xdim + x_];
+                if (q == 0) continue;
+                for(int z = 0; z < zdim; z++) { // observation point loop
+                    for(int y = 0; y < ydim; y++) {
+                        for(int x = 0; x < xdim; x++) {
+                            if (z == z_ && y == y_ && x == x_) continue;    // skip on itself
+                            Vector3 R(x-x_, y-y_, z-z_);
+                            potential[z*ydim*xdim + y*xdim + x] += q / R.magnitude();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+// H field based on nearest neighbor coupling only
+void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
+                                const int xdim, const int ydim, const int zdim )
+{
+    for(int i = 0; i < zdim*ydim*xdim; i++)
+        H[i] = -0.2 * (   ((i-xdim >= 0)        ? M[i-xdim] : Vector3(0,0,0))     // top
+                        + ((i+xdim < ydim*xdim) ? M[i+xdim] : Vector3(0,0,0))     // bottom
+                        + ((i%xdim != 0)        ? M[i-1]    : Vector3(0,0,0))     // left
+                        + (((i+1)%xdim != 0)    ? M[i+1]    : Vector3(0,0,0)) );  // right
 }

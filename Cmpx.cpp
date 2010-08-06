@@ -13,6 +13,7 @@ Cmpx::Cmpx() {
 Cmpx::Cmpx(const float x, const float y, const int mode) {
     init(x, y, mode);
 }
+
 Cmpx& Cmpx::init(const float x, const float y, const int mode) {
     if (mode == 0) {
         re = x;

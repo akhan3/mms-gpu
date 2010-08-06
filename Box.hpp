@@ -28,6 +28,7 @@ public:
 // member functions
     void            split(unsigned int limit);
     void            prune();
+    void            grow();
     inline int      is_pruned() { return pruned; }
     void            find_neighbors(Box* root);
     unsigned int    calc_x(unsigned int level1, byte *id1);

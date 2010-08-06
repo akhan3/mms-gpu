@@ -11,7 +11,7 @@ log*
 results/*
 pathdef.m
 unused/*
-mat_ohf/*
+ohf_mat_files/*
 
 # switch to regexp syntax.
 #syntax: regexp

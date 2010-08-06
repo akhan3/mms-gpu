@@ -6,58 +6,22 @@
 #include <cmath>
 #include <FreeImage.h>
 #include "Box.hpp"
+#include "Cmpx.hpp"
+#include "Vector3.hpp"
 #include "helper_functions.hpp"
+#include "vector_functions.hpp"
+#include "ode_functions.hpp"
 #define NEWLINE printf("\n");
 using std::cout;
 using std::endl;
 
-
-int load_mask(const char *filename, BYTE **mask, unsigned *dimx, unsigned *dimy) {
-    assert( !strcmp(filename+strlen(filename)-3, "png") || !strcmp(filename+strlen(filename)-3, "PNG") );
-    FIBITMAP *myimage = FreeImage_Load(FIF_PNG, filename, PNG_DEFAULT);
-    assert(FreeImage_GetWidth(myimage) == FreeImage_GetHeight(myimage));
-    assert(FreeImage_GetColorType(myimage) != FIC_RGBALPHA);
-
-    // cout << "type = "       << FreeImage_GetImageType(myimage) << endl;
-    // cout << "#colors = "    << FreeImage_GetColorsUsed(myimage) << endl;
-    // cout << "bpp = "        << FreeImage_GetBPP(myimage) << endl;
-    cout << "width = "        << FreeImage_GetWidth(myimage) << endl;
-    cout << "height = "        << FreeImage_GetHeight(myimage) << endl;
-    // cout << "color type = "        << FreeImage_GetColorType(myimage) << endl;
-    // cout << "red mask = "        << FreeImage_GetRedMask(myimage) << endl;
-    // cout << "green mask = "        << FreeImage_GetGreenMask(myimage) << endl;
-    // cout << "blue mask = "        << FreeImage_GetBlueMask(myimage) << endl;
-    // cout << "is transparent = "        << FreeImage_IsTransparent(myimage) << endl;
-    // cout << "file type = "        << FreeImage_GetFileType(filename) << endl;
-
-    *dimx = FreeImage_GetWidth(myimage);
-    *dimy = FreeImage_GetHeight(myimage);
-    *mask = new BYTE[FreeImage_GetHeight(myimage) * FreeImage_GetWidth(myimage)]();
-    // Calculate the number of bytes per pixel (3 for 24-bit or 4 for 32-bit)
-    int bytespp = FreeImage_GetLine(myimage) / FreeImage_GetWidth(myimage);
-    for(unsigned y = 0; y < FreeImage_GetHeight(myimage); y++) {
-        BYTE *bits = FreeImage_GetScanLine(myimage, y);
-        for(unsigned x = 0; x < FreeImage_GetWidth(myimage); x++) {
-            // read pixel color
-            BYTE r = bits[FI_RGBA_RED];
-            BYTE g = bits[FI_RGBA_GREEN];
-            BYTE b = bits[FI_RGBA_BLUE];
-            BYTE gray = (BYTE)(.3*r + .59*g + .11*b);
-            (*mask)[y*FreeImage_GetWidth(myimage) + x] = gray;
-            // jump to next pixel
-            bits += bytespp;
-        }
-    }
-
-    FreeImage_Unload(myimage);
-    return EXIT_SUCCESS;
-}
 
 //*************************************************************************//
 //******************** Main function **************************************//
 //*************************************************************************//
 int main(int argc, char **argv)
 {
+    const int verbose_level = 2;
     int status = 0;
     char filename_arg[1000];
     unsigned int seed = time(NULL);
@@ -78,86 +42,79 @@ int main(int argc, char **argv)
 
 // Material parameters
 // ================================================
-    const float Ms = 8.6e5; // permalloy
-    const float meshwidth = 1e-9;
-    const float meshdepth = 1e-9; // depth of material in z-dimension
+    const float mu_0 = 4 * M_PI * 1e-7; // permeability of vacuum
+    const float Ms = 8.6e5;             // saturation magnetization (permalloy)
+    const float Aexch = 1.3e-11;        // exchange constant (permalloy)
+    const float alfa = 0.5;             // damping coefficient (permalloy)
+    const float gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
 
 // Mask configuration for magnetic material
     BYTE *mask = NULL; // mask matrix
-    unsigned dimx = 0, dimy = 0;
+    unsigned int xdim = 0;
+    unsigned int ydim = 0;
+
     char filename[1000];
     sprintf(filename, "%s", filename_arg);
 // read the mask from file
-    load_mask(filename, &mask, &dimx, &dimy);
-    assert(dimx == dimy);
-
-// set up grid
-    const unsigned int N = dimx * dimy;
-    const unsigned int logN = ceil(log2(N) / log2(4));
-    const unsigned int h = (unsigned int)sqrt(N);
-    printf("N = %d, log4(N) = %d\n", N, logN);
-
-// generate the tree
-    Box *root = new Box(0, logN);
-    create_tree_recurse(root, logN);
-    find_neighbors_recurse(root, root, logN);
+    load_mask(filename, &mask, &xdim, &ydim);
+    assert(xdim == ydim);
+    unsigned int zdim = 1;
+    printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
 
 // generate the initial magnetization distribution
-    Cmpx *M = new Cmpx[N]();    // magnetization matrix
-    for(unsigned int y = 0; y < h; y++)
-        for(unsigned int x = 0; x < h; x++)
-            if (!mask[y*h + x])
-                M[y*h + x].init(Ms, 1*M_PI/2, 1);
-                // M[y*h + x].init(Ms, frand_atob(0, 2*M_PI), 1);
-
-// magnetic volume charge density
-    float *charge = new float[N]();
-    divergence_2d(M, h, h, 1, charge);
-
-// write charge matrix to file
-    status |= matrix2file(charge, h, h, "charge.dat");
-    if(status) return EXIT_FAILURE;
-
-// magnetic scalar potential
-    float *potential = new float[N]();
-
-// call the function for main FMM calculation
-    status |= fmm_calc(root, logN, charge, potential);
-    if(status) return EXIT_FAILURE;
-
-// write potential matrix to file
-    status |= matrix2file(potential, h, h, "potential.dat");
-    if(status) return EXIT_FAILURE;
-
-// magnetic field
-    Cmpx *H = new Cmpx[N]();    // magnetic field matrix
-    const float constant_multiple = (meshdepth / meshwidth) / (4 * M_PI);
-    printf("constant_multiple = %f\n", constant_multiple);
-    gradient_2d(potential, h, h, 1, H);
-    for(unsigned int i = 0; i < N; i++)
-        H[i] *= constant_multiple;
-
-// write H matrix to file
-    float *Hx = new float[N]();
-    float *Hy = new float[N]();
-    for(unsigned int i = 0; i < N; i++) {
-        Hx[i] = H[i].get_re();
-        Hy[i] = H[i].get_im();
+    Vector3 *M = new Vector3[zdim*ydim*xdim]();  // magnetization matrix
+    if(M == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return EXIT_FAILURE;
     }
-    status |= matrix2file(Hx, h, h, "Hx.dat");
-    status |= matrix2file(Hy, h, h, "Hy.dat");
+
+    for(unsigned int z = 0; z <= 0; z++)
+    {
+        for(unsigned int y = 0; y < ydim; y++) {
+            for(unsigned int x = 0; x < xdim; x++) {
+                if (!mask[y*xdim + x])
+                {
+                    // float theta = M_PI/4 * (rand_atob(0,1) ? 1 : 3);   // fixed at pi/2 for 2D vector field
+                    float theta = frand_atob(0, M_PI);
+                    float phi   = frand_atob(0, 2*M_PI);
+                    M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+                }
+            }
+        }
+    }
+    delete []mask;
+
+// write M field to file
+    status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
+    if(status) return EXIT_FAILURE;
+
+// set up grid and simulation time
+    const float meshwidth = 1e-9;
+    const float dt = 1e-12;           // time step = 1ps
+    const int tdim = 10;
+    const float finaltime = 1e-9;     // final time = 1ns
+    // const int tdim = (int)ceil(finaltime / dt);
+
+// magnetization dynamics
+// ===================================================================
+    printf("If you want to see the initial state of M, now is the time! "); fflush(NULL);
+    getchar();
+
+    status |= time_marching(    M,
+                                tdim, dt, finaltime,
+                                xdim, ydim, zdim, meshwidth,
+                                mu_0, Ms, Aexch, alfa, gamma,
+                                verbose_level );
+    if(status) return EXIT_FAILURE;
+
+// write M field to file
+    status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
     if(status) return EXIT_FAILURE;
 
 
 // closing
-    delete root;
-    delete []potential;
-    delete []Hx;
-    delete []Hy;
-    delete []H;
-    delete []charge;
-    delete []mask;
+    delete []M;
 
     printf("SEED = %d\n", seed);
-    return EXIT_SUCCESS;
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
