@@ -1,5 +1,6 @@
-% initial loading and setup
+ %initial loading and setup
     clear
+    zdim = 1;
 
     q = 1.6e-19;
     load dynamics.dat
@@ -13,7 +14,7 @@
 
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);
-    plot(t, energy/q, '.');
+    plot(t, energy/q, '.-');
     xlabel('time'); ylabel('Energy (eV)');
 
 subplot(222);
@@ -27,7 +28,6 @@ subplot(222);
     load My.dat;
     load Mz.dat;
     [ydim, xdim] = size(Mx);
-    zdim = 1;
     Mx = reshape(Mx', xdim,xdim,zdim);
     My = reshape(My', xdim,xdim,zdim);
     Mz = reshape(Mz', xdim,xdim,zdim);
@@ -37,6 +37,7 @@ subplot(222);
         Mz(:,:,z) = Mz(:,:,z)';
     end
     M = sqrt(Mx.^2 + My.^2 + Mz.^2);
+    Ms = 8.6e5;
     [ydim, xdim] = size(Mx);
     [ydim, xdim, zdim] = size(Mz);
     x = 0:xdim-1;
@@ -45,28 +46,18 @@ subplot(222);
     [X,Y,Z] = meshgrid(x,y,z);
 
 
-%subplot(223);
-    %quiver3(X,Y,Z, Mx,My,Mz, .5);
-    %axis tight equal;
-    %xlabel('x'); ylabel('y'); title('Magnetization (M)');
-    %[a,b] = view();
-    %view(a+90-30,b);
-    %%view(0,90);
+    subplot(234); imagesc(Mx); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('Mx');
+    subplot(235); imagesc(My); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('My');
+    subplot(236); imagesc(Mz); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('Mz');
 
-%subplot(224);
-    %quiver3(X,Y,Z, Mx,My,Mz, .5);
-    %axis tight equal;
-    %xlabel('x'); ylabel('y'); title('Magnetization (M)');
-    %view(90,0);
-
+return
 
 
 % load and post process H files
     load Hx.dat;
     load Hy.dat;
     load Hz.dat;
-    [ydim, xdim] = size(Hx);
-    %zdim = xdim;
+    [ydim, xdim] = size(Mx);
     Hx = reshape(Hx', xdim,xdim,zdim);
     Hy = reshape(Hy', xdim,xdim,zdim);
     Hz = reshape(Hz', xdim,xdim,zdim);
@@ -83,18 +74,23 @@ subplot(222);
     z = 0:zdim-1;
     [X,Y,Z] = meshgrid(x,y,z);
 
-return
+
+
+
+
+%return
 
 %load fmm_data_64x64.mat
-% draw H field in slices
+ %draw H field in slices
     %figure('Colormap',map)
-    slice_num = zdim/2;
-    %contourslice(H,[],[],slice_num)
-    contourslice(H,[],[],[1, zdim/2, zdim])
+%subplot(223)
+%clf
+    slice_num = ceil(zdim/2);
+    contourslice(H,[],[],[1, slice_num, zdim])
     axis image xy
     view(3)
     xlabel('x'); ylabel('y'); zlabel('z');
-
+    %daspect([1 1 .02])
 
 return
 

@@ -5,13 +5,17 @@ LINKER     	:= 	g++ -fPIC
 #INCPATH     := -I./ $(MATLAB_INCLUDES)
 #LIBPATH		:= $(MATLAB_LIBRARIES)
 LIBRARIES	:= -lfreeimage
+
 ifeq ($(dbg),1)
-	#COMMONFLAGS += -g -pg
 	COMMONFLAGS += -g
 else
-	#COMMONFLAGS += -O3 -pg
 	COMMONFLAGS += -O3
 endif
+
+ifeq ($(prof),1)
+	COMMONFLAGS += -pg
+endif
+
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)
 OBJS        := 	Box.o \
 				Queue.o \

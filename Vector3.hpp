@@ -23,6 +23,8 @@ struct Vector3 {
     Vector3& init(const float x1, const float y1, const float z1);
 
 // overloaded operators
+    Vector3& operator+=(const Vector3 &b);
+
     Vector3 operator+(const Vector3 &b) const;
     Vector3 operator-(const Vector3 &b) const;
     Vector3 operator/(const Vector3 &b) const;

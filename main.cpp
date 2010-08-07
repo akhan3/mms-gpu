@@ -68,15 +68,16 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    for(unsigned int z = 0; z <= 0; z++)
+    for(unsigned int z = 0; z < zdim; z++)
+    // unsigned int z = 0;
     {
         for(unsigned int y = 0; y < ydim; y++) {
             for(unsigned int x = 0; x < xdim; x++) {
                 if (!mask[y*xdim + x])
                 {
-                    // float theta = M_PI/4 * (rand_atob(0,1) ? 1 : 3);   // fixed at pi/2 for 2D vector field
-                    float theta = frand_atob(0, M_PI);
-                    float phi   = frand_atob(0, 2*M_PI);
+                    // float theta = frand_atob(90-30, 90+30) * M_PI/180;
+                    float theta = frand_atob(0, 180) * M_PI/180;
+                    float phi   = frand_atob(0, 360) * M_PI/180;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                 }
             }
@@ -90,8 +91,8 @@ int main(int argc, char **argv)
 
 // set up grid and simulation time
     const float meshwidth = 1e-9;
-    const float dt = 1e-12;           // time step = 1ps
-    const int tdim = 10;
+    const float dt = 1e-14;           // time step = 1ps
+    const int tdim = 5000;
     const float finaltime = 1e-9;     // final time = 1ns
     // const int tdim = (int)ceil(finaltime / dt);
 
@@ -105,10 +106,6 @@ int main(int argc, char **argv)
                                 xdim, ydim, zdim, meshwidth,
                                 mu_0, Ms, Aexch, alfa, gamma,
                                 verbose_level );
-    if(status) return EXIT_FAILURE;
-
-// write M field to file
-    status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
     if(status) return EXIT_FAILURE;
 
 

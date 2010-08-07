@@ -22,6 +22,7 @@ int fmm_bfs(        const float *charge,
                     const int P,    // multipole series truncation (l = 0...P)
                     const int xdim, const int ydim, const int zdim,
                     const int zc,   // charge layer
+                    FILE *paniclog,
                     const int verbose_level
                 )
 {
@@ -46,18 +47,18 @@ int fmm_bfs(        const float *charge,
         // function to perform on node
         if(n->level >= 2)   // no FMM steps for Level-0 and Level-1
         {
-            if(prev_level != n->level) {
-                if(prev_level >= 2) {
-                    status |= gettimeofday(&time2, NULL);
-                    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-                    status |= gettimeofday(&time1, NULL);
-                    if(verbose_level >= 10)
-                        printf("done in %f seconds.\n", deltatime); fflush(NULL);
-                }
-                prev_level = n->level;
-                if(verbose_level >= 6)
-                    printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
-            }
+            // if(prev_level != n->level) {
+                // if(prev_level >= 2) {
+                    // status |= gettimeofday(&time2, NULL);
+                    // double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+                    // status |= gettimeofday(&time1, NULL);
+                    // if(verbose_level >= 10)
+                        // printf("done in %f seconds.\n", deltatime); fflush(NULL);
+                // }
+                // prev_level = n->level;
+                // if(verbose_level >= 6)
+                    // printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+            // }
 
             if(n->is_pruned()) {
                 continue;
@@ -117,13 +118,14 @@ int fmm_bfs(        const float *charge,
                                     potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
                                     // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
 
-                                    const float threshold = 1e-1;
+                                    const float threshold = 1e-3;
                                     float modangle = fabs(sum_over_lm.get_ang());
                                     modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
-                                    if(modangle > threshold)
+                                    if(modangle > threshold) {
                                         if(verbose_level >= 0)
-                                            printf("PANIC!! sum_over_lm.ang=%g , modangle=%g \n", sum_over_lm.get_ang(), modangle);
-                                    // assert(fabs(sum_over_lm.get_ang()) <= threshold || (M_PI-fabs(sum_over_lm.get_ang())) <= threshold);   // make sure there is no imaginary part remaining
+                                            printf("PANIC!! L%d   R=%g   angle=%g\n", n->level, r.magnitude(), modangle);
+                                        fprintf(paniclog, "%d   %g   %g\n", n->level, r.magnitude(), modangle);
+                                    }
                                 }
                             }
                         } // if (ni != NULL)
@@ -150,10 +152,10 @@ int fmm_bfs(        const float *charge,
         }   // if(n->level >= 2)
     } // while(!Q_tree.isEmpty())
 
-    status |= gettimeofday(&time2, NULL);
-    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(verbose_level >= 10)
-        printf("done in %f seconds.\n", deltatime);
+    // status |= gettimeofday(&time2, NULL);
+    // double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    // if(verbose_level >= 10)
+        // printf("done in %f seconds.\n", deltatime);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -166,6 +168,9 @@ int fmm_calc(   const float *charge,
 {
     int status = 0;
     const unsigned int logN = ceil(log2(xdim * ydim) / log2(4));
+    // FILE *paniclog = fopen("paniclog.dat", "w");
+    FILE *paniclog = fopen("paniclog.dat", "a");
+    fprintf(paniclog, "# FMM: New run\n");
 
 // generate the tree
     Box *root = new Box(0, logN);
@@ -174,12 +179,14 @@ int fmm_calc(   const float *charge,
 
 // for each charge layer in zdim
     for (int zc = 0; zc < zdim; zc++) {
-        if(verbose_level >= 5)
+        if(verbose_level >= 2)
             printf("FMM: charge layer %d\n", zc);
+        fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
+        fflush(NULL);
         timeval time1, time2;
         status |= gettimeofday(&time1, NULL);
         // call the actual function
-        status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, verbose_level);
+        status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, verbose_level);
         status |= gettimeofday(&time2, NULL);
         double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
         if(verbose_level >= 5)
@@ -189,6 +196,7 @@ int fmm_calc(   const float *charge,
     }
 
 // closing
+    fclose(paniclog);
     delete root;
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }

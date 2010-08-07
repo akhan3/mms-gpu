@@ -27,6 +27,13 @@ Vector3& Vector3::init(const float x1, const float y1, const float z1) {
     return *this;
 }
 
+Vector3& Vector3::operator+=(const Vector3 &b) {
+    x += b.x;
+    y += b.y;
+    z += b.z;
+    return *this;
+}
+
 Vector3 Vector3::operator+(const Vector3 &b) const {
     return Vector3( x + b.x,
                     y + b.y,

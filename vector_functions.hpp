@@ -11,6 +11,7 @@ void divergence_3d( const Vector3 *V,
 
 void gradient_3d(   const float *S,
                     const int xdim, const int ydim, const int zdim,
+                    const float constant_multiple,
                     Vector3 *V );
 
 void add_exchange_field(
