@@ -91,10 +91,8 @@ int main(int argc, char **argv)
 
 // set up grid and simulation time
     const float meshwidth = 1e-9;
-    const float dt = 1e-14;           // time step = 1ps
-    const int tdim = 5000;
-    const float finaltime = 1e-9;     // final time = 1ns
-    // const int tdim = (int)ceil(finaltime / dt);
+    const float dt = 1e-14;           // initial time step = 1ps (will be adapted on the fly)
+    const float finaltime = 1e-10;
 
 // magnetization dynamics
 // ===================================================================
@@ -102,12 +100,15 @@ int main(int argc, char **argv)
     getchar();
 
     status |= time_marching(    M,
-                                tdim, dt, finaltime,
+                                dt, finaltime,
                                 xdim, ydim, zdim, meshwidth,
                                 mu_0, Ms, Aexch, alfa, gamma,
                                 verbose_level );
     if(status) return EXIT_FAILURE;
 
+// write M vectorfield to file
+    status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
+    if(status) return EXIT_FAILURE;
 
 // closing
     delete []M;

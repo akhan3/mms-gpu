@@ -4,21 +4,23 @@
 
     q = 1.6e-19;
     load dynamics.dat
-    index = dynamics(:,1);
-    t = dynamics(:,2);
-    energy = dynamics(:,3);
-    Mx = dynamics(:,4);
-    My = dynamics(:,5);
-    Mz = dynamics(:,6);
-    M = dynamics(:,7);
+    tindex = dynamics(:,1);
+    time = dynamics(:,2);
+    dt = dynamics(:,3);
+    energy = dynamics(:,4);
+    dE = dynamics(:,5); dE(1) = dE(2);
+    Mx = dynamics(:,6);
+    My = dynamics(:,7);
+    Mz = dynamics(:,8);
+    M  = dynamics(:,9);
 
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);
-    plot(t, energy/q, '.-');
+    plot(time, energy/q, '. ');
     xlabel('time'); ylabel('Energy (eV)');
 
 subplot(222);
-    plot(t, Mx, t, My, t, Mz, t, M);
+    plot(time, Mx, time, My, time, Mz, time, M);
     legend('Mx', 'My', 'Mz', 'M');
     xlabel('time'); ylabel('Magnetization (A/m)');
 

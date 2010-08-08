@@ -25,6 +25,7 @@ struct Vector3 {
 // overloaded operators
     Vector3& operator+=(const Vector3 &b);
 
+    // inline Vector3 operator+(const Vector3 &b) const  { return Vector3(*this) += b; }
     Vector3 operator+(const Vector3 &b) const;
     Vector3 operator-(const Vector3 &b) const;
     Vector3 operator/(const Vector3 &b) const;
