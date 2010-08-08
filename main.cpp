@@ -86,13 +86,13 @@ int main(int argc, char **argv)
     delete []mask;
 
 // write M field to file
-    status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
+    status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
     if(status) return EXIT_FAILURE;
 
 // set up grid and simulation time
     const float meshwidth = 1e-9;
-    const float dt = 1e-14;           // initial time step = 1ps (will be adapted on the fly)
-    const float finaltime = 1e-10;
+    const float dt = 1e-14;           // initial time step (will be adapted on the fly)
+    const float finaltime = 1e-9;
 
 // magnetization dynamics
 // ===================================================================
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     if(status) return EXIT_FAILURE;
 
 // write M vectorfield to file
-    status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
+    status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
     if(status) return EXIT_FAILURE;
 
 // closing

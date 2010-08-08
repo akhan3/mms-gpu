@@ -2,7 +2,6 @@
     clear
     zdim = 1;
 
-    q = 1.6e-19;
     load dynamics.dat
     tindex = dynamics(:,1);
     time = dynamics(:,2);
@@ -13,68 +12,57 @@
     My = dynamics(:,7);
     Mz = dynamics(:,8);
     M  = dynamics(:,9);
+    torque_max  = dynamics(:,10);
 
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);
-    plot(time, energy/q, '. ');
-    xlabel('time'); ylabel('Energy (eV)');
+    plot(time, energy, '-');
+    xlabel('time'); title('Energy (eV)');
 
 subplot(222);
     plot(time, Mx, time, My, time, Mz, time, M);
-    legend('Mx', 'My', 'Mz', 'M');
-    xlabel('time'); ylabel('Magnetization (A/m)');
+    %legend('Mx', 'My', 'Mz', 'M');
+    xlabel('time'); title('Magnetization (A/m)');
 
 
-% load and post process M files
-    load Mx.dat;
-    load My.dat;
-    load Mz.dat;
-    [ydim, xdim] = size(Mx);
-    Mx = reshape(Mx', xdim,xdim,zdim);
-    My = reshape(My', xdim,xdim,zdim);
-    Mz = reshape(Mz', xdim,xdim,zdim);
-    for z = 1:zdim
-        Mx(:,:,z) = Mx(:,:,z)';
-        My(:,:,z) = My(:,:,z)';
-        Mz(:,:,z) = Mz(:,:,z)';
-    end
+% load and post-process M data
+    zdim = 1;
+    ydim = 16;
+    xdim = ydim;
+    x = 0:xdim-1;
+    y = 0:ydim-1;
+    z = 0:zdim-1;
+    [X,Y,Z] = meshgrid(x,y,z);
+    Mall = load('M.dat');
+    Mall = reshape(Mall', 3,ydim,xdim,zdim);
+    Mx = shiftdim(Mall(1,:,:,:), 1);
+    My = shiftdim(Mall(2,:,:,:), 1);
+    Mz = shiftdim(Mall(3,:,:,:), 1);
     M = sqrt(Mx.^2 + My.^2 + Mz.^2);
     Ms = 8.6e5;
-    [ydim, xdim] = size(Mx);
-    [ydim, xdim, zdim] = size(Mz);
-    x = 0:xdim-1;
-    y = 0:ydim-1;
-    z = 0:zdim-1;
-    [X,Y,Z] = meshgrid(x,y,z);
 
+subplot(224);
+    quiver3(X,Y,Z, Mx,My,Mz, .5);
+    axis tight equal;
+    xlabel('x'); ylabel('y'); zlabel('z'); title('Magnetization (M)');
+    [a,b] = view();
+    view(0,90);
 
-    subplot(234); imagesc(Mx); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('Mx');
-    subplot(235); imagesc(My); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('My');
-    subplot(236); imagesc(Mz); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('Mz');
+subplot(223);
+    plot(time, torque_max, '-');
+    xlabel('time'); title('Normalized maximum Torque M \times H / Ms^2');
+
+%subplot(224);
+    %quiver3(X,Y,Z, Mx,My,Mz, .5);
+    %axis tight; daspect([1 1 .2]); zlim ([-zdim, zdim]);
+    %xlabel('x'); ylabel('y'); zlabel('z'); title('Magnetization (M)');
+    %view(0,0);
+
+    %subplot(234); imagesc(Mx); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('Mx');
+    %subplot(235); imagesc(My); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('My');
+    %subplot(236); imagesc(Mz); axis image xy; caxis([-Ms Ms]); xlabel('x'); ylabel('y'); zlabel('z'); title('Mz');
 
 return
-
-
-% load and post process H files
-    load Hx.dat;
-    load Hy.dat;
-    load Hz.dat;
-    [ydim, xdim] = size(Mx);
-    Hx = reshape(Hx', xdim,xdim,zdim);
-    Hy = reshape(Hy', xdim,xdim,zdim);
-    Hz = reshape(Hz', xdim,xdim,zdim);
-    for z = 1:zdim
-        Hx(:,:,z) = Hx(:,:,z)';
-        Hy(:,:,z) = Hy(:,:,z)';
-        Hz(:,:,z) = Hz(:,:,z)';
-    end
-    H = sqrt(Hx.^2 + Hy.^2 + Hz.^2);
-    [ydim, xdim] = size(Hx);
-    [ydim, xdim, zdim] = size(Hz);
-    x = 0:xdim-1;
-    y = 0:ydim-1;
-    z = 0:zdim-1;
-    [X,Y,Z] = meshgrid(x,y,z);
 
 
 

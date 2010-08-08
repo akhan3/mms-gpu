@@ -45,16 +45,16 @@ int calc_Hfield(const Vector3 *M, Vector3 *H,
 
 // calculate potential in each layer through FMM
     // status |= fmm_calc(charge, potential, xdim, ydim, zdim, 3, verbose_level);
-    // calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
+    calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
 
 // magnetostatic field from potential = H_demag + H_coupl
-    // gradient_3d(potential, xdim, ydim, zdim, 1/(4*M_PI), H);
+    gradient_3d(potential, xdim, ydim, zdim, 1/(4*M_PI), H);
 
 // Exchange field from magnetization = H_exch
-    add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
+    // add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
 
-// // add external field = H_ext
-    // const Vector3 Hext = 0.1*Ms * Vector3(0,0,1);
+// add external field = H_ext
+    // const Vector3 Hext = 10*0.1*Ms * Vector3(0,0,1);
     // for(int i = 0; i < zdim*ydim*xdim; i++)
         // H[i] += Hext;
 
@@ -78,35 +78,31 @@ float adjust_step(  const Vector3 *slope,
         Mmax.z = (fabs(dM.z) > Mmax.z) ? fabs(dM.z) : Mmax.z;
     }
     float maxchange =  (Mmax.x > Mmax.y) ? Mmax.x : ((Mmax.y > Mmax.z) ? Mmax.y : Mmax.z);
-    const float llimit = control_point - control_point_hysteresis/2;
-    const float ulimit = control_point + control_point_hysteresis/2;
+    float error = maxchange - control_point;
     float dt_new = dt;
-    if(maxchange < llimit) { // increase step size
-        dt_new += dt * step_correction;
-        printf("%g < %g ", maxchange, llimit);
-        printf("step too small, increasing... ");
-        printf("%g, %g\n", dt, dt_new);
-        dt_new = adjust_step(slope, dt_new, xyzdim, Ms, control_point, control_point_hysteresis, step_correction);
-    }
-    else if(maxchange < ulimit)
-        return dt_new;
-    if(maxchange > ulimit) { // decrease step size
-        dt_new -= dt * step_correction;
-        printf("%g > %g ", maxchange, ulimit);
-        printf("step too large, decreasing... ");
-        printf("%g, %g\n", dt, dt_new);
-        dt_new = adjust_step(slope, dt_new, xyzdim, Ms, control_point, control_point_hysteresis, step_correction);
-    }
-    else if(maxchange > llimit)
-        return dt_new;
-    return dt_new;
+    return control_point / maxchange * dt;
+    // if(-control_point_hysteresis/2 <= error && error <= control_point_hysteresis/2)
+        // return dt_new;   // don't update if falls inside hysteresis window
+    // if(error < -control_point_hysteresis/2) { // increase step size
+        // dt_new = control_point / maxchange * dt;
+        // // dt_new += dt * step_correction;
+        // printf("increasing step... (%g < %g) %g, %g\n", error, -control_point_hysteresis/2, dt, dt_new);
+        // // dt_new = adjust_step(slope, dt_new, xyzdim, Ms, control_point, control_point_hysteresis, step_correction);
+    // }
+    // if(error > control_point_hysteresis/2) { // decrease step size
+        // dt_new = control_point / maxchange * dt;
+        // // dt_new -= dt * step_correction;
+        // printf("decreasing step... (%g > %g) %g, %g\n", error, control_point_hysteresis/2, dt, dt_new);
+        // // dt_new = adjust_step(slope, dt_new, xyzdim, Ms, control_point, control_point_hysteresis, step_correction);
+    // }
+    // return dt_new;
 }
 
 
 // update M from current value of M (Runge-Kutta 4th order)
 // =================================================================
 int rk4_step(   Vector3 *M, // input and output state
-                float *dt, const int normalize,
+                const int tindex, float *dt, const int normalize,
                 const int xdim, const int ydim, const int zdim, const float meshwidth,
                 const float mu_0, const float Ms, const float Aexch, const float alfa, const float gamma,
                 const int verbose_level )
@@ -126,7 +122,8 @@ int rk4_step(   Vector3 *M, // input and output state
         this_slope[i] = LLG_Mprime(M[i], H_[i], alfa, gamma, Ms);
     }
 // adjust step size
-    *dt = adjust_step(this_slope, *dt, xyzdim, Ms, 0.01, 0.001, 0.5);
+    // if(!(tindex % 100))
+        *dt = adjust_step(this_slope, *dt, xyzdim, Ms, 0.1, 0.05, 0.5);
 // k1 @ t1
     for(int i = 0; i < xyzdim; i++) {
         M_[i] = M[i] + (this_slope[i] * 0.5 * *dt);
@@ -158,6 +155,8 @@ int rk4_step(   Vector3 *M, // input and output state
     return EXIT_SUCCESS;
 }
 
+
+// =============================================
 // main time marching function
 // =============================================
 int time_marching(  Vector3 *M, // initial state. This will be overwritten in each time step
@@ -176,10 +175,10 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         return EXIT_FAILURE;
     }
 
-// allocate memory for H
-    Vector3 *H = new Vector3[zdim*ydim*xdim]();
-    if(H == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+// open file for logging time evolution of M
+    FILE *fhM = fopen("Mdynamics.dat", "w");
+    if(fh == NULL) {
+        printf("FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
 
@@ -190,53 +189,84 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     float energy_prev = 0;
     while(time <= finaltime)
     {
-        printf("**tindex = %d, time = %g, dt = %g\n", tindex, time, dt);
+        status |= append_vector3d(M, zdim, ydim, xdim, tindex, time, fhM, verbose_level);
+
+    // allocate memory for H
+        Vector3 *H = new Vector3[zdim*ydim*xdim]();
+        if(H == NULL) {
+            fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+            return EXIT_FAILURE;
+        }
 
     // update H for current M
         status |= calc_Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, verbose_level);
 
     // calculate energy and average magnetization
+        float torque_max = 0;
         float energy = 0;
-        float Ms_avg = 0;
+        float Mmag_avg = 0;
         int count = 0;
         Vector3 M_avg;
         for(int i = 0; i < zdim*ydim*xdim; i++) {
             if(M[i].magnitude()) {
+                float torque =  M[i].cross(H[i]).magnitude() * (1/Ms/Ms);
+                torque_max = (torque_max > torque) ? torque_max : torque;
                 energy += M[i].dot(H[i]);
-                Ms_avg += M[i].magnitude();
+                Mmag_avg += M[i].magnitude();
                 M_avg = M_avg + M[i];
                 count++;
             }
         }
-        energy *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth);
-        Ms_avg /= count;
-        M_avg = M_avg * (1.0 / count);
-        fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %g\n",
-                tindex, time, dt, energy, energy-energy_prev, M_avg.x, M_avg.y, M_avg.z, Ms_avg);
+        energy *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth) / 1.6e-19;
+        float dE = energy - energy_prev;
         energy_prev = energy;
+        Mmag_avg /= count;
+        M_avg = M_avg * (1.0 / count);
+        fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %g, %g \n",
+                tindex, time, dt, energy, dE, M_avg.x, M_avg.y, M_avg.z, Mmag_avg, torque_max);
+        fprintf(stdout, "%d, %g, %g, %g, %g, %g, %g, %g, %g, %g \n",
+                tindex, time, dt, energy, dE, M_avg.x, M_avg.y, M_avg.z, Mmag_avg, torque_max);
+
+        if(dE > 0 && tindex != 0) {
+            // write M vectorfield to file
+            status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
+            if(status) return EXIT_FAILURE;
+            printf("PANIC!! dE = %g eV,  dE/E = %g \n", dE, dE/energy);
+            // status = EXIT_FAILURE;
+            // break;
+        }
+        if(Mmag_avg > 1.1*Ms && tindex != 0) {
+            // write M vectorfield to file
+            status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
+            if(status) return EXIT_FAILURE;
+            printf("PANIC!! Mmag_avg = %g A/m,  Mmag_avg/Ms  = %g \n", Mmag_avg, Mmag_avg/Ms);
+        }
+
+        delete []H;
 
     // update M from current value of M by executing one step of RK
         // printf("executing RK step...\n");
-        status |= rk4_step(M, &dt, false, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma, verbose_level);
+        status |= rk4_step(M, tindex, &dt, false, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma, verbose_level);
         if(status) return EXIT_FAILURE;
 
-        if(!(tindex % 500))
+        if(!(tindex % 100))
         {
             // write M vectorfield to file
-            status |= save_vector3d(M, zdim, ydim, xdim, "M", verbose_level);
+            status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
             if(status) return EXIT_FAILURE;
-            printf("step completed! ");
-            fflush(NULL);
+            // printf("Press to continue! ");
+            // fflush(NULL);
             // getchar();
         }
 
     // increment time
         tindex++;
         time += dt;
+        fflush(NULL);
     } // time loop
 
-// freeing up memory
+// closing
     fclose(fh);
-    delete []H;
+    fclose(fhM);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }

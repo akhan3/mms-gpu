@@ -45,4 +45,4 @@ fmm_calc.o			: fmm_calc.cpp
 main.o				: main.cpp
 
 clean:
-	rm -f $(OBJS) gmon.out
+	rm -f $(OBJS) gmon.out $(TARGET)

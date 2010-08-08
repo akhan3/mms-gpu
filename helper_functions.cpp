@@ -211,9 +211,10 @@ int save_scalar3d(const float* scalarfield, const int zdim, const int ydim, cons
         return EXIT_FAILURE;
     }
     for(int z = 0; z < zdim; z++) {
-        for(int y = 0; y < ydim; y++) {
-            for(int x = 0; x < xdim; x++)
+        for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
+            for(int y = 0; y < ydim; y++) {
                 fprintf(fh, "%g ", scalarfield[z*ydim*xdim + y*xdim + x]);
+            }
             fprintf(fh, "\n");
         }
         fprintf(fh, "\n");
@@ -229,42 +230,44 @@ int save_scalar3d(const float* scalarfield, const int zdim, const int ydim, cons
 int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level)
 {
     int status = 0;
-    char filenamex[100];
-    char filenamey[100];
-    char filenamez[100];
-    sprintf(filenamex, "%sx.dat", filename);
-    sprintf(filenamey, "%sy.dat", filename);
-    sprintf(filenamez, "%sz.dat", filename);
-    FILE *fhx = fopen(filenamex, "w");
-    FILE *fhy = fopen(filenamey, "w");
-    FILE *fhz = fopen(filenamez, "w");
-    if(fhx == NULL || fhy == NULL || fhz == NULL) {
-        fprintf(stderr, "%s:%d FATAL ERROR: couldn't open file %s\n", __FILE__, __LINE__, filenamex);
+    FILE *fh = fopen(filename, "w");
+    if(fh == NULL) {
+        fprintf(stderr, "%s:%d FATAL ERROR: couldn't open file %s\n", __FILE__, __LINE__, filename);
         return EXIT_FAILURE;
     }
     for(int z = 0; z < zdim; z++) {
-        for(int y = 0; y < ydim; y++) {
-            for(int x = 0; x < xdim; x++) {
-                fprintf(fhx, "%g ", vectorfield[z*ydim*xdim + y*xdim + x].x);
-                fprintf(fhy, "%g ", vectorfield[z*ydim*xdim + y*xdim + x].y);
-                fprintf(fhz, "%g ", vectorfield[z*ydim*xdim + y*xdim + x].z);
+        for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
+            for(int y = 0; y < ydim; y++) {
+                fprintf(fh, "%g %g %g \n", vectorfield[z*ydim*xdim + y*xdim + x].x, vectorfield[z*ydim*xdim + y*xdim + x].y, vectorfield[z*ydim*xdim + y*xdim + x].z);
             }
-            fprintf(fhx, "\n");
-            fprintf(fhy, "\n");
-            fprintf(fhz, "\n");
+            // fprintf(fh, "# y done\n");
         }
-        fprintf(fhx, "\n");
-        fprintf(fhy, "\n");
-        fprintf(fhz, "\n");
+        // fprintf(fh, "# yx done\n");
     }
-    fclose(fhx);
-    fclose(fhy);
-    fclose(fhz);
+    // fprintf(fh, "# yxz done\n");
+    fclose(fh);
     if(verbose_level >= 3) {
-        printf("INFO: Written file %s with status=%d\n", filenamex, status);
-        printf("INFO: Written file %s with status=%d\n", filenamey, status);
-        printf("INFO: Written file %s with status=%d\n", filenamez, status);
+        printf("INFO: Written file %s with status=%d\n", filename, status);
     }
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+// Append 3D vector field to file
+// ===============================
+int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const int tindex, const float time, FILE* fh, int verbose_level)
+{
+    int status = 0;
+    for(int z = 0; z < zdim; z++) {
+        for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
+            for(int y = 0; y < ydim; y++) {
+                fprintf(fh, "%g %g %g \n", vectorfield[z*ydim*xdim + y*xdim + x].x, vectorfield[z*ydim*xdim + y*xdim + x].y, vectorfield[z*ydim*xdim + y*xdim + x].z);
+            }
+            // fprintf(fh, "# y done\n");
+        }
+        // fprintf(fh, "# yx done\n");
+    }
+    // fprintf(fh, "# yxz done\n");
+    // fprintf(fh, "# tindex=%d, time=%g done\n", tindex, time);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

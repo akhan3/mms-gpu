@@ -29,11 +29,11 @@ int fmm_bfs(        const float *charge,
     int status = 0;
     assert(limit == actual_limit);  // unable to support arbitrary depth calculations.
     // assert(limit <= actual_limit);
-    timeval time1, time2;
-    status |= gettimeofday(&time1, NULL);
+    // timeval time1, time2;
+    // status |= gettimeofday(&time1, NULL);
     if(verbose_level >= 6)
         printf("Executing FMM algorithm...\n");
-    unsigned int prev_level = 0;
+    // unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
     Queue Q_tree(N);

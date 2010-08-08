@@ -17,6 +17,7 @@ Cmpx spherical_harmonic(int l, int m, float theta, float phi);
 // int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbose_level);
 int matrix2file(const float* matrix, const int rows, const int cols, const char* filename, int verbose_level);
 int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
+int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const int tindex, const float time, FILE* fh, int verbose_level);
 int save_scalar3d(const float* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
 // int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname);
 
