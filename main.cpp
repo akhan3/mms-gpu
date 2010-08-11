@@ -75,9 +75,12 @@ int main(int argc, char **argv)
             for(unsigned int x = 0; x < xdim; x++) {
                 if (!mask[y*xdim + x])
                 {
-                    // float theta = frand_atob(90-30, 90+30) * M_PI/180;
-                    float theta = frand_atob(0, 180) * M_PI/180;
-                    float phi   = frand_atob(0, 360) * M_PI/180;
+                    float theta = frand_atob(90-30, 90+30) * M_PI/180;
+                    float phi   = frand_atob(0, 90) * M_PI/180;
+                    // float theta = frand_atob(0, 180) * M_PI/180;
+                    // float phi   = frand_atob(0, 360) * M_PI/180;
+                    // float theta = M_PI/2;
+                    // float phi   = 0;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                 }
             }
@@ -91,28 +94,25 @@ int main(int argc, char **argv)
 
 // set up grid and simulation time
     const float meshwidth = 1e-9;
-    const float dt = 1e-14;           // initial time step (will be adapted on the fly)
     const float finaltime = 1e-9;
 
 // magnetization dynamics
 // ===================================================================
-    printf("If you want to see the initial state of M, now is the time! "); fflush(NULL);
-    getchar();
-
     status |= time_marching(    M,
-                                dt, finaltime,
+                                finaltime,
                                 xdim, ydim, zdim, meshwidth,
                                 mu_0, Ms, Aexch, alfa, gamma,
                                 verbose_level );
     if(status) return EXIT_FAILURE;
 
-// write M vectorfield to file
-    status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
-    if(status) return EXIT_FAILURE;
+// // write M vectorfield to file
+    // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
+    // if(status) return EXIT_FAILURE;
 
 // closing
     delete []M;
 
     printf("SEED = %d\n", seed);
+    // printf("%s\n", status ? "failed to complete" : "successfuly completed");
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }

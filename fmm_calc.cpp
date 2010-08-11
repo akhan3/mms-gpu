@@ -118,7 +118,7 @@ int fmm_bfs(        const float *charge,
                                     potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
                                     // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
 
-                                    const float threshold = 1e-3;
+                                    const float threshold = 1e-2;
                                     float modangle = fabs(sum_over_lm.get_ang());
                                     modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
                                     if(modangle > threshold) {
@@ -179,7 +179,7 @@ int fmm_calc(   const float *charge,
 
 // for each charge layer in zdim
     for (int zc = 0; zc < zdim; zc++) {
-        if(verbose_level >= 2)
+        if(verbose_level >= 3)
             printf("FMM: charge layer %d\n", zc);
         fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);

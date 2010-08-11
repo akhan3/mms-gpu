@@ -1,3 +1,4 @@
+if(1)
 clear
 
 load dynamics.dat;
@@ -21,15 +22,16 @@ load dynamics.dat;
     y = 0:ydim-1;
     z = 0:zdim-1;
     [X,Y,Z] = meshgrid(x,y,z);
-    required_lines = ydim*xdim*zdim*tdim
+    required_lines = ydim*xdim*zdim*tdim;
 
 
 M_yxzt = load('Mdynamics.dat');
+M_yxzt = M_yxzt(1:required_lines,:);
 M_yxzt = reshape(M_yxzt', 3,ydim,xdim,zdim, tdim);
 Mx = shiftdim(M_yxzt(1,:,:,:,:), 1);
 My = shiftdim(M_yxzt(2,:,:,:,:), 1);
 Mz = shiftdim(M_yxzt(3,:,:,:,:), 1);
-
+end
 
 figure;
 set(gcf, 'OuterPosition', [0 0 1280 800]);

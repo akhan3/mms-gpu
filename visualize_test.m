@@ -1,6 +1,5 @@
  %initial loading and setup
     clear
-    zdim = 1;
 
     load dynamics.dat
     tindex = dynamics(:,1);
@@ -17,14 +16,29 @@
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);
     plot(time, energy, '-');
+    axis tight;
     xlabel('time'); title('Energy (eV)');
 
 subplot(222);
     plot(time, Mx, time, My, time, Mz, time, M);
-    %legend('Mx', 'My', 'Mz', 'M');
+    axis tight;
+    legend('Mx', 'My', 'Mz', 'M');
     xlabel('time'); title('Magnetization (A/m)');
 
 
+
+subplot(223);
+    plot(time, torque_max, '-');
+    axis tight;
+    xlabel('time'); title('Normalized maximum Torque M \times H / Ms^2');
+
+subplot(224);
+    plot(time, dt, '-');
+    axis tight;
+    xlabel('time'); title('Time step');
+
+
+return
 % load and post-process M data
     zdim = 1;
     ydim = 16;
@@ -40,17 +54,12 @@ subplot(222);
     Mz = shiftdim(Mall(3,:,:,:), 1);
     M = sqrt(Mx.^2 + My.^2 + Mz.^2);
     Ms = 8.6e5;
-
 subplot(224);
     quiver3(X,Y,Z, Mx,My,Mz, .5);
     axis tight equal;
     xlabel('x'); ylabel('y'); zlabel('z'); title('Magnetization (M)');
     [a,b] = view();
     view(0,90);
-
-subplot(223);
-    plot(time, torque_max, '-');
-    xlabel('time'); title('Normalized maximum Torque M \times H / Ms^2');
 
 %subplot(224);
     %quiver3(X,Y,Z, Mx,My,Mz, .5);
