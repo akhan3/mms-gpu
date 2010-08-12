@@ -16,25 +16,27 @@
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);
     plot(time, energy, '-');
-    axis tight;
+    %axis tight;
     xlabel('time'); title('Energy (eV)');
 
 subplot(222);
     plot(time, Mx, time, My, time, Mz, time, M);
-    axis tight;
+    %axis tight;
     legend('Mx', 'My', 'Mz', 'M');
     xlabel('time'); title('Magnetization (A/m)');
 
 
 
 subplot(223);
-    plot(time, torque_max, '-');
-    axis tight;
+    %plot(time, torque_max, '-');
+    semilogy(time, torque_max, '-');
+    %axis tight;
     xlabel('time'); title('Normalized maximum Torque M \times H / Ms^2');
 
 subplot(224);
-    plot(time, dt, '-');
-    axis tight;
+    %plot(time, dt, '-');
+    semilogy(time, dt, '-');
+    %axis tight;
     xlabel('time'); title('Time step');
 
 

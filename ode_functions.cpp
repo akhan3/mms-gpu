@@ -239,9 +239,7 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
             float e = (fabs(delta.x) > fabs(delta.y)) ? fabs(delta.x) : ((fabs(delta.y) > fabs(delta.z)) ? fabs(delta.y) : fabs(delta.z));
             diff_avg += e;
             diff_max = (diff_max > e) ? diff_max : e;
-            // float e = (M_mid2[i] - M_new[i]).magnitude();
-            // (M_mid2[i] - M_new[i]).print(stdout);
-            // printf("    diff=%g, e=%g\n", error, e);
+            // printf("    diff_max=%g, e=%g\n", diff_max, e);
         }
         diff_avg /= xyzdim;
     // take decision
@@ -252,15 +250,20 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
                 printf("PANIC!! step size hit minimum size before fulfilling tolerance requirement.\n");
         }
         else {
-            *t_new = t;  // recect and invalidate this step
+            *t_new = t;  // reject and invalidate this step
         }
     // adjust step
         const float safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
         *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
+        // if(diff_max <= tolerance)   // increase step
+            // *dt_new = 1.01 * dt;
+        // else                        //  decrease step
+            // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
         *dt_new = (*dt_new < dt_min) ? dt_min : *dt_new;
         *dt_new = (*dt_new > dt_max) ? dt_max : *dt_new;
         // printf("dt=%g, dt_new=%g \n", dt, *dt_new);
-        printf("dt=%.7g, diff_max=%.7f, diff_avg=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, diff_avg, tolerance, *dt_new);
+        // printf("dt=%.7g, diff_max=%.7f, diff_avg=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, diff_avg, tolerance, *dt_new);
+        printf("dt=%.7g, diff_max=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, tolerance, *dt_new);
         delete []M_mid1;
         delete []M_mid2;
     }
@@ -294,8 +297,8 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
 // adaptive rk4 parameters
     const float dt_min = 1e-17;   // OOMMF has a default of zero
     const float dt_max = 1e-10;
-    float dt = 1.1e-17; // start very optimistically at dt_max
-    const float tolerance = Ms/1e3;
+    float dt = 1e-14; // start very optimistically at dt_max
+    const float tolerance = Ms/1e2;
     const int normalize = true;
     const int adjust_step = true;
 // H field parameters
@@ -314,7 +317,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
                              coupling, exchange, external,
                              fh, fhM, verbose_level );
     printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
-    getchar();
+    // getchar();
     printf("\n");
 
 // Time-marching loop
@@ -356,8 +359,28 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         } // if(step_valid)
         delete []M_new;
         fflush(NULL);
-        // if(tindex >= 10) break;
+        if(tindex >= 200) break;
     } // time marching while loop
+        float t_new, dt_new;
+        Vector3 *M_new = new Vector3[zdim*ydim*xdim]();
+        status |= rk4_step_adaptive( t, M, 5e-14,
+                            dt_min, dt_max, Ms/1e3,
+                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
+                            coupling, exchange, external,
+                            normalize,
+                            adjust_step,
+                            &t_new, M_new, &dt_new,  // output from RK step
+                            verbose_level);
+        status |= rk4_step_adaptive( t, M, 5e-14,
+                            dt_min, dt_max, Ms/1e2,
+                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
+                            coupling, exchange, external,
+                            normalize,
+                            adjust_step,
+                            &t_new, M_new, &dt_new,  // output from RK step
+                            verbose_level);
+
+
 
 // closing
     fclose(fh);
