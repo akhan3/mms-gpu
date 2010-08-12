@@ -1,6 +1,8 @@
 #ifndef _QUEUE_H_
 #define _QUEUE_H_
 
+#include "mydefs.hpp"
+
 class Queue {
 // data members
     void **contents;

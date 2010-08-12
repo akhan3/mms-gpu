@@ -1,7 +1,7 @@
 #ifndef _BOX_H_
 #define _BOX_H_
 
-typedef unsigned char byte;
+#include "mydefs.hpp"
 
 class Box {
 // data members
@@ -14,11 +14,11 @@ public:
     unsigned int level;
     unsigned int x;
     unsigned int y;
-    float cx;
-    float cy;
+    fptype cx;
+    fptype cy;
 private:
     int pruned;
-    // float potential;
+    // fptype potential;
 
 public:
 // constructors and destructor

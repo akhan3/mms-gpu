@@ -11,7 +11,6 @@
 #include "helper_functions.hpp"
 #include "vector_functions.hpp"
 #include "ode_functions.hpp"
-#define NEWLINE printf("\n");
 using std::cout;
 using std::endl;
 
@@ -42,11 +41,11 @@ int main(int argc, char **argv)
 
 // Material parameters
 // ================================================
-    const float mu_0 = 4 * M_PI * 1e-7; // permeability of vacuum
-    const float Ms = 8.6e5;             // saturation magnetization (permalloy)
-    const float Aexch = 1.3e-11;        // exchange constant (permalloy)
-    const float alfa = 0.5;             // damping coefficient (permalloy)
-    const float gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
+    const fptype mu_0 = 4 * M_PI * 1e-7; // permeability of vacuum
+    const fptype Ms = 8.6e5;             // saturation magnetization (permalloy)
+    const fptype Aexch = 1.3e-11;        // exchange constant (permalloy)
+    const fptype alfa = 0.5;             // damping coefficient (permalloy)
+    const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
 
 // Mask configuration for magnetic material
     BYTE *mask = NULL; // mask matrix
@@ -75,12 +74,12 @@ int main(int argc, char **argv)
             for(unsigned int x = 0; x < xdim; x++) {
                 if (!mask[y*xdim + x])
                 {
-                    float theta = frand_atob(90-30, 90+30) * M_PI/180;
-                    float phi   = frand_atob(0, 90) * M_PI/180;
-                    // float theta = frand_atob(0, 180) * M_PI/180;
-                    // float phi   = frand_atob(0, 360) * M_PI/180;
-                    // float theta = M_PI/2;
-                    // float phi   = 0;
+                    fptype theta = frand_atob(90-30, 90+30) * M_PI/180;
+                    fptype phi   = frand_atob(0, 90) * M_PI/180;
+                    // fptype theta = frand_atob(0, 180) * M_PI/180;
+                    // fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    // fptype theta = M_PI/2;
+                    // fptype phi   = 0;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                 }
             }
@@ -93,8 +92,8 @@ int main(int argc, char **argv)
     if(status) return EXIT_FAILURE;
 
 // set up grid and simulation time
-    const float meshwidth = 1e-9;
-    const float finaltime = 1e-9;
+    const fptype meshwidth = 1e-9;
+    const fptype finaltime = 1e-9;
 
 // magnetization dynamics
 // ===================================================================

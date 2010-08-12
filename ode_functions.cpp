@@ -6,9 +6,10 @@
 #include "helper_functions.hpp"
 #include "vector_functions.hpp"
 
+
 Vector3 LLG_Mprime( const Vector3 &M,
                     const Vector3 &H,
-                    const float alfa, const float gamma, const float Ms )
+                    const fptype alfa, const fptype gamma, const fptype Ms )
 {
     Vector3 McrossH = M.cross(H);
     Vector3 Mprime = -gamma * McrossH - (alfa * gamma / Ms) * M.cross(McrossH);
@@ -17,8 +18,8 @@ Vector3 LLG_Mprime( const Vector3 &M,
 
 
 int Hfield(const Vector3 *M, Vector3 *H,
-                const int xdim, const int ydim, const int zdim, const float meshwidth,
-                const float mu_0, const float Ms, const float Aexch,
+                const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                const fptype mu_0, const fptype Ms, const fptype Aexch,
                 const int coupling, const int exchange, const int external,
                 const int verbose_level )
 {
@@ -30,8 +31,8 @@ int Hfield(const Vector3 *M, Vector3 *H,
 
     if(coupling) {
     // allocate memory for charge and potential field
-        float *charge = new float[zdim*ydim*xdim]();
-        float *potential = new float[zdim*ydim*xdim]();
+        fptype *charge = new fptype[zdim*ydim*xdim]();
+        fptype *potential = new fptype[zdim*ydim*xdim]();
         if(charge == NULL || potential == NULL) {
             fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
             return EXIT_FAILURE;
@@ -66,10 +67,10 @@ int Hfield(const Vector3 *M, Vector3 *H,
 
 
 int postprocess_M(  const Vector3 *M,
-                    const int tindex, const float t, const float dt,
-                    const float energy, float *energy_new,
-                    const int xdim, const int ydim, const int zdim, const float meshwidth,
-                    const float mu_0, const float Ms, const float Aexch,
+                    const int tindex, const fptype t, const fptype dt,
+                    const fptype energy, fptype *energy_new,
+                    const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                    const fptype mu_0, const fptype Ms, const fptype Aexch,
                     const int coupling, const int exchange, const int external,
                     FILE *fh, FILE *fhM,
                     int verbose_level )
@@ -85,14 +86,14 @@ int postprocess_M(  const Vector3 *M,
     }
     status |= Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
 // calculate energy and average magnetization
-    float torque_max = 0;
+    fptype torque_max = 0;
     *energy_new = 0;
-    float Mmag_avg = 0;
+    fptype Mmag_avg = 0;
     int count = 0;
     Vector3 M_avg(0,0,0);
     for(int i = 0; i < zdim*ydim*xdim; i++) {
         if(M[i].magnitude()) {
-            float torque =  M[i].cross(H[i]).magnitude() * (1/Ms/Ms);
+            fptype torque =  M[i].cross(H[i]).magnitude() * (1/Ms/Ms);
             torque_max = (torque_max > torque) ? torque_max : torque;
             *energy_new += M[i].dot(H[i]);
             Mmag_avg += M[i].magnitude();
@@ -101,7 +102,7 @@ int postprocess_M(  const Vector3 *M,
         }
     }
     *energy_new *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth) / 1.6e-19;
-    float dE = *energy_new - energy;
+    fptype dE = *energy_new - energy;
     Mmag_avg /= count;
     M_avg = M_avg * (1.0 / count);
     fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %g, %g \n",
@@ -131,12 +132,12 @@ int postprocess_M(  const Vector3 *M,
 
 // update M from current value of M (Runge-Kutta 4th order)
 // =================================================================
-int rk4_step(   const float t, const Vector3 *M, const float dt,
-                const int xdim, const int ydim, const int zdim, const float meshwidth,
-                const float mu_0, const float Ms, const float Aexch, const float alfa, const float gamma,
+int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
+                const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                 const int coupling, const int exchange, const int external,
                 const int normalize,
-                float *t_new, Vector3 *M_new,    // output
+                fptype *t_new, Vector3 *M_new,    // output
                 const int verbose_level)
 {
     const int xyzdim = zdim*ydim*xdim;
@@ -187,14 +188,14 @@ int rk4_step(   const float t, const Vector3 *M, const float dt,
 
 
 
-int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
-                const float dt_min, const float dt_max, const float tolerance,
-                const int xdim, const int ydim, const int zdim, const float meshwidth,
-                const float mu_0, const float Ms, const float Aexch, const float alfa, const float gamma,
+int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
+                const fptype dt_min, const fptype dt_max, const fptype tolerance,
+                const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                 const int coupling, const int exchange, const int external,
                 const int normalize,
                 const int adjust_step,
-                float *t_new, Vector3 *M_new, float *dt_new,    // output
+                fptype *t_new, Vector3 *M_new, fptype *dt_new,    // output
                 const int verbose_level)
 {
     int status = 0;
@@ -212,7 +213,7 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
     }
     else {
     // two RK steps of half size for Richardson extrapolation
-        float t_mid1 = -34, t_mid2 = -56;
+        fptype t_mid1 = -34, t_mid2 = -56;
         Vector3 *M_mid1 = new Vector3[zdim*ydim*xdim]();
         Vector3 *M_mid2 = new Vector3[zdim*ydim*xdim]();
         if(M_mid1 == NULL || M_mid2 == NULL) {
@@ -232,11 +233,11 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
                             &t_mid2, M_mid2,   // output from RK step
                             verbose_level);
     // error estimation
-        float diff_max = 0;
-        float diff_avg = 0;
+        fptype diff_max = 0;
+        fptype diff_avg = 0;
         for(int i = 0; i < xyzdim; i++) {
             Vector3 delta = M_mid2[i] - M_new[i];
-            float e = (fabs(delta.x) > fabs(delta.y)) ? fabs(delta.x) : ((fabs(delta.y) > fabs(delta.z)) ? fabs(delta.y) : fabs(delta.z));
+            fptype e = (fabs(delta.x) > fabs(delta.y)) ? fabs(delta.x) : ((fabs(delta.y) > fabs(delta.z)) ? fabs(delta.y) : fabs(delta.z));
             diff_avg += e;
             diff_max = (diff_max > e) ? diff_max : e;
             // printf("    diff_max=%g, e=%g\n", diff_max, e);
@@ -253,7 +254,7 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
             *t_new = t;  // reject and invalidate this step
         }
     // adjust step
-        const float safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
+        const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
         *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
         // if(diff_max <= tolerance)   // increase step
             // *dt_new = 1.01 * dt;
@@ -263,7 +264,7 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
         *dt_new = (*dt_new > dt_max) ? dt_max : *dt_new;
         // printf("dt=%g, dt_new=%g \n", dt, *dt_new);
         // printf("dt=%.7g, diff_max=%.7f, diff_avg=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, diff_avg, tolerance, *dt_new);
-        printf("dt=%.7g, diff_max=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, tolerance, *dt_new);
+        printf("dt=%g, diff_max=%g, tolerance=%g, dt_new=%g \n", dt, diff_max, tolerance, *dt_new);
         delete []M_mid1;
         delete []M_mid2;
     }
@@ -275,9 +276,9 @@ int rk4_step_adaptive(   const float t, const Vector3 *M, const float dt,
 // main time marching function
 // =============================================
 int time_marching(  Vector3 *M, // initial state. This will be overwritten in each time step
-                    const float finaltime,
-                    const int xdim, const int ydim, const int zdim, const float meshwidth,
-                    const float mu_0, const float Ms, const float Aexch, const float alfa, const float gamma,
+                    const fptype finaltime,
+                    const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                    const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                     const int verbose_level )
 {
     int status = 0;
@@ -295,10 +296,11 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         return EXIT_FAILURE;
     }
 // adaptive rk4 parameters
-    const float dt_min = 1e-17;   // OOMMF has a default of zero
-    const float dt_max = 1e-10;
-    float dt = 1e-14; // start very optimistically at dt_max
-    const float tolerance = Ms/1e2;
+    // const fptype dt_min = 1e-17;   // OOMMF has a default of zero
+    const fptype dt_min = 0;   // OOMMF has a default of zero
+    const fptype dt_max = 1e-10;
+    fptype dt = 1e-14; // start very optimistically at dt_max
+    const fptype tolerance = Ms/1e3;
     const int normalize = true;
     const int adjust_step = true;
 // H field parameters
@@ -307,9 +309,9 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     const int external = false;
 // starting point
     int tindex = 0;
-    float t = 0;
-    float energy = 0;
-    float energy_new = 0;
+    fptype t = 0;
+    fptype energy = 0;
+    fptype energy_new = 0;
 // post-process initial state
     status |= postprocess_M( M, tindex, t, dt,
                              energy, &energy_new,
@@ -324,8 +326,8 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
 // ======================================
     while(t < finaltime)
     {
-        float t_new = -99;
-        float dt_new = -99;
+        fptype t_new = -99;
+        fptype dt_new = -99;
         Vector3 *M_new = new Vector3[zdim*ydim*xdim]();
         if(M_new == NULL) {
             fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
@@ -348,7 +350,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
             t = t_new;
             for(int i = 0; i < zdim*ydim*xdim; i++)
                 M[i] = M_new[i];
-            float energy_new = 0;
+            fptype energy_new = 0;
             status |= postprocess_M( M, tindex, t, dt,
                                      energy, &energy_new,
                                      xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch,
@@ -361,25 +363,27 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         fflush(NULL);
         if(tindex >= 200) break;
     } // time marching while loop
-        float t_new, dt_new;
-        Vector3 *M_new = new Vector3[zdim*ydim*xdim]();
-        status |= rk4_step_adaptive( t, M, 5e-14,
-                            dt_min, dt_max, Ms/1e3,
-                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            coupling, exchange, external,
-                            normalize,
-                            adjust_step,
-                            &t_new, M_new, &dt_new,  // output from RK step
-                            verbose_level);
-        status |= rk4_step_adaptive( t, M, 5e-14,
-                            dt_min, dt_max, Ms/1e2,
-                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            coupling, exchange, external,
-                            normalize,
-                            adjust_step,
-                            &t_new, M_new, &dt_new,  // output from RK step
-                            verbose_level);
 
+    {
+        // fptype t_new, dt_new;
+        // Vector3 *M_new = new Vector3[zdim*ydim*xdim]();
+        // status |= rk4_step_adaptive( t, M, 5e-14,
+                            // dt_min, dt_max, Ms/1e3,
+                            // xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
+                            // coupling, exchange, external,
+                            // normalize,
+                            // adjust_step,
+                            // &t_new, M_new, &dt_new,  // output from RK step
+                            // verbose_level);
+        // status |= rk4_step_adaptive( t, M, 5e-14,
+                            // dt_min, dt_max, Ms/1e2,
+                            // xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
+                            // coupling, exchange, external,
+                            // normalize,
+                            // adjust_step,
+                            // &t_new, M_new, &dt_new,  // output from RK step
+                            // verbose_level);
+    }
 
 
 // closing

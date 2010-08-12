@@ -10,11 +10,11 @@ Cmpx::Cmpx() {
     ang = 0;
 }
 
-Cmpx::Cmpx(const float x, const float y, const int mode) {
+Cmpx::Cmpx(const fptype x, const fptype y, const int mode) {
     init(x, y, mode);
 }
 
-Cmpx& Cmpx::init(const float x, const float y, const int mode) {
+Cmpx& Cmpx::init(const fptype x, const fptype y, const int mode) {
     if (mode == 0) {
         re = x;
         im = y;
@@ -37,21 +37,21 @@ Cmpx& Cmpx::init(const float x, const float y, const int mode) {
     return *this;
 }
 
-Cmpx& Cmpx::set_re(const float x) {
+Cmpx& Cmpx::set_re(const fptype x) {
     re = x;
     mag = magnitude();
     ang = angle();
     return *this;
 }
 
-Cmpx& Cmpx::set_im(const float x) {
+Cmpx& Cmpx::set_im(const fptype x) {
     im = x;
     mag = magnitude();
     ang = angle();
     return *this;
 }
 
-Cmpx& Cmpx::set_mag(const float x) {
+Cmpx& Cmpx::set_mag(const fptype x) {
     assert(x >= 0);
     mag = x;
     re = real();
@@ -59,7 +59,7 @@ Cmpx& Cmpx::set_mag(const float x) {
     return *this;
 }
 
-Cmpx& Cmpx::set_ang(const float x) {
+Cmpx& Cmpx::set_ang(const fptype x) {
     ang = fmod(x, 2*M_PI);
     re = real();
     im = imaginary();
@@ -102,7 +102,7 @@ Cmpx& Cmpx::operator/=(const Cmpx &z) {
     return *this;
 }
 
-Cmpx& Cmpx::operator*=(const float k) {
+Cmpx& Cmpx::operator*=(const fptype k) {
     if(k < 0) {
         mag *= -k;
         ang = fmod(ang + M_PI, 2*M_PI);

@@ -9,13 +9,12 @@
 #include "Cmpx.hpp"
 #include "Vector3.hpp"
 #include "helper_functions.hpp"
-#define NEWLINE printf("\n");
 
 
 // FMM algorithm in BFS
 // ===============================
-int fmm_bfs(        const float *charge,
-                    float *potential,
+int fmm_bfs(        const fptype *charge,
+                    fptype *potential,
                     const Box *root,
                     const unsigned int limit,
                     const unsigned int actual_limit,
@@ -71,13 +70,13 @@ int fmm_bfs(        const float *charge,
         // Calculate multipole moments for the source box
             Cmpx multipole_coeff[P+1][2*P+1];
             // checking for source charges in the source box
-            float charge_found = 0;
-            float width = pow(2, actual_limit-n->level);
+            fptype charge_found = 0;
+            fptype width = pow(2, actual_limit-n->level);
             for(int l=0; l<=P; l++) {
                 for(int m=-l; m<=l; m++) {
                     for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
                         for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                            float q = charge[yy*xdim + xx];
+                            fptype q = charge[yy*xdim + xx];
                             if (q != 0) { // if charge found
                                 charge_found = 1;
                                 Cmpx r_(xx - n->cx, yy - n->cy, 0);
@@ -118,8 +117,8 @@ int fmm_bfs(        const float *charge,
                                     potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
                                     // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
 
-                                    const float threshold = 1e-2;
-                                    float modangle = fabs(sum_over_lm.get_ang());
+                                    const fptype threshold = 1e-2;
+                                    fptype modangle = fabs(sum_over_lm.get_ang());
                                     modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
                                     if(modangle > threshold) {
                                         if(verbose_level >= 0)
@@ -134,7 +133,7 @@ int fmm_bfs(        const float *charge,
                 // calculation with neighbor list at the deepest level
                     if(n->level == actual_limit) {
                         assert(n->cx == n->x && n->cy == n->y);
-                        float q = charge[(int)(n->cy*xdim + n->cx)];
+                        fptype q = charge[(int)(n->cy*xdim + n->cx)];
                         if(zp != zc) { // neighbor on other layers at self position
                             Vector3 r(0, 0, zp - zc);
                             potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
@@ -160,8 +159,8 @@ int fmm_bfs(        const float *charge,
 }
 
 
-int fmm_calc(   const float *charge,
-                float *potential,
+int fmm_calc(   const fptype *charge,
+                fptype *potential,
                 const int xdim, const int ydim, const int zdim,
                 const int P,    // multipole series truncation (l = 0...P)
                 const int verbose_level )
@@ -203,14 +202,14 @@ int fmm_calc(   const float *charge,
 
 
 // Exact O(N^2) calculation of potential
-void calc_potential_exact( const float *charge,
+void calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
-                        float *potential)
+                        fptype *potential)
 {
     for(int z_ = 0; z_ < zdim; z_++) {  // source loop
         for(int y_ = 0; y_ < ydim; y_++) {
             for(int x_ = 0; x_ < xdim; x_++) {
-                float q = charge[z_*ydim*xdim + y_*xdim + x_];
+                fptype q = charge[z_*ydim*xdim + y_*xdim + x_];
                 if (q == 0) continue;
                 for(int z = 0; z < zdim; z++) { // observation point loop
                     for(int y = 0; y < ydim; y++) {

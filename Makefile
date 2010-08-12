@@ -34,15 +34,15 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBPATH) $(LIBRARIES)
 
-Box.o 				: Box.cpp Box.hpp
-Queue.o				: Queue.cpp Queue.hpp
-Cmpx.o				: Cmpx.cpp Cmpx.hpp
-Vector3.o			: Vector3.cpp Vector3.hpp
-helper_functions.o 	: helper_functions.cpp helper_functions.hpp
-vector_functions.o 	: vector_functions.cpp vector_functions.hpp
-ode_functions.o 	: ode_functions.cpp ode_functions.hpp
-fmm_calc.o			: fmm_calc.cpp
-main.o				: main.cpp
+Box.o 				: Box.cpp Box.hpp mydefs.hpp
+Queue.o				: Queue.cpp Queue.hpp mydefs.hpp
+Cmpx.o				: Cmpx.cpp Cmpx.hpp mydefs.hpp
+Vector3.o			: Vector3.cpp Vector3.hpp mydefs.hpp
+helper_functions.o 	: helper_functions.cpp helper_functions.hpp mydefs.hpp
+vector_functions.o 	: vector_functions.cpp vector_functions.hpp mydefs.hpp
+ode_functions.o 	: ode_functions.cpp ode_functions.hpp mydefs.hpp
+fmm_calc.o			: fmm_calc.cpp mydefs.hpp
+main.o				: main.cpp mydefs.hpp
 
 clean:
 	rm -f $(OBJS) gmon.out $(TARGET)

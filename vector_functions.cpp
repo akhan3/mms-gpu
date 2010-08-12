@@ -3,45 +3,44 @@
 #include <assert.h>
 #include <cmath>
 #include "vector_functions.hpp"
-#define NEWLINE printf("\n");
 
 
 void divergence_3d( const Vector3 *V,
                     const int xdim, const int ydim, const int zdim,
-                    float *S )
+                    fptype *S )
 {
     // printf("calculating divergence... \n");
-    float meshwidth = 1.0;
+    fptype meshwidth = 1.0;
     for(int z = 0; z < zdim; z++)
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
-                float x2 = (x != xdim-1) ? V[(z  )*ydim*xdim + (y  )*xdim + (x+1)].x : 0;
-                float x0 = (x != 0     ) ? V[(z  )*ydim*xdim + (y  )*xdim + (x-1)].x : 0;
-                float y2 = (y != ydim-1) ? V[(z  )*ydim*xdim + (y+1)*xdim + (x  )].y : 0;
-                float y0 = (y != 0     ) ? V[(z  )*ydim*xdim + (y-1)*xdim + (x  )].y : 0;
-                float z2 = (z != zdim-1) ? V[(z+1)*ydim*xdim + (y  )*xdim + (x  )].z : 0;
-                float z0 = (z != 0     ) ? V[(z-1)*ydim*xdim + (y  )*xdim + (x  )].z : 0;
+                fptype x2 = (x != xdim-1) ? V[(z  )*ydim*xdim + (y  )*xdim + (x+1)].x : 0;
+                fptype x0 = (x != 0     ) ? V[(z  )*ydim*xdim + (y  )*xdim + (x-1)].x : 0;
+                fptype y2 = (y != ydim-1) ? V[(z  )*ydim*xdim + (y+1)*xdim + (x  )].y : 0;
+                fptype y0 = (y != 0     ) ? V[(z  )*ydim*xdim + (y-1)*xdim + (x  )].y : 0;
+                fptype z2 = (z != zdim-1) ? V[(z+1)*ydim*xdim + (y  )*xdim + (x  )].z : 0;
+                fptype z0 = (z != 0     ) ? V[(z-1)*ydim*xdim + (y  )*xdim + (x  )].z : 0;
                 S[z*ydim*xdim + y*xdim + x] = (x2 - x0 + y2 - y0 + z2 - z0) / (2*meshwidth);
             }
 }
 
 
-void gradient_3d(   const float *S,
+void gradient_3d(   const fptype *S,
                     const int xdim, const int ydim, const int zdim,
-                    const float constant_multiple,
+                    const fptype constant_multiple,
                     Vector3 *V )
 {
     // printf("calculating gradient... \n");
-    float meshwidth = 1.0;
+    fptype meshwidth = 1.0;
     for(int z = 0; z < zdim; z++)
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
-                float x2 = (x != xdim-1) ? S[(z  )*ydim*xdim + (y  )*xdim + (x+1)] : 0;
-                float x0 = (x != 0     ) ? S[(z  )*ydim*xdim + (y  )*xdim + (x-1)] : 0;
-                float y2 = (y != ydim-1) ? S[(z  )*ydim*xdim + (y+1)*xdim + (x  )] : 0;
-                float y0 = (y != 0     ) ? S[(z  )*ydim*xdim + (y-1)*xdim + (x  )] : 0;
-                float z2 = (z != zdim-1) ? S[(z+1)*ydim*xdim + (y  )*xdim + (x  )] : 0;
-                float z0 = (z != 0     ) ? S[(z-1)*ydim*xdim + (y  )*xdim + (x  )] : 0;
+                fptype x2 = (x != xdim-1) ? S[(z  )*ydim*xdim + (y  )*xdim + (x+1)] : 0;
+                fptype x0 = (x != 0     ) ? S[(z  )*ydim*xdim + (y  )*xdim + (x-1)] : 0;
+                fptype y2 = (y != ydim-1) ? S[(z  )*ydim*xdim + (y+1)*xdim + (x  )] : 0;
+                fptype y0 = (y != 0     ) ? S[(z  )*ydim*xdim + (y-1)*xdim + (x  )] : 0;
+                fptype z2 = (z != zdim-1) ? S[(z+1)*ydim*xdim + (y  )*xdim + (x  )] : 0;
+                fptype z0 = (z != 0     ) ? S[(z-1)*ydim*xdim + (y  )*xdim + (x  )] : 0;
                 V[z*ydim*xdim + y*xdim + x].x = (x2 - x0) / (2*meshwidth) * constant_multiple;
                 V[z*ydim*xdim + y*xdim + x].y = (y2 - y0) / (2*meshwidth) * constant_multiple;
                 V[z*ydim*xdim + y*xdim + x].z = (z2 - z0) / (2*meshwidth) * constant_multiple;
@@ -50,12 +49,12 @@ void gradient_3d(   const float *S,
 
 
 void add_exchange_field(const Vector3 *M,
-                        const float Ms, const float Aexch, const float mu,
-                        const int xdim, const int ydim, const int zdim, float meshwidth,
+                        const fptype Ms, const fptype Aexch, const fptype mu,
+                        const int xdim, const int ydim, const int zdim, fptype meshwidth,
                         Vector3 *H )
 {
     // printf("calculating exchange field... \n");
-    const float constant_multiple = 2 * Aexch / (mu * Ms*Ms) / (meshwidth*meshwidth);
+    const fptype constant_multiple = 2 * Aexch / (mu * Ms*Ms) / (meshwidth*meshwidth);
     for(int z = 0; z < zdim; z++)
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {

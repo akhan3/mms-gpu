@@ -6,8 +6,6 @@
 #include "Vector3.hpp"
 #include "helper_functions.hpp"
 
-#define NEWLINE printf("\n");
-
 
 int factorial(int x)
 {
@@ -33,7 +31,7 @@ int factorial(int x)
 }
 
 // Legendre function (recursive implementation)
-float legendre(int k, float x)
+fptype legendre(int k, fptype x)
 {
     assert(k >= 0);
     assert(x >= -1 && x <= 1);
@@ -52,7 +50,7 @@ float legendre(int k, float x)
 }
 
 // Associated Legendre function
-float associated_legendre(int l, int m, float x)
+fptype associated_legendre(int l, int m, fptype x)
 {
     assert(l >= 0 && l <= 4);
     assert(abs(m) <= l);
@@ -100,7 +98,7 @@ float associated_legendre(int l, int m, float x)
 }
 
 // Lookup table for x = 0)
-// float associated_legendre(int l, int m, float x)
+// fptype associated_legendre(int l, int m, fptype x)
 // {
     // assert(l >= 0 && l <= 4);
     // assert(abs(m) <= l);
@@ -149,7 +147,7 @@ float associated_legendre(int l, int m, float x)
 // }
 
 // Spherical harmonics
-Cmpx spherical_harmonic(int l, int m, float theta, float phi)
+Cmpx spherical_harmonic(int l, int m, fptype theta, fptype phi)
 {
     // return Cmpx(sqrt((1.0*factorial(l-abs(m))) / factorial(l+abs(m))) * associated_legendre(l,abs(m),cos(theta)), m*phi, 1);
     return Cmpx(associated_legendre(l, abs(m), cos(theta)), m*phi, 1);
@@ -180,7 +178,7 @@ Cmpx spherical_harmonic(int l, int m, float theta, float phi)
 
 // Write matrix to file
 // ===============================
-int matrix2file(const float* matrix, const int rows, const int cols, const char* filename, int verbose_level)
+int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbose_level)
 {
     int status = 0;
     FILE *fh = fopen(filename, "w");
@@ -202,7 +200,7 @@ int matrix2file(const float* matrix, const int rows, const int cols, const char*
 
 // Write 3D scalar field to file
 // ===============================
-int save_scalar3d(const float* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level)
+int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level)
 {
     int status = 0;
     FILE *fh = fopen(filename, "w");
@@ -254,7 +252,7 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
 
 // Append 3D vector field to file
 // ===============================
-int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const int tindex, const float time, FILE* fh, int verbose_level)
+int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const int tindex, const fptype time, FILE* fh, int verbose_level)
 {
     int status = 0;
     for(int z = 0; z < zdim; z++) {
@@ -271,7 +269,7 @@ int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, 
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-int matrix2stdout(const float* matrix, const int rows, const int cols, const char* matrixname) {
+int matrix2stdout(const fptype* matrix, const int rows, const int cols, const char* matrixname) {
     printf("%s = [\n", matrixname);
     for(int r=0; r<rows; r++) {     // axis ij
     // for(int r=rows-1; r>=0; r--) {     // axis xy
@@ -345,10 +343,10 @@ int rand_atob(const int a, const int b) {
     return (int)r;
 }
 
-float frand_atob(const float a, const float b) {
+fptype frand_atob(const fptype a, const fptype b) {
     double r = rand() / (double)RAND_MAX;
     r = a + (b-a) * r;
-    return (float)r;
+    return (fptype)r;
 }
 
 
