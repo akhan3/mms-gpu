@@ -20,7 +20,7 @@ Vector3 LLG_Mprime( const Vector3 &M,
 int Hfield(const Vector3 *M, Vector3 *H,
                 const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                 const fptype mu_0, const fptype Ms, const fptype Aexch,
-                const int coupling, const int exchange, const int external,
+                const int coupling, const int exchange, const int external, const int use_fmm, const int P,
                 const int verbose_level )
 {
     int status = 0;
@@ -40,9 +40,11 @@ int Hfield(const Vector3 *M, Vector3 *H,
     // magnetic volume charge density
         divergence_3d(M, xdim, ydim, zdim, charge);
     // calculate potential
-        calc_H_nearest_neighbor(M, H, xdim, ydim, zdim); // nearest neighbor coupling only
-        // status |= fmm_calc(charge, potential, xdim, ydim, zdim, 3, verbose_level);
-        // calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
+        // calc_H_nearest_neighbor(M, H, xdim, ydim, zdim); // nearest neighbor coupling only
+        if(use_fmm)
+            status |= fmm_calc(charge, potential, xdim, ydim, zdim, P, verbose_level);
+        else
+            calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
     // magnetostatic field from potential = H_demag + H_coupl
         gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);
     // clean-up
@@ -71,7 +73,7 @@ int postprocess_M(  const Vector3 *M,
                     const fptype energy, fptype *energy_new,
                     const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                     const fptype mu_0, const fptype Ms, const fptype Aexch,
-                    const int coupling, const int exchange, const int external,
+                    const int coupling, const int exchange, const int external, const int use_fmm, const int P,
                     FILE *fh, FILE *fhM,
                     int verbose_level )
 {
@@ -84,7 +86,7 @@ int postprocess_M(  const Vector3 *M,
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
     }
-    status |= Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
+    status |= Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
 // calculate energy and average magnetization
     fptype torque_max = 0;
     *energy_new = 0;
@@ -135,7 +137,7 @@ int postprocess_M(  const Vector3 *M,
 int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
                 const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                 const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
-                const int coupling, const int exchange, const int external,
+                const int coupling, const int exchange, const int external, const int use_fmm, const int P,
                 const int normalize,
                 fptype *t_new, Vector3 *M_new,    // output
                 const int verbose_level)
@@ -149,7 +151,7 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
         return EXIT_FAILURE;
     }
 // k1 @ t1
-    Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
+    Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
@@ -158,7 +160,7 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
         }
     }
 // k2 @ t1 + dt/2
-    Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
+    Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
@@ -167,7 +169,7 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
         }
     }
 // k3 @ t1 + dt/2
-    Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
+    Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
@@ -176,7 +178,7 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
         }
     }
 // k4 @ t1 + dt
-    Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
+    Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
@@ -200,7 +202,7 @@ int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
                 const fptype dt_min, const fptype dt_max, const fptype tolerance, const fptype tolerance_hyst, const fptype safety_factor,
                 const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                 const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
-                const int coupling, const int exchange, const int external,
+                const int coupling, const int exchange, const int external, const int use_fmm, const int P,
                 const int normalize,
                 const int adjust_step,
                 fptype *t_new, Vector3 *M_new, fptype *dt_new,    // output
@@ -212,7 +214,7 @@ int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
     // printf("rk4_step_adaptive: %g, %g, %g, %g\n", t, dt, *t_new, *dt_new);
     status |= rk4_step( t, M, dt,
                         xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                        coupling, exchange, external,
+                        coupling, exchange, external, use_fmm, P,
                         normalize,
                         t_new, M_new,   // output from RK step
                         verbose_level);
@@ -284,9 +286,10 @@ int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
 // main time marching function
 // =============================================
 int time_marching(  Vector3 *M, // initial state. This will be overwritten in each time step
-                    const fptype finaltime,
-                    const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                    const fptype finaltime, const fptype timestep,
+                    const int xdim, const int ydim, const int zdim, const fptype meshwidth, const int P,
                     const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
+                    const int coupling, const int exchange, const int external, const int use_fmm,
                     const int verbose_level )
 {
     int status = 0;
@@ -307,7 +310,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     // const fptype dt_min = 1e-17;   // OOMMF has a default of zero
     const fptype dt_min = 0;   // OOMMF has a default of zero
     const fptype dt_max = 1e-10;
-    fptype dt = 1e-14; // start very optimistically at dt_max
+    fptype dt = timestep; // start very optimistically at dt_max
     // const fptype tolerance = Ms/1e3;
     const fptype tolerance = 1 * M_PI/180;  // in radians
     const fptype tolerance_hyst = .5 * tolerance;  // in radians
@@ -315,9 +318,9 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     const int normalize = true;
     const int adjust_step = false;
 // H field parameters
-    const int coupling = true;
-    const int exchange = true;
-    const int external = false;
+    // const int coupling = true;
+    // const int exchange = true;
+    // const int external = false;
 // starting point
     int tindex = 0;
     fptype t = 0;
@@ -327,7 +330,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     status |= postprocess_M( M, tindex, t, dt,
                              energy, &energy_new,
                              xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch,
-                             coupling, exchange, external,
+                             coupling, exchange, external, use_fmm, P,
                              fh, fhM, verbose_level );
     printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
     // getchar();
@@ -349,7 +352,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         status |= rk4_step_adaptive( t, M, dt,
                             dt_min, dt_max, tolerance, tolerance_hyst, safety_factor,
                             xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            coupling, exchange, external,
+                            coupling, exchange, external, use_fmm, P,
                             normalize,
                             adjust_step,
                             &t_new, M_new, &dt_new,  // output from RK step
@@ -365,7 +368,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
             status |= postprocess_M( M, tindex, t, dt,
                                      energy, &energy_new,
                                      xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch,
-                                     coupling, exchange, external,
+                                     coupling, exchange, external, use_fmm, P,
                                      fh, fhM, verbose_level );
             energy = energy_new;
             printf("\n");

@@ -22,22 +22,41 @@ int main(int argc, char **argv)
     const int verbose_level = 2;
     int status = 0;
 // intial command line arguments
-    char filename_arg[1000];
+    char filename_arg[1000] = "verysmall_16x16.png";
     unsigned int P = 3;
-    unsigned int seed = time(NULL);
+    fptype finaltime = 1e-9;
+    fptype timestep = 1e-14;
+    fptype meshwidth = 1e-9;
+    int coupling = true;
+    int exchange = true;
+    int external = false;
+    int use_fmm = false;
+    // unsigned int seed = time(NULL);
+    unsigned int seed = 1985;
 // read command line arguments
-    if(argc >= 2) {
+    if(argc >= 2)
         sscanf(argv[1], "%s", filename_arg);
-    }
     if(argc >= 3) {
         sscanf(argv[2], "%u", &P);
         assert(P <= 4);
     }
-    if(argc >= 4) {
-        sscanf(argv[3], "%u", &seed);
-    }
+    if(argc >= 4)
+        sscanf(argv[3], "%f", &finaltime);
+    if(argc >= 5)
+        sscanf(argv[4], "%f", &timestep);
+    if(argc >= 6)
+        sscanf(argv[5], "%f", &meshwidth);
+    if(argc >= 7)
+        sscanf(argv[6], "%d", &coupling);
+    if(argc >= 8)
+        sscanf(argv[7], "%d", &exchange);
+    if(argc >= 9)
+        sscanf(argv[8], "%d", &external);
+    if(argc >= 10)
+        sscanf(argv[9], "%d", &use_fmm);
+    if(argc >= 11)
+        sscanf(argv[10], "%u", &seed);
     srand(seed);
-    srand(1985);
 
 // Material parameters
 // ================================================
@@ -55,7 +74,6 @@ int main(int argc, char **argv)
     BYTE *mask = NULL; // mask matrix
     char filename[1000];
     sprintf(filename, "%s", filename_arg);
-    // sprintf(filename, "%s", "verysmall_16x16.png");
 // read the mask from file
     load_mask(filename, &mask, &xdim, &ydim);
     zdim = 1;
@@ -111,15 +129,16 @@ int main(int argc, char **argv)
     if(status) return EXIT_FAILURE;
 
 // set up grid and simulation time
-    const fptype meshwidth = 1e-9;
-    const fptype finaltime = 10e-9;
+    // const fptype meshwidth = 1e-9;
+    // const fptype finaltime = 10e-9;
 
 // magnetization dynamics
 // ===================================================================
     status |= time_marching(    M,
-                                finaltime,
-                                xdim, ydim, zdim, meshwidth,
+                                finaltime, timestep,
+                                xdim, ydim, zdim, meshwidth, P,
                                 mu_0, Ms, Aexch, alfa, gamma,
+                                coupling, exchange, external, use_fmm,
                                 verbose_level );
     if(status) return EXIT_FAILURE;
 
