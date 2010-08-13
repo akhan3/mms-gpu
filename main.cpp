@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <iostream>
 #include <cmath>
-#include <FreeImage.h>
 #include "Box.hpp"
 #include "Cmpx.hpp"
 #include "Vector3.hpp"
@@ -22,10 +21,11 @@ int main(int argc, char **argv)
 {
     const int verbose_level = 2;
     int status = 0;
+// intial command line arguments
     char filename_arg[1000];
-    unsigned int seed = time(NULL);
     unsigned int P = 3;
-    assert(argc >= 2);
+    unsigned int seed = time(NULL);
+// read command line arguments
     if(argc >= 2) {
         sscanf(argv[1], "%s", filename_arg);
     }
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         sscanf(argv[3], "%u", &seed);
     }
     srand(seed);
-
+    srand(1985);
 
 // Material parameters
 // ================================================
@@ -48,16 +48,27 @@ int main(int argc, char **argv)
     const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
 
 // Mask configuration for magnetic material
-    BYTE *mask = NULL; // mask matrix
     unsigned int xdim = 0;
     unsigned int ydim = 0;
-
+    unsigned int zdim = 0;
+#ifdef USE_FREEIMAGE
+    BYTE *mask = NULL; // mask matrix
     char filename[1000];
     sprintf(filename, "%s", filename_arg);
+    // sprintf(filename, "%s", "verysmall_16x16.png");
 // read the mask from file
     load_mask(filename, &mask, &xdim, &ydim);
+    zdim = 1;
+#else
+    xdim = 64;
+    ydim = xdim;
+    zdim = 32;
+    byte *mask = new byte[ydim*xdim](); // mask matrix
+    for(unsigned int y = 1; y < ydim-1; y++)
+        for(unsigned int x = 1; x < xdim-1; x++)
+            mask[y*xdim + x] = 1;
+#endif
     assert(xdim == ydim);
-    unsigned int zdim = 1;
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
 
 // generate the initial magnetization distribution
@@ -67,9 +78,17 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    for(unsigned int z = 0; z < zdim; z++)
-    // unsigned int z = 0;
-    {
+    unsigned int zstart;
+    unsigned int zend;
+    if(zdim == 1) {
+        zstart = 0;
+        zend = 0;
+    }
+    else {
+        zstart = 1;
+        zend = zdim-2;
+    }
+    for(unsigned int z = zstart; z <= zend; z++) {
         for(unsigned int y = 0; y < ydim; y++) {
             for(unsigned int x = 0; x < xdim; x++) {
                 if (!mask[y*xdim + x])
@@ -93,7 +112,7 @@ int main(int argc, char **argv)
 
 // set up grid and simulation time
     const fptype meshwidth = 1e-9;
-    const fptype finaltime = 1e-9;
+    const fptype finaltime = 10e-9;
 
 // magnetization dynamics
 // ===================================================================

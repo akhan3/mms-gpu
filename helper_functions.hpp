@@ -1,7 +1,6 @@
 #ifndef _HELPER_FUNCTIONS_H_
 #define _HELPER_FUNCTIONS_H_
 
-#include <FreeImage.h>
 #include "mydefs.hpp"
 #include "Box.hpp"
 #include "Queue.hpp"
@@ -46,6 +45,10 @@ void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
 void create_tree_recurse(Box *thisBox, const unsigned int limit);
 void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit);
 
+#ifdef USE_FREEIMAGE
+#include <FreeImage.h>
 int load_mask(const char *filename, BYTE **mask, unsigned *xdim, unsigned *ydim);
+#endif
+
 
 #endif // #ifndef  _HELPER_FUNCTIONS_H_

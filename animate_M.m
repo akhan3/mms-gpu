@@ -15,8 +15,8 @@ load dynamics.dat;
     torque_max  = dynamics(:,10);
 
     tdim = length(time);
-    zdim = 1;
-    ydim = 16;
+    zdim = 32;
+    ydim = 64;
     xdim = ydim;
     x = 0:xdim-1;
     y = 0:ydim-1;

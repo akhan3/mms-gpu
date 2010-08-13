@@ -2,10 +2,18 @@ CXX         := 	g++
 CC         	:=	gcc
 LINKER     	:= 	g++ -fPIC
 
-#INCPATH     := -I./ $(MATLAB_INCLUDES)
+#INCPATH		:= -I./ $(MATLAB_INCLUDES)
 #LIBPATH		:= $(MATLAB_LIBRARIES)
-LIBRARIES	:= -lfreeimage
+DEFINES		:=
+COMMONFLAGS	:=
+LIBRARIES	:=
 
+ifeq ($(use_freeimage),1)
+	LIBRARIES	+= -lfreeimage
+	DEFINES 	+= -DUSE_FREEIMAGE
+endif
+
+COMMONFLAGS		+= $(DEFINES)
 ifeq ($(dbg),1)
 	COMMONFLAGS += -g
 else

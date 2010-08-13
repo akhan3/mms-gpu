@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <cmath>
-#include <FreeImage.h>
 #include "Vector3.hpp"
 #include "helper_functions.hpp"
 
@@ -350,6 +349,7 @@ fptype frand_atob(const fptype a, const fptype b) {
 }
 
 
+#ifdef USE_FREEIMAGE
 int load_mask(const char *filename, BYTE **mask, unsigned *xdim, unsigned *ydim)
 {
     assert( !strcmp(filename+strlen(filename)-3, "png") || !strcmp(filename+strlen(filename)-3, "PNG") );
@@ -395,3 +395,4 @@ int load_mask(const char *filename, BYTE **mask, unsigned *xdim, unsigned *ydim)
     FreeImage_Unload(myimage);
     return EXIT_SUCCESS;
 }
+#endif

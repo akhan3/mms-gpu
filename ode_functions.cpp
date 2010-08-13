@@ -40,9 +40,9 @@ int Hfield(const Vector3 *M, Vector3 *H,
     // magnetic volume charge density
         divergence_3d(M, xdim, ydim, zdim, charge);
     // calculate potential
-        // calc_H_nearest_neighbor(M, H, xdim, ydim, zdim); // nearest neighbor coupling only
+        calc_H_nearest_neighbor(M, H, xdim, ydim, zdim); // nearest neighbor coupling only
         // status |= fmm_calc(charge, potential, xdim, ydim, zdim, 3, verbose_level);
-        calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
+        // calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
     // magnetostatic field from potential = H_demag + H_coupl
         gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);
     // clean-up
@@ -116,11 +116,11 @@ int postprocess_M(  const Vector3 *M,
         // status = EXIT_FAILURE;
         // break;
     }
-    if(Mmag_avg > 1.1*Ms && tindex != 0) {
-        status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
-        if(status) return EXIT_FAILURE;
-        printf("PANIC!! Mmag_avg = %g A/m,  Mmag_avg/Ms  = %g \n", Mmag_avg, Mmag_avg/Ms);
-    }
+    // if(Mmag_avg > 1.1*Ms && tindex != 0) {
+        // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
+        // if(status) return EXIT_FAILURE;
+        // printf("PANIC!! Mmag_avg = %g A/m,  Mmag_avg/Ms  = %g \n", Mmag_avg, Mmag_avg/Ms);
+    // }
     delete []H;
     if(!(tindex % 100))
     {
@@ -151,32 +151,40 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
 // k1 @ t1
     Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
-        this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
-        M_new[i] = M[i] + (this_slope[i] * 0.5 * dt);
-        slope[i] += this_slope[i];
+        if(M[i].magnitude()) {
+            this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
+            M_new[i] = M[i] + (this_slope[i] * 0.5 * dt);
+            slope[i] += this_slope[i];
+        }
     }
 // k2 @ t1 + dt/2
     Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
-        this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
-        M_new[i] = M[i] + (this_slope[i] * 0.5 * dt);
-        slope[i] += 2 * this_slope[i];
+        if(M[i].magnitude()) {
+            this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
+            M_new[i] = M[i] + (this_slope[i] * 0.5 * dt);
+            slope[i] += 2 * this_slope[i];
+        }
     }
 // k3 @ t1 + dt/2
     Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
-        this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
-        M_new[i] = M[i] + (this_slope[i] * dt);
-        slope[i] += 2 * this_slope[i];
+        if(M[i].magnitude()) {
+            this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
+            M_new[i] = M[i] + (this_slope[i] * dt);
+            slope[i] += 2 * this_slope[i];
+        }
     }
 // k4 @ t1 + dt
     Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, verbose_level);
     for(int i = 0; i < xyzdim; i++) {
-        this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
-        slope[i] += this_slope[i];
-        M_new[i] = M[i] + dt * slope[i] * (1/6.0);
-        if(normalize)
-            M_new[i] = M_new[i] * (Ms / M_new[i].magnitude());  // re-normalize with Ms
+        if(M[i].magnitude()) {
+            this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
+            slope[i] += this_slope[i];
+            M_new[i] = M[i] + dt * slope[i] * (1/6.0);
+            if(normalize)
+                M_new[i] = M_new[i] * (Ms / M_new[i].magnitude());  // re-normalize with Ms
+        }
     }
     *t_new = t + dt;
     delete []H;
@@ -189,7 +197,7 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
 
 
 int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
-                const fptype dt_min, const fptype dt_max, const fptype tolerance,
+                const fptype dt_min, const fptype dt_max, const fptype tolerance, const fptype tolerance_hyst, const fptype safety_factor,
                 const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                 const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                 const int coupling, const int exchange, const int external,
@@ -212,63 +220,63 @@ int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
         *dt_new = dt;
     }
     else {
-    // two RK steps of half size for Richardson extrapolation
-        fptype t_mid1 = -34, t_mid2 = -56;
-        Vector3 *M_mid1 = new Vector3[zdim*ydim*xdim]();
-        Vector3 *M_mid2 = new Vector3[zdim*ydim*xdim]();
-        if(M_mid1 == NULL || M_mid2 == NULL) {
-            fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-            return EXIT_FAILURE;
-        }
-        status |= rk4_step( t, M, dt/2,
-                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            coupling, exchange, external,
-                            normalize,
-                            &t_mid1, M_mid1,   // output from RK step
-                            verbose_level);
-        status |= rk4_step( t_mid1, M_mid1, dt/2,
-                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            coupling, exchange, external,
-                            normalize,
-                            &t_mid2, M_mid2,   // output from RK step
-                            verbose_level);
     // error estimation
         fptype diff_max = 0;
-        fptype diff_avg = 0;
         for(int i = 0; i < xyzdim; i++) {
-            Vector3 delta = M_mid2[i] - M_new[i];
-            fptype e = (fabs(delta.x) > fabs(delta.y)) ? fabs(delta.x) : ((fabs(delta.y) > fabs(delta.z)) ? fabs(delta.y) : fabs(delta.z));
-            diff_avg += e;
-            diff_max = (diff_max > e) ? diff_max : e;
-            // printf("    diff_max=%g, e=%g\n", diff_max, e);
+            if(M[i].magnitude()) {
+                fptype e = acos(M[i].dot(M_new[i]) / (M[i].magnitude() * M_new[i].magnitude()));
+                diff_max = (diff_max > e) ? diff_max : e;
+                // printf("    diff_max=%g, e=%g\n", diff_max, e);
+            }
         }
-        diff_avg /= xyzdim;
-    // take decision
-        if(diff_max <= tolerance || dt == dt_min) {    // accept the step
-            // t_new = t_new;
-            // M_new = M_new;
-            if(dt == dt_min)
-                printf("PANIC!! step size hit minimum size before fulfilling tolerance requirement.\n");
+        fptype error = diff_max - tolerance;
+    // take decision and adjust step
+        if(-tolerance_hyst/2 <= error && error <= tolerance_hyst/2) { // accept the step
+            *dt_new = dt;   // don't update if falls inside hysteresis window
+            return status;
         }
-        else {
-            *t_new = t;  // reject and invalidate this step
+        else if(error < -tolerance_hyst/2) { // accept the step
+            // *dt_new = dt * 1.01; // and increase stepsize slightly
+            *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1); // and decrease stepsize
         }
-    // adjust step
-        const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
-        *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
-        // if(diff_max <= tolerance)   // increase step
-            // *dt_new = 1.01 * dt;
-        // else                        //  decrease step
-            // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
+        else if(error > tolerance_hyst/2 && dt > dt_min) { // reject the step
+            *t_new = t; // invalidate this step
+            *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1); // and decrease stepsize
+        }
+        else if(error > tolerance_hyst/2 && dt <= dt_min) { // accept the step with warning
+            printf("PANIC!! step size hit minimum size before fulfilling tolerance requirement.\n");
+            *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1); // and decrease stepsize
+        }
+    // check the bounds
+        // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1);
         *dt_new = (*dt_new < dt_min) ? dt_min : *dt_new;
         *dt_new = (*dt_new > dt_max) ? dt_max : *dt_new;
-        // printf("dt=%g, dt_new=%g \n", dt, *dt_new);
-        // printf("dt=%.7g, diff_max=%.7f, diff_avg=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, diff_avg, tolerance, *dt_new);
         printf("dt=%g, diff_max=%g, tolerance=%g, dt_new=%g \n", dt, diff_max, tolerance, *dt_new);
-        delete []M_mid1;
-        delete []M_mid2;
     }
     return status;
+    // // take decision
+        // if(diff_max <= tolerance || dt == dt_min) {    // accept the step
+            // // t_new = t_new;
+            // // M_new = M_new;
+            // if(dt == dt_min)
+                // printf("PANIC!! step size hit minimum size before fulfilling tolerance requirement.\n");
+        // }
+        // else {
+            // *t_new = t;  // reject and invalidate this step
+        // }
+    // // adjust step
+        // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1);
+        // // if(diff_max <= tolerance)   // increase step
+            // // *dt_new = 1.01 * dt;
+        // // else                        //  decrease step
+            // // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
+        // *dt_new = (*dt_new < dt_min) ? dt_min : *dt_new;
+        // *dt_new = (*dt_new > dt_max) ? dt_max : *dt_new;
+        // // printf("dt=%g, dt_new=%g \n", dt, *dt_new);
+        // // printf("dt=%.7g, diff_max=%.7f, diff_avg=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, diff_avg, tolerance, *dt_new);
+        // printf("dt=%g, diff_max=%g, tolerance=%g, dt_new=%g \n", dt, diff_max, tolerance, *dt_new);
+    // }
+    // return status;
 }
 
 
@@ -300,11 +308,14 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     const fptype dt_min = 0;   // OOMMF has a default of zero
     const fptype dt_max = 1e-10;
     fptype dt = 1e-14; // start very optimistically at dt_max
-    const fptype tolerance = Ms/1e3;
+    // const fptype tolerance = Ms/1e3;
+    const fptype tolerance = 1 * M_PI/180;  // in radians
+    const fptype tolerance_hyst = .5 * tolerance;  // in radians
+    const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
     const int normalize = true;
-    const int adjust_step = true;
+    const int adjust_step = false;
 // H field parameters
-    const int coupling = false;
+    const int coupling = true;
     const int exchange = true;
     const int external = false;
 // starting point
@@ -336,7 +347,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     // execute one step of RK
         // printf("\nexecuting RK step...\n");
         status |= rk4_step_adaptive( t, M, dt,
-                            dt_min, dt_max, tolerance,
+                            dt_min, dt_max, tolerance, tolerance_hyst, safety_factor,
                             xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
                             coupling, exchange, external,
                             normalize,
@@ -361,7 +372,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         } // if(step_valid)
         delete []M_new;
         fflush(NULL);
-        if(tindex >= 200) break;
+        if(tindex >= 5) break;
     } // time marching while loop
 
     {
