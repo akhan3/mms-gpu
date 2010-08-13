@@ -253,6 +253,7 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
 // ===============================
 int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const int tindex, const fptype time, FILE* fh, int verbose_level)
 {
+    if(verbose_level) {}
     int status = 0;
     for(int z = 0; z < zdim; z++) {
         for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB

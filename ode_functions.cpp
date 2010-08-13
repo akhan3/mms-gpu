@@ -371,34 +371,12 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
                                      coupling, exchange, external, use_fmm, P,
                                      fh, fhM, verbose_level );
             energy = energy_new;
-            printf("\n");
+            // printf("\n");
         } // if(step_valid)
         delete []M_new;
         fflush(NULL);
-        if(tindex >= 5) break;
+        // if(tindex >= 5) break;
     } // time marching while loop
-
-    {
-        // fptype t_new, dt_new;
-        // Vector3 *M_new = new Vector3[zdim*ydim*xdim]();
-        // status |= rk4_step_adaptive( t, M, 5e-14,
-                            // dt_min, dt_max, Ms/1e3,
-                            // xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            // coupling, exchange, external,
-                            // normalize,
-                            // adjust_step,
-                            // &t_new, M_new, &dt_new,  // output from RK step
-                            // verbose_level);
-        // status |= rk4_step_adaptive( t, M, 5e-14,
-                            // dt_min, dt_max, Ms/1e2,
-                            // xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            // coupling, exchange, external,
-                            // normalize,
-                            // adjust_step,
-                            // &t_new, M_new, &dt_new,  // output from RK step
-                            // verbose_level);
-    }
-
 
 // closing
     fclose(fh);
