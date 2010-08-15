@@ -1,7 +1,7 @@
  %initial loading and setup
     clear
 
-    load dynamics.dat
+load dynamics.dat
     tindex = dynamics(:,1);
     time = dynamics(:,2);
     dt = dynamics(:,3);
@@ -12,6 +12,7 @@
     Mz = dynamics(:,8);
     M  = dynamics(:,9);
     torque_max  = dynamics(:,10);
+clear dynamics
 
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);

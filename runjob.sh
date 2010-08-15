@@ -1,27 +1,27 @@
-#!/bin/bash
+#!/bin/csh
 
-# clean-up
-rm -rf log*
-rm -rf *.dat
-make clean
-# fresh compile
-make
+# set OpenMP threads
+setenv OMP_NUM_THREADS=4
 
 # launch the simulation
-time ./main                 \
+./main                      \
                 dummy.png   \
                 3           \
                 5e-10       \
-                2e-14       \
+                5e-14       \
                 1e-9        \
+                32          \
+                32          \
+                3           \
                 1           \
                 1           \
                 0           \
                 0           \
-                sim_coupling_exchange_cell1nm_nofmm     \
+                sim_coupling_exchange_cel1nm_nofmm     \
                 1985        \
-    &> log
-    echo "program exit staus = $?" >> log
+    | tee log
+
+echo "program exit staus = $?" >> log
 
 
 # default command line args
@@ -31,6 +31,9 @@ time ./main                 \
 # finaltime = 1e-9
 # timestep = 1e-14
 # meshwidth = 1e-9
+# xdim = 16
+# ydim = 16
+# zdim = 3
 # coupling = 0
 # exchange = 1
 # external = 0

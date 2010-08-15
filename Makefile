@@ -23,6 +23,9 @@ endif
 ifeq ($(prof),1)
 	COMMONFLAGS += -pg
 endif
+ifeq ($(omp),1)
+	COMMONFLAGS += -fopenmp
+endif
 
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)
 OBJS        := 	Box.o \

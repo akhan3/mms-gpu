@@ -32,6 +32,9 @@ int main(int argc, char **argv)
     fptype finaltime = 1e-9;
     fptype timestep = 1e-14;
     fptype meshwidth = 1e-9;
+    unsigned int xdim = 16;
+    unsigned int ydim = 16;
+    unsigned int zdim = 3;
     int coupling = false;
     int exchange = true;
     int external = false;
@@ -52,17 +55,23 @@ int main(int argc, char **argv)
     if(argc >= 6)
         sscanf(argv[5], "%lf", &meshwidth);
     if(argc >= 7)
-        sscanf(argv[6], "%d", &coupling);
+        sscanf(argv[6], "%d", &xdim);
     if(argc >= 8)
-        sscanf(argv[7], "%d", &exchange);
+        sscanf(argv[7], "%d", &ydim);
     if(argc >= 9)
-        sscanf(argv[8], "%d", &external);
+        sscanf(argv[8], "%d", &zdim);
     if(argc >= 10)
-        sscanf(argv[9], "%d", &use_fmm);
+        sscanf(argv[9], "%d", &coupling);
     if(argc >= 11)
-        sscanf(argv[10], "%s", sim_name);
+        sscanf(argv[10], "%d", &exchange);
     if(argc >= 12)
-        sscanf(argv[11], "%u", &seed);
+        sscanf(argv[11], "%d", &external);
+    if(argc >= 13)
+        sscanf(argv[12], "%d", &use_fmm);
+    if(argc >= 14)
+        sscanf(argv[13], "%s", sim_name);
+    if(argc >= 15)
+        sscanf(argv[14], "%u", &seed);
     srand(seed);
 // print command line arguments
     printf("imagefile = %s \n", filename_arg);
@@ -70,6 +79,9 @@ int main(int argc, char **argv)
     printf("finaltime = %g \n", finaltime);
     printf("timestep = %g \n", timestep);
     printf("meshwidth = %g \n", meshwidth);
+    printf("xdim = %d \n", xdim);
+    printf("ydim = %d \n", ydim);
+    printf("zdim = %d \n", zdim);
     printf("coupling = %d \n", coupling);
     printf("exchange = %d \n", exchange);
     printf("external = %d \n", external);
@@ -86,9 +98,6 @@ int main(int argc, char **argv)
     const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
 
 // Mask configuration for magnetic material
-    unsigned int xdim = 0;
-    unsigned int ydim = 0;
-    unsigned int zdim = 0;
 #ifdef USE_FREEIMAGE
     BYTE *mask = NULL; // mask matrix
     char filename[1000];
@@ -97,15 +106,12 @@ int main(int argc, char **argv)
     load_mask(filename, &mask, &xdim, &ydim);
     zdim = 1;
 #else
-    xdim = 64;
-    ydim = xdim;
-    zdim = 32;
     byte *mask = new byte[ydim*xdim](); // mask matrix
     for(unsigned int y = 0; y < ydim; y++)
         for(unsigned int x = 0; x < xdim; x++)
             mask[y*xdim + x] = 1;   // all white (no material)
-    for(unsigned int y = 1; y < ydim-1; y++)
-        for(unsigned int x = 1; x < xdim-1; x++)
+    for(unsigned int y = 2; y < ydim-2; y++)
+        for(unsigned int x = 2; x < xdim-2; x++)
             mask[y*xdim + x] = 0;   // selected black (material)
 #endif
     assert(xdim == ydim);
@@ -125,6 +131,7 @@ int main(int argc, char **argv)
         zend = 0;
     }
     else {
+        assert(zdim >= 3);
         zstart = 1;
         zend = zdim-2;
     }
@@ -133,10 +140,10 @@ int main(int argc, char **argv)
             for(unsigned int x = 0; x < xdim; x++) {
                 if (!mask[y*xdim + x])
                 {
-                    fptype theta = frand_atob(90-30, 90+30) * M_PI/180;
-                    fptype phi   = frand_atob(0, 90) * M_PI/180;
-                    // fptype theta = frand_atob(0, 180) * M_PI/180;
-                    // fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    // fptype theta = frand_atob(90-30, 90+30) * M_PI/180;
+                    // fptype phi   = frand_atob(0, 90) * M_PI/180;
+                    fptype theta = frand_atob(0, 180) * M_PI/180;
+                    fptype phi   = frand_atob(0, 360) * M_PI/180;
                     // fptype theta = M_PI/2;
                     // fptype phi   = 0;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
@@ -149,10 +156,6 @@ int main(int argc, char **argv)
 // write M field to file
     status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
     if(status) return EXIT_FAILURE;
-
-// set up grid and simulation time
-    // const fptype meshwidth = 1e-9;
-    // const fptype finaltime = 10e-9;
 
 // magnetization dynamics
 // ===================================================================

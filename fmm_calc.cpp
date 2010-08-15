@@ -1,3 +1,6 @@
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -213,6 +216,9 @@ void calc_potential_exact( const fptype *charge,
                 if (q == 0) continue;
                 for(int z = 0; z < zdim; z++) { // observation point loop
                     for(int y = 0; y < ydim; y++) {
+                        #ifdef _OPENMP
+                        #pragma omp for
+                        #endif
                         for(int x = 0; x < xdim; x++) {
                             if (z == z_ && y == y_ && x == x_) continue;    // skip on itself
                             Vector3 R(x-x_, y-y_, z-z_);

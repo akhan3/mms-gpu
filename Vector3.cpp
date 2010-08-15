@@ -1,4 +1,7 @@
 #include "Vector3.hpp"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 Vector3::Vector3() {
     x = 0;
@@ -70,7 +73,22 @@ Vector3 Vector3::cross(const Vector3 &b) const {
 }
 
 fptype Vector3::magnitude() const {
-    return sqrt(x * x + y * y + z * z);
+    fptype x2;
+    fptype y2;
+    fptype z2;
+// #ifdef _OPENMP
+    // #pragma omp parallel shared(x2, y2, z2)
+    // {
+        // if(omp_get_thread_num() == 0) x2 = x*x;
+        // if(omp_get_thread_num() == 1) y2 = y*y;
+        // if(omp_get_thread_num() == 0) z2 = z*z;
+    // }
+// #else
+    x2 = x*x;
+    y2 = y*y;
+    z2 = z*z;
+// #endif
+    return sqrt(x2 + y2 + z2);
 }
 
 fptype Vector3::colatitude() const {
