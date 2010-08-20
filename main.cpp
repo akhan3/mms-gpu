@@ -114,7 +114,7 @@ int main(int argc, char **argv)
         for(unsigned int x = 2; x < xdim-2; x++)
             mask[y*xdim + x] = 0;   // selected black (material)
 #endif
-    assert(xdim == ydim);
+    // assert(xdim == ydim);
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
 
 // generate the initial magnetization distribution
@@ -140,16 +140,17 @@ int main(int argc, char **argv)
             for(unsigned int x = 0; x < xdim; x++) {
                 if (!mask[y*xdim + x])
                 {
-                    // fptype theta = frand_atob(90-30, 90+30) * M_PI/180;
-                    // fptype phi   = frand_atob(0, 90) * M_PI/180;
-                    fptype theta = frand_atob(0, 180) * M_PI/180;
-                    fptype phi   = frand_atob(0, 360) * M_PI/180;
-                    // fptype theta = M_PI/2;
-                    // fptype phi   = 0;
+                    // fptype theta = frand_atob(0, 180) * M_PI/180;
+                    // fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    fptype theta = M_PI/2;
+                    fptype phi   = M_PI/2*.8;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                 }
             }
         }
+        // fptype theta = M_PI/2;
+        // fptype phi   = 0;
+        // M[z*ydim*xdim + ydim/2*xdim + xdim/2] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
     }
     delete []mask;
 

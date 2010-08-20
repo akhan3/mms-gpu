@@ -215,10 +215,10 @@ void calc_potential_exact( const fptype *charge,
                 fptype q = charge[z_*ydim*xdim + y_*xdim + x_];
                 if (q == 0) continue;
                 for(int z = 0; z < zdim; z++) { // observation point loop
+                    #ifdef _OPENMP
+                    #pragma omp parallel for
+                    #endif
                     for(int y = 0; y < ydim; y++) {
-                        #ifdef _OPENMP
-                        #pragma omp for
-                        #endif
                         for(int x = 0; x < xdim; x++) {
                             if (z == z_ && y == y_ && x == x_) continue;    // skip on itself
                             Vector3 R(x-x_, y-y_, z-z_);

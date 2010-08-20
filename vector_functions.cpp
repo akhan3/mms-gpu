@@ -12,6 +12,9 @@ void divergence_3d( const Vector3 *V,
     // printf("calculating divergence... \n");
     fptype meshwidth = 1.0;
     for(int z = 0; z < zdim; z++)
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
                 fptype x2 = (x != xdim-1) ? V[(z  )*ydim*xdim + (y  )*xdim + (x+1)].x : 0;
@@ -33,6 +36,9 @@ void gradient_3d(   const fptype *S,
     // printf("calculating gradient... \n");
     fptype meshwidth = 1.0;
     for(int z = 0; z < zdim; z++)
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
                 fptype x2 = (x != xdim-1) ? S[(z  )*ydim*xdim + (y  )*xdim + (x+1)] : 0;
@@ -56,6 +62,9 @@ void add_exchange_field(const Vector3 *M,
     // printf("calculating exchange field... \n");
     const fptype constant_multiple = 2 * Aexch / (mu * Ms*Ms) / (meshwidth*meshwidth);
     for(int z = 0; z < zdim; z++)
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
                 Vector3 x2 = (x != xdim-1) ? M[(z  )*ydim*xdim + (y  )*xdim + (x+1)] : Vector3(0,0,0);

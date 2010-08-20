@@ -1,6 +1,6 @@
-// #include <stdio.h>
-// #include <assert.h>
-// #include <cmath>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <stdlib.h>
 #include "ode_functions.hpp"
 #include "helper_functions.hpp"
@@ -26,6 +26,9 @@ int Hfield(const Vector3 *M, Vector3 *H,
     int status = 0;
     if(verbose_level) {}
 // reset H before beginning
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for(int i = 0; i < xdim*ydim*zdim; i++)
         H[i] = Vector3(0,0,0);
 
@@ -60,6 +63,9 @@ int Hfield(const Vector3 *M, Vector3 *H,
     if(external) {
     // add external field = H_ext
         const Vector3 Hext = 1*Ms * Vector3(0,0,1);
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for(int i = 0; i < zdim*ydim*xdim; i++)
             H[i] += Hext;
     }
@@ -75,6 +81,7 @@ int postprocess_M(  const Vector3 *M,
                     const fptype mu_0, const fptype Ms, const fptype Aexch,
                     const int coupling, const int exchange, const int external, const int use_fmm, const int P,
                     FILE *fh, FILE *fhM,
+                    fptype *torque_max,
                     int verbose_level )
 {
     int status = 0;
@@ -88,15 +95,18 @@ int postprocess_M(  const Vector3 *M,
     }
     status |= Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
 // calculate energy and average magnetization
-    fptype torque_max = 0;
+    *torque_max = 0;
     *energy_new = 0;
     fptype Mmag_avg = 0;
     int count = 0;
     Vector3 M_avg(0,0,0);
+    #ifdef _OPENMP
+    // #pragma omp parallel for
+    #endif
     for(int i = 0; i < zdim*ydim*xdim; i++) {
         if(M[i].magnitude()) {
             fptype torque =  M[i].cross(H[i]).magnitude() * (1/Ms/Ms);
-            torque_max = (torque_max > torque) ? torque_max : torque;
+            *torque_max = (*torque_max > torque) ? *torque_max : torque;
             *energy_new += M[i].dot(H[i]);
             Mmag_avg += M[i].magnitude();
             M_avg = M_avg + M[i];
@@ -108,9 +118,9 @@ int postprocess_M(  const Vector3 *M,
     Mmag_avg /= count;
     M_avg = M_avg * (1.0 / count);
     fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %g, %g \n",
-            tindex, t, dt, energy, dE, M_avg.x, M_avg.y, M_avg.z, Mmag_avg, torque_max);
+            tindex, t, dt, energy, dE, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, *torque_max);
     fprintf(stdout, "%d, %g, %g, %g, %g, %g, %g, %g, %g, %g \n",
-            tindex, t, dt, energy, dE, M_avg.x, M_avg.y, M_avg.z, Mmag_avg, torque_max);
+            tindex, t, dt, energy, dE, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, *torque_max);
     if(dE > 0 && tindex != 0) {
         status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
         if(status) return EXIT_FAILURE;
@@ -118,11 +128,6 @@ int postprocess_M(  const Vector3 *M,
         // status = EXIT_FAILURE;
         // break;
     }
-    // if(Mmag_avg > 1.1*Ms && tindex != 0) {
-        // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
-        // if(status) return EXIT_FAILURE;
-        // printf("PANIC!! Mmag_avg = %g A/m,  Mmag_avg/Ms  = %g \n", Mmag_avg, Mmag_avg/Ms);
-    // }
     delete []H;
     if(!(tindex % 100))
     {
@@ -152,6 +157,9 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
     }
 // k1 @ t1
     Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
@@ -161,6 +169,9 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
     }
 // k2 @ t1 + dt/2
     Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
@@ -170,6 +181,9 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
     }
 // k3 @ t1 + dt/2
     Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
@@ -179,6 +193,9 @@ int rk4_step(   const fptype t, const Vector3 *M, const fptype dt,
     }
 // k4 @ t1 + dt
     Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for(int i = 0; i < xyzdim; i++) {
         if(M[i].magnitude()) {
             this_slope[i] = LLG_Mprime(M_new[i], H[i], alfa, gamma, Ms);
@@ -210,6 +227,17 @@ int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
 {
     int status = 0;
     const int xyzdim = zdim*ydim*xdim;
+    fptype energy = 0;
+    Vector3 *H = new Vector3[xyzdim]();
+    status |= Hfield(M, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for(int i = 0; i < zdim*ydim*xdim; i++)
+        if(M[i].magnitude())
+            energy += M[i].dot(H[i]);
+    energy *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth) / 1.6e-19;
+
 // provisional RK step
     // printf("rk4_step_adaptive: %g, %g, %g, %g\n", t, dt, *t_new, *dt_new);
     status |= rk4_step( t, M, dt,
@@ -222,63 +250,40 @@ int rk4_step_adaptive(   const fptype t, const Vector3 *M, const fptype dt,
         *dt_new = dt;
     }
     else {
-    // error estimation
-        fptype diff_max = 0;
-        for(int i = 0; i < xyzdim; i++) {
-            if(M[i].magnitude()) {
-                fptype e = acos(M[i].dot(M_new[i]) / (M[i].magnitude() * M_new[i].magnitude()));
-                diff_max = (diff_max > e) ? diff_max : e;
-                // printf("    diff_max=%g, e=%g\n", diff_max, e);
+    // calculate energy and maximum torque
+        fptype torque_max = 0;
+        fptype energy_new = 0;
+        status |= Hfield(M_new, H, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, coupling, exchange, external, use_fmm, P, verbose_level);
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for(int i = 0; i < zdim*ydim*xdim; i++) {
+            if(M_new[i].magnitude()) {
+                fptype torque =  M_new[i].cross(H[i]).magnitude() * (1/Ms/Ms);
+                torque_max = (torque_max > torque) ? torque_max : torque;
+                energy_new += M_new[i].dot(H[i]);
             }
         }
-        fptype error = diff_max - tolerance;
-    // take decision and adjust step
-        if(-tolerance_hyst/2 <= error && error <= tolerance_hyst/2) { // accept the step
-            *dt_new = dt;   // don't update if falls inside hysteresis window
-            return status;
+        energy_new *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth) / 1.6e-19;
+        if(energy_new > energy) {
+            *t_new = t;  // reject and invalidate this step
+            *dt_new = dt / 2.5;
+            printf("PANIC!! energy is increasing, so halving the step\n");
         }
-        else if(error < -tolerance_hyst/2) { // accept the step
-            // *dt_new = dt * 1.01; // and increase stepsize slightly
-            *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1); // and decrease stepsize
+        else {
+            // if(torque_max * dt < 1e-13)
+                *dt_new = 1e-13 / torque_max/2;
+                // *dt_new = dt * 1.1;
+            // else
+                // *dt_new = 1e-13 / torque_max/2;
+            // *dt_new = (*dt_new < dt_max) ? *dt_new : dt_max;
         }
-        else if(error > tolerance_hyst/2 && dt > dt_min) { // reject the step
-            *t_new = t; // invalidate this step
-            *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1); // and decrease stepsize
+        if(torque_max < 1e-6) {
+            printf("Simulation is practically finished!\n");
+            return EXIT_FAILURE;
         }
-        else if(error > tolerance_hyst/2 && dt <= dt_min) { // accept the step with warning
-            printf("PANIC!! step size hit minimum size before fulfilling tolerance requirement.\n");
-            *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1); // and decrease stepsize
-        }
-    // check the bounds
-        // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1);
-        *dt_new = (*dt_new < dt_min) ? dt_min : *dt_new;
-        *dt_new = (*dt_new > dt_max) ? dt_max : *dt_new;
-        printf("dt=%g, diff_max=%g, tolerance=%g, dt_new=%g \n", dt, diff_max, tolerance, *dt_new);
     }
     return status;
-    // // take decision
-        // if(diff_max <= tolerance || dt == dt_min) {    // accept the step
-            // // t_new = t_new;
-            // // M_new = M_new;
-            // if(dt == dt_min)
-                // printf("PANIC!! step size hit minimum size before fulfilling tolerance requirement.\n");
-        // }
-        // else {
-            // *t_new = t;  // reject and invalidate this step
-        // }
-    // // adjust step
-        // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1);
-        // // if(diff_max <= tolerance)   // increase step
-            // // *dt_new = 1.01 * dt;
-        // // else                        //  decrease step
-            // // *dt_new = dt * pow(safety_factor*tolerance/diff_max, 1/4.0);
-        // *dt_new = (*dt_new < dt_min) ? dt_min : *dt_new;
-        // *dt_new = (*dt_new > dt_max) ? dt_max : *dt_new;
-        // // printf("dt=%g, dt_new=%g \n", dt, *dt_new);
-        // // printf("dt=%.7g, diff_max=%.7f, diff_avg=%.7f, tolerance=%.7g, dt_new=%.7g \n", dt, diff_max, diff_avg, tolerance, *dt_new);
-        // printf("dt=%g, diff_max=%g, tolerance=%g, dt_new=%g \n", dt, diff_max, tolerance, *dt_new);
-    // }
-    // return status;
 }
 
 
@@ -316,7 +321,7 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     const fptype tolerance_hyst = .5 * tolerance;  // in radians
     const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
     const int normalize = true;
-    const int adjust_step = false;
+    const int adjust_step = true;
 // H field parameters
     // const int coupling = true;
     // const int exchange = true;
@@ -326,12 +331,13 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
     fptype t = 0;
     fptype energy = 0;
     fptype energy_new = 0;
+    fptype torque_max = 0;
 // post-process initial state
     status |= postprocess_M( M, tindex, t, dt,
                              energy, &energy_new,
                              xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch,
                              coupling, exchange, external, use_fmm, P,
-                             fh, fhM, verbose_level );
+                             fh, fhM, &torque_max, verbose_level );
     printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
     // getchar();
     printf("\n");
@@ -362,21 +368,30 @@ int time_marching(  Vector3 *M, // initial state. This will be overwritten in ea
         if(t_new > t) { // if(step_valid) do additional book-keeping
             tindex++;
             t = t_new;
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
             for(int i = 0; i < zdim*ydim*xdim; i++)
                 M[i] = M_new[i];
             fptype energy_new = 0;
+            // if(!(tindex % 50))
             status |= postprocess_M( M, tindex, t, dt,
                                      energy, &energy_new,
                                      xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch,
                                      coupling, exchange, external, use_fmm, P,
-                                     fh, fhM, verbose_level );
+                                     fh, fhM, &torque_max, verbose_level );
             energy = energy_new;
-            // printf("\n");
         } // if(step_valid)
         delete []M_new;
         fflush(NULL);
         // if(tindex >= 5) break;
     } // time marching while loop
+
+    status |= postprocess_M( M, tindex, t, dt,
+                             energy, &energy_new,
+                             xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch,
+                             coupling, exchange, external, use_fmm, P,
+                             fh, fhM, &torque_max, verbose_level );
 
 // closing
     fclose(fh);

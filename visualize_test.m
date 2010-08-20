@@ -17,7 +17,7 @@ clear dynamics
 %set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(221);
     plot(time, energy, '-');
-    %axis tight;
+    axis tight;
     xlabel('time'); title('Energy (eV)');
 
 subplot(222);
@@ -30,14 +30,14 @@ subplot(222);
 
 subplot(223);
     %plot(time, torque_max, '-');
-    semilogy(time, torque_max, '-');
-    %axis tight;
+    semilogy(tindex, torque_max, '-');
+    axis tight;
     xlabel('time'); title('Normalized maximum Torque M \times H / Ms^2');
 
 subplot(224);
     %plot(time, dt, '-');
-    semilogy(time, dt, '-');
-    %axis tight;
+    semilogy(tindex, dt, '-');
+    axis tight;
     xlabel('time'); title('Time step');
 
 

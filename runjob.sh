@@ -1,27 +1,28 @@
-#!/bin/csh
+#!/bin/bash
 
 # set OpenMP threads
-setenv OMP_NUM_THREADS=4
+export OMP_NUM_THREADS=2
+echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
 
 # launch the simulation
 ./main                      \
                 dummy.png   \
                 3           \
-                5e-10       \
-                5e-14       \
-                1e-9        \
-                32          \
-                32          \
+                10e-9      \
+                1e-13       \
+                20e-9       \
+                16          \
+                16          \
                 3           \
                 1           \
                 1           \
                 0           \
                 0           \
-                sim_coupling_exchange_cel1nm_nofmm     \
+                sim_cell10nm_fixedstep2e-14     \
                 1985        \
-    | tee log
+    | tee -a log
 
-echo "program exit staus = $?" >> log
+echo "program exit staus = $?" | tee -a log
 
 
 # default command line args

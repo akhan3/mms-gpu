@@ -14,20 +14,20 @@ load dynamics.dat;
     torque_max  = dynamics(:,10);
 clear dynamics
 
-for bigindex = 0:5
-    animation_skip = 1;
+for bigindex = 0:0
+    animation_skip = 10;
     start_tindex = 5000*bigindex %1
-    tdim = 1 %length(time);
-    zdim = 5;
-    ydim = 32;
+    tdim = length(time);
+    zdim = 3;
+    ydim = 16;
     xdim = ydim;
-    zslice = 3;
+    zslice = 2;
     x = 0:xdim-1;
     y = 0:ydim-1;
     z = zslice:zslice;
     [X,Y,Z] = meshgrid(x,y,z);
-    start_line = ydim*xdim*zdim*(start_tindex);
-    required_lines = ydim*xdim*zdim*tdim;
+    start_line = ydim*xdim*zdim*(start_tindex)
+    required_lines = ydim*xdim*zdim*tdim
 %return
 
 %system(['tail -' num2str(required_lines) ' Mdynamics.dat > Mdynamics1.dat']);
@@ -40,8 +40,8 @@ M_yxzt = load('Mdynamics1.dat');
     Mz = shiftdim(M_yxzt(3,:,:,zslice,:), 1);
 clear M_yxzt
 
-%figure;
-%set(gcf, 'OuterPosition', [0 0 1280 800]);
+figure;
+set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(121);
     q1 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
     axis tight equal; grid off;
@@ -55,7 +55,7 @@ subplot(122);
     zlim ([zslice-1, zslice+1]);
     daspect([1 1 .5]);
     xlabel('x'); ylabel('y'); zlabel('z'); qt2 = title('Magnetization (M)');
-    view(45,10);
+    view(45,0);
     set(qt1, 'string', ['M(t = ', num2str(time(start_tindex+1)), ')']);
     set(qt2, 'string', ['M(t = ', num2str(time(start_tindex+1)), ')']);
     %view(3)

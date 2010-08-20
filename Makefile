@@ -23,7 +23,9 @@ endif
 ifeq ($(prof),1)
 	COMMONFLAGS += -pg
 endif
-ifeq ($(omp),1)
+ifeq ($(omp),0)
+	COMMONFLAGS +=
+else
 	COMMONFLAGS += -fopenmp
 endif
 
