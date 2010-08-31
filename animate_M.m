@@ -1,33 +1,33 @@
 clear
 
-load dynamics.dat;
-    load dynamics.dat
+load dynamics.dat
     tindex = dynamics(:,1);
     time = dynamics(:,2);
     dt = dynamics(:,3);
-    energy = dynamics(:,4);
-    dE = dynamics(:,5); dE(1) = dE(2);
-    Mx = dynamics(:,6);
-    My = dynamics(:,7);
-    Mz = dynamics(:,8);
-    M  = dynamics(:,9);
-    torque_max  = dynamics(:,10);
+    E = dynamics(:,4);
+    Mx = dynamics(:,5);
+    My = dynamics(:,6);
+    Mz = dynamics(:,7);
+    M  = dynamics(:,8);
+    torque  = dynamics(:,9);
 clear dynamics
 
 for bigindex = 0:0
     animation_skip = 10;
     start_tindex = 5000*bigindex %1
     tdim = length(time);
-    zdim = 3;
+    xdim = 16;
     ydim = 16;
-    xdim = ydim;
+    zdim = 3;
     zslice = 2;
     x = 0:xdim-1;
     y = 0:ydim-1;
     z = zslice:zslice;
     [X,Y,Z] = meshgrid(x,y,z);
+    %start_tindex = 0;
     start_line = ydim*xdim*zdim*(start_tindex)
     required_lines = ydim*xdim*zdim*tdim
+    %tdim = 1;
 %return
 
 %system(['tail -' num2str(required_lines) ' Mdynamics.dat > Mdynamics1.dat']);
@@ -55,12 +55,14 @@ subplot(122);
     zlim ([zslice-1, zslice+1]);
     daspect([1 1 .5]);
     xlabel('x'); ylabel('y'); zlabel('z'); qt2 = title('Magnetization (M)');
-    view(45,0);
+    view(0,0);
     set(qt1, 'string', ['M(t = ', num2str(time(start_tindex+1)), ')']);
     set(qt2, 'string', ['M(t = ', num2str(time(start_tindex+1)), ')']);
     %view(3)
 
-for i = 1:animation_skip:tdim
+%return
+
+for i = [1:animation_skip:tdim, tdim]
     set(q1, 'Udata', Mx(:,:,:,i));
     set(q1, 'Vdata', My(:,:,:,i));
     set(q1, 'Wdata', Mz(:,:,:,i));

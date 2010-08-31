@@ -179,23 +179,24 @@ int fmm_calc(   const fptype *charge,
     create_tree_recurse(root, logN);
     find_neighbors_recurse(root, root, logN);
 
+    timeval time1, time2;
+    status |= gettimeofday(&time1, NULL);
 // for each charge layer in zdim
     for (int zc = 0; zc < zdim; zc++) {
         if(verbose_level >= 3)
             printf("FMM: charge layer %d\n", zc);
         fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);
-        timeval time1, time2;
-        status |= gettimeofday(&time1, NULL);
         // call the actual function
         status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, verbose_level);
-        status |= gettimeofday(&time2, NULL);
-        double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-        if(verbose_level >= 5)
-            printf("FMM: charge layer %d took %f seconds\n", zc, deltatime);
         if(status) return EXIT_FAILURE;
         root->grow();
     }
+    status |= gettimeofday(&time2, NULL);
+    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    if(verbose_level >= 0)
+        printf("FMM: took %f seconds\n", deltatime);
+    fflush(NULL);
 
 // closing
     fclose(paniclog);
@@ -209,6 +210,9 @@ void calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential)
 {
+    int status = 0;
+    timeval time1, time2;
+    status |= gettimeofday(&time1, NULL);
     for(int z_ = 0; z_ < zdim; z_++) {  // source loop
         for(int y_ = 0; y_ < ydim; y_++) {
             for(int x_ = 0; x_ < xdim; x_++) {
@@ -229,6 +233,11 @@ void calc_potential_exact( const fptype *charge,
             }
         }
     }
+    status |= gettimeofday(&time2, NULL);
+    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    if(1)
+        printf("Exact: took %f seconds\n", deltatime);
+    fflush(NULL);
 }
 
 

@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     unsigned int xdim = 16;
     unsigned int ydim = 16;
     unsigned int zdim = 3;
-    int coupling = false;
+    int demag = true;
     int exchange = true;
     int external = false;
     int use_fmm = false;
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     if(argc >= 9)
         sscanf(argv[8], "%d", &zdim);
     if(argc >= 10)
-        sscanf(argv[9], "%d", &coupling);
+        sscanf(argv[9], "%d", &demag);
     if(argc >= 11)
         sscanf(argv[10], "%d", &exchange);
     if(argc >= 12)
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     printf("xdim = %d \n", xdim);
     printf("ydim = %d \n", ydim);
     printf("zdim = %d \n", zdim);
-    printf("coupling = %d \n", coupling);
+    printf("demag = %d \n", demag);
     printf("exchange = %d \n", exchange);
     printf("external = %d \n", external);
     printf("use_fmm = %d \n", use_fmm);
@@ -104,22 +104,23 @@ int main(int argc, char **argv)
     sprintf(filename, "%s", filename_arg);
 // read the mask from file
     load_mask(filename, &mask, &xdim, &ydim);
-    zdim = 1;
+    zdim = 3;
 #else
     byte *mask = new byte[ydim*xdim](); // mask matrix
     for(unsigned int y = 0; y < ydim; y++)
         for(unsigned int x = 0; x < xdim; x++)
             mask[y*xdim + x] = 1;   // all white (no material)
-    for(unsigned int y = 2; y < ydim-2; y++)
-        for(unsigned int x = 2; x < xdim-2; x++)
+    for(unsigned int y = 1; y < ydim-1; y++)
+        for(unsigned int x = 1; x < xdim-1; x++)
             mask[y*xdim + x] = 0;   // selected black (material)
 #endif
     // assert(xdim == ydim);
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
 
 // generate the initial magnetization distribution
+    byte *material = new byte[zdim*ydim*xdim]();  // material matrix
     Vector3 *M = new Vector3[zdim*ydim*xdim]();  // magnetization matrix
-    if(M == NULL) {
+    if(material == NULL || M == NULL) {
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
     }
@@ -143,14 +144,15 @@ int main(int argc, char **argv)
                     // fptype theta = frand_atob(0, 180) * M_PI/180;
                     // fptype phi   = frand_atob(0, 360) * M_PI/180;
                     fptype theta = M_PI/2;
-                    fptype phi   = M_PI/2*.8;
+                    fptype phi   = M_PI/2;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+                    material[z*ydim*xdim + y*xdim + x] = 1;
                 }
             }
         }
-        // fptype theta = M_PI/2;
-        // fptype phi   = 0;
-        // M[z*ydim*xdim + ydim/2*xdim + xdim/2] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+        fptype theta = 0*M_PI/2;
+        fptype phi   = 1*M_PI/2;
+        M[z*ydim*xdim + ydim/3*xdim + xdim/3] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
     }
     delete []mask;
 
@@ -158,13 +160,24 @@ int main(int argc, char **argv)
     status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
     if(status) return EXIT_FAILURE;
 
+// write material field to file
+    fptype *m = new fptype[xdim*ydim];
+    int z = 1;
+    for(unsigned int y = 0; y < ydim; y++)
+        for(unsigned int x = 0; x < xdim; x++)
+            m[y*xdim + x] = (fptype)material[z*ydim*xdim + y*xdim + x];
+    status |= matrix2file(m, ydim, xdim, "material.dat", 100);
+    if(status) return EXIT_FAILURE;
+    delete []m;
+
+
 // magnetization dynamics
 // ===================================================================
-    status |= time_marching(    M,
+    status |= time_marching(    material, M,
                                 finaltime, timestep,
                                 xdim, ydim, zdim, meshwidth, P,
                                 mu_0, Ms, Aexch, alfa, gamma,
-                                coupling, exchange, external, use_fmm,
+                                demag, exchange, external, use_fmm,
                                 verbose_level );
     if(status) return EXIT_FAILURE;
 
@@ -174,6 +187,7 @@ int main(int argc, char **argv)
 
 // closing
     delete []M;
+    delete []material;
 
     printf("SEED = %d\n", seed);
     // printf("%s\n", status ? "failed to complete" : "successfuly completed");

@@ -18,7 +18,7 @@ echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
                 1           \
                 0           \
                 0           \
-                sim_cell10nm_fixedstep2e-14     \
+                sim_cell20nm_dots_16x16     \
                 1985        \
     | tee -a log
 
@@ -35,7 +35,7 @@ echo "program exit staus = $?" | tee -a log
 # xdim = 16
 # ydim = 16
 # zdim = 3
-# coupling = 0
+# demag = 1
 # exchange = 1
 # external = 0
 # use_fmm = 0

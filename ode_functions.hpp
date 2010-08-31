@@ -5,7 +5,7 @@
 #include "Vector3.hpp"
 
 
-int time_marching(  Vector3 *M, // initial state. This will be overwritten in each time step
+int time_marching(  byte *material, Vector3 *M, // initial state. This will be overwritten in each time step
                     const fptype finaltime, const fptype timestep,
                     const int xdim, const int ydim, const int zdim, const fptype meshwidth, const int P,
                     const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
