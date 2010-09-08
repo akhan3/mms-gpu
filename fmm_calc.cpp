@@ -40,119 +40,131 @@ int fmm_bfs(        const fptype *charge,
     const unsigned int N = (unsigned int)pow(4, limit);
     Queue Q_tree(N);
     Q_tree.enqueue((void*)root);
+
+// iterate over all the boxes in tree
     while(!Q_tree.isEmpty()) {
         Box *n = (Box*)Q_tree.dequeue();
         // populate queue with children nodes
         if(n->level < limit)
             for(int i=0; i<=3; i++)
                 Q_tree.enqueue(n->child[i]);
-        // function to perform on node
-        if(n->level >= 2)   // no FMM steps for Level-0 and Level-1
-        {
-            if(prev_level != n->level) {
-                if(prev_level >= 2) {
-                    status |= gettimeofday(&time2, NULL);
-                    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-                    status |= gettimeofday(&time1, NULL);
-                    if(verbose_level >= 10)
-                        printf("done in %f seconds.\n", deltatime); fflush(NULL);
-                }
-                prev_level = n->level;
-                if(verbose_level >= 6)
-                    printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+
+        if(n->level <= 1)   // no FMM steps for Level-0 and Level-1
+            continue;
+
+// function to perform on node
+        if(prev_level != n->level) {
+            if(prev_level >= 2) {
+                status |= gettimeofday(&time2, NULL);
+                double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+                status |= gettimeofday(&time1, NULL);
+                if(verbose_level >= 10)
+                    printf("done in %f seconds.\n", deltatime); fflush(NULL);
             }
+            prev_level = n->level;
+            if(verbose_level >= 6)
+                printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+        }
 
-            if(n->is_pruned()) {
-                continue;
-            }
+        if(n->is_pruned()) {
+            continue;
+        }
 
-            // char idstring[100];
-            // n->get_idstring(idstring);
-            // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) \n", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
+        // char idstring[100];
+        // n->get_idstring(idstring);
+        // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) \n", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
 
-        // Calculate multipole moments for the source box
-            Cmpx multipole_coeff[P+1][2*P+1];
-            // checking for source charges in the source box
-            fptype charge_found = 0;
-            fptype width = pow(2, actual_limit-n->level);
+    // Calculate multipole moments for the source box
+        Cmpx multipole_coeff[P+1][2*P+1];
+        // checking for source charges in the source box
+        fptype charge_found = 0;
+        fptype width = pow(2, actual_limit-n->level);
 // charge_found = 1;
 // if(0)
-            for(int l=0; l<=P; l++) {
-                for(int m=-l; m<=l; m++) {
-                    for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
-                        for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                            fptype q = charge[yy*xdim + xx];
-                            if(q != 0) { // if charge found
-                                charge_found = 1;
-                                Cmpx r_(xx - n->cx, yy - n->cy, 0);
-                                multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
-                            } // if(q != 0)
-                        } // source charge loop
+        for(int l=0; l<=P; l++) {
+            for(int m=-l; m<=l; m++) {
+                for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
+                    for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
+                        fptype q = charge[yy*xdim + xx];
+                        if(q != 0) { // if charge found
+                            charge_found = 1;
+                            Cmpx r_(xx - n->cx, yy - n->cy);
+                            Cmpx sph = spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
+                            sph *= q * pow(r_.get_mag(), l);
+                            multipole_coeff[l][m+l] += sph;
+                            // multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
+                        } // if(q != 0)
                     } // source charge loop
-                } // m loop
-            } // l loop
-            // NEWLINE;
+                } // source charge loop
+            } // m loop
+        } // l loop
+        // NEWLINE;
 
-            if(! charge_found) {
-                n->prune();
-                continue;
-            }
+        if(! charge_found) {
+            n->prune();
+            continue;
+        }
 
-            if(charge_found)
+        if(charge_found)
+        {
+            for (int zp = 0; zp < zdim; zp++) // for each potential layer in zdim
             {
-                for (int zp = 0; zp < zdim; zp++) // for each potential layer in zdim
-                {
-                    // printf("FMM:   charge layer %d, potential layer %d\n", zc, zp);
-                // calculation of potential at the boxes in interaction list
-                    for(int i=0; i<27; i++) {
-                        Box *ni = n->interaction[i];
-                        if(ni != NULL) {
-                            for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
-                                for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
-                                    Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
-                                    Cmpx sum_over_lm;
-                                    for(int l=0; l<=P; l++) {
-                                        Cmpx sum_over_m;
-                                        for(int m=-l; m<=l; m++) {
-                                            sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, r.colatitude(), r.azimuth());
-                                        }
-                                        sum_over_lm += 1 / pow(r.magnitude(), l+1) * sum_over_m;
+                // printf("FMM:   charge layer %d, potential layer %d\n", zc, zp);
+            // calculation of potential at the boxes in interaction list
+                for(int i=0; i<27; i++) {
+                    Box *ni = n->interaction[i];
+                    if(ni != NULL) {
+                        for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
+                            for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
+                                Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
+                                Cmpx sum_over_lm;
+                                for(int l=0; l<=P; l++) {
+                                    Cmpx sum_over_m;
+                                    for(int m=-l; m<=l; m++) {
+                                        Cmpx sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+                                        sph *= (1.0*factorial(l-abs(m))) / factorial(l+abs(m));
+                                        sph *= multipole_coeff[l][m+l];
+                                        sum_over_m += sph;
+                                        // sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, r.colatitude(), r.azimuth());
                                     }
-                                    potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
-                                    // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
-
-                                    const fptype threshold = 1e-2;
-                                    fptype modangle = fabs(sum_over_lm.get_ang());
-                                    modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
-                                    if(modangle > threshold) {
-                                        if(verbose_level >= 0)
-                                            printf("PANIC!! L%d   R=%g   angle=%g\n", n->level, r.magnitude(), modangle);
-                                        fprintf(paniclog, "%d   %g   %g\n", n->level, r.magnitude(), modangle);
-                                    }
+                                    sum_over_m *= 1 / pow(r.magnitude(), l+1);
+                                    sum_over_lm += sum_over_m;
+                                    // sum_over_lm += 1 / pow(r.magnitude(), l+1) * sum_over_m;
                                 }
-                            }
-                        } // if(ni != NULL)
-                    } // interaction loop
+                                potential[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
+                                // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
 
-                // calculation with neighbor list at the deepest level
-                    if(n->level == actual_limit) {
-                        assert(n->cx == n->x && n->cy == n->y);
-                        fptype q = charge[(int)(n->cy*xdim + n->cx)];
-                        if(zp != zc) { // neighbor on other layers at self position
-                            Vector3 r(0, 0, zp - zc);
-                            potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
-                        }
-                        for(int i=0; i<8; i++) {
-                            Box *nb = n->neighbor[i];
-                            if(nb != NULL) {
-                                Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
-                                potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
+                                // const fptype threshold = 1e-2;
+                                // fptype modangle = fabs(sum_over_lm.get_ang());
+                                // modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
+                                // if(modangle > threshold) {
+                                    // if(verbose_level >= 0)
+                                        // printf("PANIC!! L%d   R=%g   angle=%g\n", n->level, r.magnitude(), modangle);
+                                    // fprintf(paniclog, "%d   %g   %g\n", n->level, r.magnitude(), modangle);
+                                // }
                             }
-                        } // neighbor loop
-                    } // if deepest level
-                } // for each potential layer in zdim
-            } // if(charge_found)
-        }   // if(n->level >= 2)
+                        }
+                    } // if(ni != NULL)
+                } // interaction loop
+
+            // calculation with neighbor list at the deepest level
+                if(n->level == actual_limit) {
+                    assert(n->cx == n->x && n->cy == n->y);
+                    fptype q = charge[(int)(n->cy*xdim + n->cx)];
+                    if(zp != zc) { // neighbor on other layers at self position
+                        Vector3 r(0, 0, zp - zc);
+                        potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
+                    }
+                    for(int i=0; i<8; i++) {
+                        Box *nb = n->neighbor[i];
+                        if(nb != NULL) {
+                            Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
+                            potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
+                        }
+                    } // neighbor loop
+                } // if deepest level
+            } // for each potential layer in zdim
+        } // if(charge_found)
     } // while(!Q_tree.isEmpty())
 
     status |= gettimeofday(&time2, NULL);

@@ -50,7 +50,7 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
 
     if(exchange) {
         // add exchange field from magnetization = H_exch
-        add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
+        // add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
     }
 
     if(external) {

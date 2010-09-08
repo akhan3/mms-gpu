@@ -73,7 +73,8 @@ void add_exchange_field(const Vector3 *M,
                 Vector3 y0 = (y != 0     ) ? M[(z  )*ydim*xdim + (y-1)*xdim + (x  )] : Vector3(0,0,0);
                 Vector3 z2 = (z != zdim-1) ? M[(z+1)*ydim*xdim + (y  )*xdim + (x  )] : Vector3(0,0,0);
                 Vector3 z0 = (z != 0     ) ? M[(z-1)*ydim*xdim + (y  )*xdim + (x  )] : Vector3(0,0,0);
-                H[z*ydim*xdim + y*xdim + x] = H[z*ydim*xdim + y*xdim + x] + constant_multiple * (x2 + x0 + y2 + y0 + z2 + z0);
+                H[z*ydim*xdim + y*xdim + x] += constant_multiple * (x2 + x0 + y2 + y0 + z2 + z0);
+                // H[z*ydim*xdim + y*xdim + x] = H[z*ydim*xdim + y*xdim + x] + constant_multiple * (x2 + x0 + y2 + y0 + z2 + z0);
                 // printf("Hexch_normalized = "); (1/(constant_multiple*Ms) * H[z*ydim*xdim + y*xdim + x]).print(stdout);
             }
 }

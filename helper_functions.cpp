@@ -6,27 +6,29 @@
 #include "helper_functions.hpp"
 
 
-int factorial(int x)
+int _factorial_(int x)
 {
-    // int fac = 1;
-    // for(int i = 2; i <= x; i++)
-        // fac *= i;
-    // return fac;
+    int fac = 1;
+    for(int i = 2; i <= x; i++)
+        fac *= i;
+    return fac;
+
     // return (x == 0) ? 1 : x*factorial(x-1);
+
     // assert(x >= 0 && x <= 8);
-    switch (x) {
-        case 0: return     1;
-        case 1: return     1;
-        case 2: return     2;
-        case 3: return     6;
-        case 4: return    24;
-        case 5: return   120;
-        case 6: return   720;
-        case 7: return  5040;
-        case 8: return 40320;
-        default:
-            return (x == 0) ? 1 : x*factorial(x-1);
-    }
+    // switch (x) {
+        // case 0: return     1;
+        // case 1: return     1;
+        // case 2: return     2;
+        // case 3: return     6;
+        // case 4: return    24;
+        // case 5: return   120;
+        // case 6: return   720;
+        // case 7: return  5040;
+        // case 8: return 40320;
+        // default:
+            // return (x == 0) ? 1 : x*factorial(x-1);
+    // }
 }
 
 // Legendre function (recursive implementation)
@@ -51,9 +53,9 @@ fptype legendre(int k, fptype x)
 // Associated Legendre function
 fptype associated_legendre(int l, int m, fptype x)
 {
-    assert(l >= 0 && l <= 4);
-    assert(abs(m) <= l);
-    assert(m == abs(m));
+    // assert(l >= 0 && l <= 4);
+    // assert(abs(m) <= l);
+    // assert(m == abs(m));
     switch (l) {
         case 0:
             switch (m) {
@@ -96,60 +98,13 @@ fptype associated_legendre(int l, int m, fptype x)
     }
 }
 
-// Lookup table for x = 0)
-// fptype associated_legendre(int l, int m, fptype x)
-// {
-    // assert(l >= 0 && l <= 4);
-    // assert(abs(m) <= l);
-    // assert(m == abs(m));
-    // assert(fabs(x) <= 1e-7);    // assert(fabs(x) == 0.0);
-    // switch (l) {
-        // case 0:
-            // switch (m) {
-                // case 0:  return 1;
-                // default: return 0;
-            // }
-        // case 1:
-            // switch (m) {
-                // case 0:  return 0;
-                // case 1:  return -1;
-                // default: return 0;
-            // }
-        // case 2:
-            // switch (m) {
-                // case 0:  return -1/2.0;
-                // case 1:  return 0;
-                // case 2:  return 3;
-                // default: return 0;
-            // }
-        // case 3:
-            // switch (m) {
-                // case 0:  return 0;
-                // case 1:  return 3/2.0;
-                // case 2:  return 0;
-                // case 3:  return -15;
-                // default: return 0;
-            // }
-        // case 4:
-            // switch (m) {
-                // case 0:  return 3/8.0;
-                // case 1:  return 0;
-                // case 2:  return -15/2.0;
-                // case 3:  return 0;
-                // case 4:  return 105;
-                // default: return 0;
-            // }
-        // default:
-            // printf("FATAL ERROR؛ associated_legendre(l=%d, m=%d, x=%f) is not implemented\n", l,m,x);
-            // return 0.0/0.0; // NaN
-    // }
-// }
-
 // Spherical harmonics
 Cmpx spherical_harmonic(int l, int m, fptype theta, fptype phi)
 {
     // return Cmpx(sqrt((1.0*factorial(l-abs(m))) / factorial(l+abs(m))) * associated_legendre(l,abs(m),cos(theta)), m*phi, 1);
-    return Cmpx(associated_legendre(l, abs(m), cos(theta)), m*phi, 1);
+    fptype mag = associated_legendre(l, abs(m), cos(theta));
+    fptype ang = m*phi;
+    return Cmpx(mag*cos(ang), mag*sin(ang));
 }
 
 // // Read matrix from file

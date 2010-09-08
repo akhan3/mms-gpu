@@ -15,16 +15,11 @@ struct Vector3 {
     Vector3();
     Vector3(const fptype x1, const fptype y1, const fptype z1);
     // Vector3(const fptype *elem);
-    // Vector3(const fptype x1, const fptype y1, const fptype z1);
 
 // member functions
-// get functions
-
-// set functions
-    Vector3& init(const fptype x1, const fptype y1, const fptype z1);
-
 // overloaded operators
-    Vector3& operator+=(const Vector3 &b);
+    // Vector3& operator+=(const Vector3 &b);
+    void operator+=(const Vector3 &b);
 
     // inline Vector3 operator+(const Vector3 &b) const  { return Vector3(*this) += b; }
     Vector3 operator+(const Vector3 &b) const;

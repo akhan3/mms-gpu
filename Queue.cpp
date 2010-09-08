@@ -23,7 +23,7 @@ Queue::~Queue() {
 void Queue::enqueue(void* n) {
     if(count >= size) {
         printf("FATAL ERROR\n");
-        printf("FATAL ERROR: Queue is already full!\n");
+        printf("FATAL ERROR: Cannot add more items. Queue is already full!\n");
         printf("FATAL ERROR\n");
         return;
     }
@@ -34,18 +34,15 @@ void Queue::enqueue(void* n) {
 void* Queue::dequeue() {
     if(isEmpty()) {
         printf("FATAL ERROR\n");
-        printf("FATAL ERROR: Queue is already empty!\n");
+        printf("FATAL ERROR: Cannot pick any item. Queue is already empty!\n");
         printf("FATAL ERROR\n");
         return NULL;
     }
     void *n1 = contents[front];
     count--;
-    front++; front = front % size;
+    front++;
+    front = front % size;
     return n1;
-}
-
-int Queue::isEmpty() {
-    return count == 0;
 }
 
 // void Queue::printQueue() {

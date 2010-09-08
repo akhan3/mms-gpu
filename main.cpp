@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 
     status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 1||use_fmm, P, verbose_level+200);
     if(status) return EXIT_FAILURE;
-    status |= save_vector3d(H_exact, zdim, ydim, xdim, "H_fmm.dat", verbose_level);
+    status |= save_vector3d(H_fmm, zdim, ydim, xdim, "H_fmm.dat", verbose_level);
 
     // status |= Hfield(M, H_exact, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 0&&use_fmm, P, verbose_level+200);
     // if(status) return EXIT_FAILURE;

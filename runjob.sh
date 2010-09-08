@@ -11,8 +11,8 @@ echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
                 10e-9      \
                 1e-13       \
                 1e-9       \
-                256         \
-                256          \
+                128         \
+                128          \
                 1           \
                 1           \
                 1           \

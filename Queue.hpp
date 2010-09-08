@@ -18,7 +18,10 @@ public:
 // member functions
     void            enqueue(void* n);
     void*           dequeue();
-    int             isEmpty();
+    inline int      isEmpty() {
+        return count == 0;
+    }
+
     // void            printQueue();
 };
 

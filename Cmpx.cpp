@@ -6,111 +6,62 @@
 Cmpx::Cmpx() {
     re = 0;
     im = 0;
-    mag = 0;
-    ang = 0;
 }
 
-Cmpx::Cmpx(const fptype x, const fptype y, const int mode) {
-    init(x, y, mode);
-}
-
-Cmpx& Cmpx::init(const fptype x, const fptype y, const int mode) {
-    if(mode == 0) {
-        re = x;
-        im = y;
-        mag = magnitude();
-        ang = angle();
-    }
-    else {
-        // assert(x >= 0);
-        if(x < 0) {
-            mag = -x;
-            ang = fmod(y + M_PI, 2*M_PI);
-        }
-        else {
-            mag = x;
-            ang = fmod(y, 2*M_PI);
-        }
-        re = real();
-        im = imaginary();
-    }
-    return *this;
-}
-
-Cmpx& Cmpx::set_re(const fptype x) {
+Cmpx::Cmpx(const fptype x, const fptype y) {
     re = x;
-    mag = magnitude();
-    ang = angle();
-    return *this;
+    im = y;
 }
 
-Cmpx& Cmpx::set_im(const fptype x) {
-    im = x;
-    mag = magnitude();
-    ang = angle();
-    return *this;
-}
+// Cmpx& Cmpx::set_re(const fptype x) {
+    // re = x;
+    // return *this;
+// }
 
-Cmpx& Cmpx::set_mag(const fptype x) {
-    assert(x >= 0);
-    mag = x;
-    re = real();
-    im = imaginary();
-    return *this;
-}
+// Cmpx& Cmpx::set_im(const fptype x) {
+    // im = x;
+    // return *this;
+// }
 
-Cmpx& Cmpx::set_ang(const fptype x) {
-    ang = fmod(x, 2*M_PI);
-    re = real();
-    im = imaginary();
-    return *this;
-}
+// Cmpx Cmpx::conjugate() const {
+    // return Cmpx(re, -im);
+// }
 
-Cmpx Cmpx::conjugate() const {
-    return Cmpx(re, -im, 0);
-}
-
-Cmpx& Cmpx::operator+=(const Cmpx &z) {
+// Cmpx& Cmpx::operator+=(const Cmpx &z) {
+void Cmpx::operator+=(const Cmpx &z) {
     re += z.re;
     im += z.im;
-    mag = magnitude();
-    ang = angle();
-    return *this;
+    // return *this;
 }
 
-Cmpx& Cmpx::operator-=(const Cmpx &z) {
-    re -= z.re;
-    im -= z.im;
-    mag = magnitude();
-    ang = angle();
-    return *this;
+// Cmpx& Cmpx::operator-=(const Cmpx &z) {
+    // re -= z.re;
+    // im -= z.im;
+    // return *this;
+// }
+
+// Cmpx& Cmpx::operator*=(const Cmpx &z) {
+void Cmpx::operator*=(const Cmpx &z) {
+    fptype x = re*z.re - im*z.im;
+    fptype y = re*z.im + im*z.re;
+    re = x;
+    im = y;
+    // return *this;
 }
 
-Cmpx& Cmpx::operator*=(const Cmpx &z) {
-    mag *= z.mag;
-    ang = fmod(ang + z.ang, 2*M_PI);
-    re = real();
-    im = imaginary();
-    return *this;
+// Cmpx& Cmpx::operator*=(const fptype k) {
+void Cmpx::operator*=(const fptype k) {
+    re *= k;
+    im *= k;
+    // return *this;
 }
 
-Cmpx& Cmpx::operator/=(const Cmpx &z) {
-    mag /= z.mag;
-    ang = fmod(ang - z.ang, 2*M_PI);
-    re = real();
-    im = imaginary();
-    return *this;
+char* Cmpx::polar() const {
+    char *ch = new char[100];
+    sprintf(ch, "%g<%gr", get_mag(), get_ang()); return ch;
 }
 
-Cmpx& Cmpx::operator*=(const fptype k) {
-    if(k < 0) {
-        mag *= -k;
-        ang = fmod(ang + M_PI, 2*M_PI);
-    }
-    else {
-        mag *= k;
-    }
-    re = real();
-    im = imaginary();
-    return *this;
+char* Cmpx::cartesian() const {
+    char *ch = new char[100];
+    sprintf(ch, "%g+%gj", re, im); return ch;
 }

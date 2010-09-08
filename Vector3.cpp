@@ -10,28 +10,21 @@ Vector3::Vector3() {
 }
 
 Vector3::Vector3(const fptype x1, const fptype y1, const fptype z1) {
-    // std::cout << "constructor: " << x1 << " " << y1 << " " << z1 << std::endl;
-    init(x1, y1, z1);
+    x = x1;
+    y = y1;
+    z = z1;
 }
 
 // Vector3::Vector3(const fptype* elem) {
     // init(elem[0], elem[1], elem[2]);
 // }
 
-Vector3& Vector3::init(const fptype x1, const fptype y1, const fptype z1) {
-    // std::cout << "  init: " << x1 << " " << y1 << " " << z1 << std::endl;
-    x = x1;
-    y = y1;
-    z = z1;
-    // std::cout << "  init: " << x << " " << y << " " << z << std::endl;
-    return *this;
-}
-
-Vector3& Vector3::operator+=(const Vector3 &b) {
+// Vector3& Vector3::operator+=(const Vector3 &b) {
+void Vector3::operator+=(const Vector3 &b) {
     x += b.x;
     y += b.y;
     z += b.z;
-    return *this;
+    // return *this;
 }
 
 Vector3 Vector3::operator+(const Vector3 &b) const {
