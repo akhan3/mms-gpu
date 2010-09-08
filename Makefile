@@ -23,10 +23,10 @@ endif
 ifeq ($(prof),1)
 	COMMONFLAGS += -pg
 endif
-ifeq ($(omp),0)
-	COMMONFLAGS +=
-else
+ifeq ($(omp),1)
 	COMMONFLAGS += -fopenmp
+else
+	COMMONFLAGS +=
 endif
 
 CXXFLAGS    := -Wall -W $(INCPATH) $(COMMONFLAGS)

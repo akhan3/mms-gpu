@@ -15,7 +15,7 @@ Cmpx::Cmpx(const fptype x, const fptype y, const int mode) {
 }
 
 Cmpx& Cmpx::init(const fptype x, const fptype y, const int mode) {
-    if (mode == 0) {
+    if(mode == 0) {
         re = x;
         im = y;
         mag = magnitude();

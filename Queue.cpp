@@ -32,7 +32,7 @@ void Queue::enqueue(void* n) {
 }
 
 void* Queue::dequeue() {
-    if (isEmpty()) {
+    if(isEmpty()) {
         printf("FATAL ERROR\n");
         printf("FATAL ERROR: Queue is already empty!\n");
         printf("FATAL ERROR\n");
@@ -58,7 +58,7 @@ int Queue::isEmpty() {
     // printf("] count = %d\n", count);
     // printf("     ");
     // for(int i=0; i<size; i++) {
-        // if (i == front)
+        // if(i == front)
             // printf("^");
         // else
             // printf(" ");

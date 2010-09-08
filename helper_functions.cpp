@@ -290,7 +290,7 @@ void traverse_tree_dfs(Box *n, const unsigned int limit)
     n->get_idstring(idstring);
     // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
     // NEWLINE;
-    if (n->level < limit)
+    if(n->level < limit)
         for(int i=0; i<=3; i++)
             traverse_tree_dfs(n->child[i], limit);
 }
@@ -304,7 +304,7 @@ void traverse_tree_bfs(Box *root, const unsigned int limit)
     Q.enqueue(root);
     while(!Q.isEmpty()) {
         Box *n = (Box*)Q.dequeue();
-        if (n->level < limit)
+        if(n->level < limit)
             for(int i=0; i<=3; i++)
                 Q.enqueue(n->child[i]);
         // function to perform on node
@@ -319,7 +319,7 @@ void traverse_tree_bfs(Box *root, const unsigned int limit)
 
 void create_tree_recurse(Box *thisBox, const unsigned int limit) {
     // Recursion
-    if (thisBox->level < limit) {
+    if(thisBox->level < limit) {
         // function to perform on node
         thisBox->split(limit);
         for(int i=0; i<=3; i++)
@@ -331,7 +331,7 @@ void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit) {
     // function to perform on node
     thisBox->find_neighbors(root);
     // Recursion
-    if (thisBox->level < limit) {
+    if(thisBox->level < limit) {
         for(int i=0; i<=3; i++)
             find_neighbors_recurse(thisBox->child[i], root, limit);
     }

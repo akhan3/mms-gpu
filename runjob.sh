@@ -10,14 +10,14 @@ echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
                 3           \
                 10e-9      \
                 1e-13       \
-                20e-9       \
-                16          \
-                16          \
-                3           \
+                1e-9       \
+                256         \
+                256          \
+                1           \
                 1           \
                 1           \
                 0           \
-                0           \
+                1           \
                 sim_cell20nm_dots_16x16     \
                 1985        \
     | tee -a log

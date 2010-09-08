@@ -35,13 +35,14 @@ Box::Box(unsigned int level1, unsigned int limit) {
 Box::~Box() {
     delete []id;
     for(int i=0; i<4; i++)
-        if (child[0] != NULL)
+        if(child[0] != NULL)
             delete child[i];
 }
 
 // Split up parent Box into 4 children Boxs
 void Box::split(unsigned int limit) {
     for(int i=0; i<4; i++) {
+        // printf("Box::split(limit=%d) level+1=%d\n", limit, level+1);
         child[i] = new Box(level+1, limit);
         if(child[i] == NULL) {
             fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
@@ -67,7 +68,7 @@ void Box::split(unsigned int limit) {
 // Prune the tree from this node downward
 void Box::prune() {
     pruned = 1;
-    if (child[0] != NULL)
+    if(child[0] != NULL)
         for(int i=0; i<=3; i++)
             child[i]->prune();
 }
@@ -75,7 +76,7 @@ void Box::prune() {
 // Grow the tree from this node downward
 void Box::grow() {
     pruned = 0;
-    if (child[0] != NULL)
+    if(child[0] != NULL)
         for(int i=0; i<=3; i++)
             child[i]->grow();
 }
@@ -102,7 +103,7 @@ void Box::find_neighbors(Box* root) {
         calc_id(Nid, level, Nx[j], Ny[j]);
         // put the pointer to neighbor in neighbors list
         for(unsigned int k=0; k<=level; k++) {
-            if (Nid[0] == 0) {
+            if(Nid[0] == 0) {
                 Box *nt = root;
                 for(unsigned int k=1; k<=level; k++)
                     nt = nt->child[Nid[k]];
@@ -114,12 +115,12 @@ void Box::find_neighbors(Box* root) {
 
     // Now construct the interaction list
     // by taking difference of two sets
-    if (level <= 1)
+    if(level <= 1)
         return;
     Box *fullList[32];
     int c = 0;
     for(int j=0; j<8; j++) {                // parent's neighbor index
-        if (parent->neighbor[j]) {          // if parent has this neighbor?
+        if(parent->neighbor[j]) {          // if parent has this neighbor?
             for(int k=0; k<4; k++) {        // parent's neighbor's child index
                 fullList[c++] = parent->neighbor[j]->child[k];
             }
@@ -129,12 +130,12 @@ void Box::find_neighbors(Box* root) {
     for (int i=0; i<c; i++) {
         int foundInNeighbor = 0;
         for (int j=0; j<8; j++) {
-            if (fullList[i] == neighbor[j]) {
+            if(fullList[i] == neighbor[j]) {
                 foundInNeighbor = 1;
                 break;
             }
         }
-        if (!foundInNeighbor)
+        if(!foundInNeighbor)
             interaction[c1++] = fullList[i];
     }
 } // find_neighbors function

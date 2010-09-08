@@ -2,6 +2,7 @@
 #include <omp.h>
 #endif
 #include <stdlib.h>
+#include <sys/time.h>
 #include "ode_functions.hpp"
 #include "helper_functions.hpp"
 #include "vector_functions.hpp"
@@ -232,6 +233,8 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         #endif
         for(int i = 0; i < xyzdim; i++)
             H3[i] = H[i];
+        timeval time1, time2;
+        status |= gettimeofday(&time1, NULL);
         status |= rk4_step( t, dt, &t2,
                             material, M, M2,
                             H3, slope, this_slope,
@@ -241,6 +244,10 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                             normalize,
                             verbose_level );
         if(status) return EXIT_FAILURE;
+        status |= gettimeofday(&time2, NULL);
+        double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+        if(verbose_level >= 0)
+            printf("RK4: took %f seconds\n", deltatime);
 
     // energies and torque after
         status |= Hfield(M2, H2, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, verbose_level);
@@ -317,7 +324,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 
         fflush(NULL);
-        // if(tindex >= 5) break;
+        if(tindex >= 1) break;
     } // time marching while loop
 
 // closing

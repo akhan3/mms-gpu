@@ -30,12 +30,12 @@ int fmm_bfs(        const fptype *charge,
 {
     int status = 0;
     assert(limit == actual_limit);  // unable to support arbitrary depth calculations.
-    // assert(limit <= actual_limit);
-    // timeval time1, time2;
-    // status |= gettimeofday(&time1, NULL);
+    assert(limit <= actual_limit);
+    timeval time1, time2;
+    status |= gettimeofday(&time1, NULL);
     if(verbose_level >= 6)
         printf("Executing FMM algorithm...\n");
-    // unsigned int prev_level = 0;
+    unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
     Queue Q_tree(N);
@@ -43,24 +43,24 @@ int fmm_bfs(        const fptype *charge,
     while(!Q_tree.isEmpty()) {
         Box *n = (Box*)Q_tree.dequeue();
         // populate queue with children nodes
-        if (n->level < limit)
+        if(n->level < limit)
             for(int i=0; i<=3; i++)
                 Q_tree.enqueue(n->child[i]);
         // function to perform on node
         if(n->level >= 2)   // no FMM steps for Level-0 and Level-1
         {
-            // if(prev_level != n->level) {
-                // if(prev_level >= 2) {
-                    // status |= gettimeofday(&time2, NULL);
-                    // double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-                    // status |= gettimeofday(&time1, NULL);
-                    // if(verbose_level >= 10)
-                        // printf("done in %f seconds.\n", deltatime); fflush(NULL);
-                // }
-                // prev_level = n->level;
-                // if(verbose_level >= 6)
-                    // printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
-            // }
+            if(prev_level != n->level) {
+                if(prev_level >= 2) {
+                    status |= gettimeofday(&time2, NULL);
+                    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+                    status |= gettimeofday(&time1, NULL);
+                    if(verbose_level >= 10)
+                        printf("done in %f seconds.\n", deltatime); fflush(NULL);
+                }
+                prev_level = n->level;
+                if(verbose_level >= 6)
+                    printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+            }
 
             if(n->is_pruned()) {
                 continue;
@@ -75,16 +75,18 @@ int fmm_bfs(        const fptype *charge,
             // checking for source charges in the source box
             fptype charge_found = 0;
             fptype width = pow(2, actual_limit-n->level);
+// charge_found = 1;
+// if(0)
             for(int l=0; l<=P; l++) {
                 for(int m=-l; m<=l; m++) {
                     for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
                         for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
                             fptype q = charge[yy*xdim + xx];
-                            if (q != 0) { // if charge found
+                            if(q != 0) { // if charge found
                                 charge_found = 1;
                                 Cmpx r_(xx - n->cx, yy - n->cy, 0);
                                 multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
-                            } // if (q != 0)
+                            } // if(q != 0)
                         } // source charge loop
                     } // source charge loop
                 } // m loop
@@ -104,10 +106,9 @@ int fmm_bfs(        const fptype *charge,
                 // calculation of potential at the boxes in interaction list
                     for(int i=0; i<27; i++) {
                         Box *ni = n->interaction[i];
-                        if (ni != NULL) {
+                        if(ni != NULL) {
                             for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
                                 for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
-                                    // Cmpx r(xx - n->cx, yy - n->cy, 0);
                                     Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
                                     Cmpx sum_over_lm;
                                     for(int l=0; l<=P; l++) {
@@ -130,7 +131,7 @@ int fmm_bfs(        const fptype *charge,
                                     }
                                 }
                             }
-                        } // if (ni != NULL)
+                        } // if(ni != NULL)
                     } // interaction loop
 
                 // calculation with neighbor list at the deepest level
@@ -143,7 +144,7 @@ int fmm_bfs(        const fptype *charge,
                         }
                         for(int i=0; i<8; i++) {
                             Box *nb = n->neighbor[i];
-                            if (nb != NULL) {
+                            if(nb != NULL) {
                                 Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
                                 potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
                             }
@@ -154,10 +155,10 @@ int fmm_bfs(        const fptype *charge,
         }   // if(n->level >= 2)
     } // while(!Q_tree.isEmpty())
 
-    // status |= gettimeofday(&time2, NULL);
-    // double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    // if(verbose_level >= 10)
-        // printf("done in %f seconds.\n", deltatime);
+    status |= gettimeofday(&time2, NULL);
+    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    if(verbose_level >= 10)
+        printf("done in %f seconds.\n", deltatime);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -174,14 +175,25 @@ int fmm_calc(   const fptype *charge,
     FILE *paniclog = fopen("paniclog.dat", "a");
     fprintf(paniclog, "# FMM: New run\n");
 
+    timeval time1, time2;
+    double deltatime;
+    status |= gettimeofday(&time1, NULL);
 // generate the tree
     Box *root = new Box(0, logN);
     create_tree_recurse(root, logN);
     find_neighbors_recurse(root, root, logN);
+    status |= gettimeofday(&time2, NULL);
+    deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    if(verbose_level >= 0)
+        printf("Tree: took %f seconds\n", deltatime);
+    fflush(NULL);
 
-    timeval time1, time2;
+    // timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
 // for each charge layer in zdim
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for (int zc = 0; zc < zdim; zc++) {
         if(verbose_level >= 3)
             printf("FMM: charge layer %d\n", zc);
@@ -189,11 +201,12 @@ int fmm_calc(   const fptype *charge,
         fflush(NULL);
         // call the actual function
         status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, verbose_level);
-        if(status) return EXIT_FAILURE;
+        // if(status) return EXIT_FAILURE;
         root->grow();
     }
+    if(status) return EXIT_FAILURE;
     status |= gettimeofday(&time2, NULL);
-    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
     if(verbose_level >= 0)
         printf("FMM: took %f seconds\n", deltatime);
     fflush(NULL);
@@ -217,14 +230,14 @@ void calc_potential_exact( const fptype *charge,
         for(int y_ = 0; y_ < ydim; y_++) {
             for(int x_ = 0; x_ < xdim; x_++) {
                 fptype q = charge[z_*ydim*xdim + y_*xdim + x_];
-                if (q == 0) continue;
+                if(q == 0) continue;
                 for(int z = 0; z < zdim; z++) { // observation point loop
                     #ifdef _OPENMP
                     #pragma omp parallel for
                     #endif
                     for(int y = 0; y < ydim; y++) {
                         for(int x = 0; x < xdim; x++) {
-                            if (z == z_ && y == y_ && x == x_) continue;    // skip on itself
+                            if(z == z_ && y == y_ && x == x_) continue;    // skip on itself
                             Vector3 R(x-x_, y-y_, z-z_);
                             potential[z*ydim*xdim + y*xdim + x] += q / R.magnitude();
                         }
