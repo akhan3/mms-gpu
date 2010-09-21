@@ -19,7 +19,7 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
                 const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                 const fptype mu_0, const fptype Ms, const fptype Aexch,
                 const int demag, const int exchange, const int external, const int use_fmm, const int P,
-                const int verbose_level );
+                const int use_gpu, const int verbose_level );
 
 //*************************************************************************//
 //******************** Main function **************************************//
@@ -44,6 +44,7 @@ int main(int argc, char **argv)
     int exchange = true;
     int external = false;
     int use_fmm = false;
+    int use_gpu = false;
     char sim_name[1000] = "sim_untitled";
     unsigned int seed = time(NULL);
 // read command line arguments
@@ -74,9 +75,11 @@ int main(int argc, char **argv)
     if(argc >= 13)
         sscanf(argv[12], "%d", &use_fmm);
     if(argc >= 14)
-        sscanf(argv[13], "%s", sim_name);
+        sscanf(argv[13], "%d", &use_gpu);
     if(argc >= 15)
-        sscanf(argv[14], "%u", &seed);
+        sscanf(argv[14], "%s", sim_name);
+    if(argc >= 16)
+        sscanf(argv[15], "%u", &seed);
     srand(seed);
 // print command line arguments
     printf("imagefile = %s \n", filename_arg);
@@ -91,6 +94,7 @@ int main(int argc, char **argv)
     printf("exchange = %d \n", exchange);
     printf("external = %d \n", external);
     printf("use_fmm = %d \n", use_fmm);
+    printf("use_gpu = %d \n", use_gpu);
     printf("sim_name = %s \n", sim_name);
     printf("SEED = %d \n", seed);
 
@@ -194,23 +198,21 @@ else if(zdim >= 3)
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
     }
+    fflush(NULL);
 
-fflush(NULL);
-if(use_fmm) {
-    status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 1||use_fmm, P, verbose_level+200);
+// call the potential function
+    status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level+200);
     if(status) return EXIT_FAILURE;
-    status |= save_vector3d(H_fmm, zdim, ydim, xdim, "H_fmm.dat", verbose_level);
-}
-else {
-    status |= Hfield(M, H_exact, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 0&&use_fmm, P, verbose_level+200);
-    if(status) return EXIT_FAILURE;
-    status |= save_vector3d(H_exact, zdim, ydim, xdim, "H_exact.dat", verbose_level);
-}
+    status |= save_vector3d(H_fmm, zdim, ydim, xdim, use_fmm ? "H_fmm.dat" : "H_exact.dat", verbose_level);
 
 
 // closing
     delete []M;
     delete []material;
+    delete []charge;
+    delete []potential;
+    delete []H_fmm;
+    delete []H_exact;
 
     printf("SEED = %d\n", seed);
     // printf("%s\n", status ? "failed to complete" : "successfuly completed");

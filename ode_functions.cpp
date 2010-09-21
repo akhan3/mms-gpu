@@ -22,7 +22,7 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
                 const int xdim, const int ydim, const int zdim, const fptype meshwidth,
                 const fptype mu_0, const fptype Ms, const fptype Aexch,
                 const int demag, const int exchange, const int external, const int use_fmm, const int P,
-                const int verbose_level )
+                const int use_gpu, const int verbose_level )
 {
     int status = 0;
     const int xyzdim = zdim*ydim*xdim;
@@ -41,9 +41,12 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
         divergence_3d(M, xdim, ydim, zdim, charge);
         // calculate potential
         if(use_fmm)
-            status |= fmm_calc(charge, potential, xdim, ydim, zdim, P, verbose_level);
+            status |= fmm_calc(charge, potential, xdim, ydim, zdim, P, use_gpu, verbose_level);
         else
-            calc_potential_exact(charge, xdim, ydim, zdim, potential); // Exact O(N^2) calculation
+            calc_potential_exact(charge, xdim, ydim, zdim, potential, use_gpu); // Exact O(N^2) calculation
+        status |= matrix2file(charge, ydim, xdim, "charge.dat", 100);
+        status |= matrix2file(potential, ydim, xdim, "potential.dat", 100);
+        if(status) return EXIT_FAILURE;
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);
     }
@@ -78,6 +81,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
                 const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                 const int demag, const int exchange, const int external, const int use_fmm, const int P,
                 const int normalize,
+                const int use_gpu,
                 const int verbose_level)
 {
     const int xyzdim = zdim*ydim*xdim;
@@ -100,7 +104,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
         }
     }
 // k2 @ t1 + dt/2
-    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, verbose_level);
+    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -112,7 +116,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
         }
     }
 // k3 @ t1 + dt/2
-    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, verbose_level);
+    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -124,7 +128,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
         }
     }
 // k4 @ t1 + dt
-    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, verbose_level);
+    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -154,7 +158,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                     const int xdim, const int ydim, const int zdim, const fptype meshwidth, const int P,
                     const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                     const int demag, const int exchange, const int external, const int use_fmm,
-                    const int verbose_level )
+                    const int use_gpu, const int verbose_level )
 {
     int status = 0;
     const int xyzdim = zdim*ydim*xdim;
@@ -212,7 +216,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 // Time-marching loop
 // ======================================
-    status |= Hfield(M, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, verbose_level);
+    status |= Hfield(M, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level);
     while(t <= finaltime)
     {
     // energies before
@@ -242,7 +246,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                             xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
                             demag, exchange, external, use_fmm, P,
                             normalize,
-                            verbose_level );
+                            use_gpu, verbose_level );
         if(status) return EXIT_FAILURE;
         status |= gettimeofday(&time2, NULL);
         double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
@@ -250,7 +254,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             printf("RK4: took %f seconds\n", deltatime);
 
     // energies and torque after
-        status |= Hfield(M2, H2, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, verbose_level);
+        status |= Hfield(M2, H2, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level);
         fptype E2 = 0;
         fptype torque = 0;
         #ifdef _OPENMP

@@ -189,6 +189,7 @@ int fmm_calc(   const fptype *charge,
                 fptype *potential,
                 const int xdim, const int ydim, const int zdim,
                 const int P,    // multipole series truncation (l = 0...P)
+                const int use_gpu,
                 const int verbose_level )
 {
     int status = 0;
@@ -243,8 +244,12 @@ int fmm_calc(   const fptype *charge,
 // Exact O(N^2) calculation of potential
 void calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
-                        fptype *potential)
+                        fptype *potential, int use_gpu)
 {
+    if(use_gpu)
+        calc_potential_exact_gpu(charge, xdim, ydim, zdim, potential);
+    else
+    {
     int status = 0;
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
@@ -273,6 +278,7 @@ void calc_potential_exact( const fptype *charge,
     if(1)
         printf("Exact: took %f seconds\n", deltatime);
     fflush(NULL);
+    }
 }
 
 

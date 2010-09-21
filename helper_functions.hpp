@@ -57,9 +57,13 @@ int fmm_calc(   const fptype *charge,
                 fptype *potential,
                 const int xdim, const int ydim, const int zdim,
                 const int P,    // multipole series truncation (l = 0...P)
-                const int verbose_level );
+                const int use_gpu, const int verbose_level );
 
 void calc_potential_exact( const fptype *charge,
+                        const int xdim, const int ydim, const int zdim,
+                        fptype *potential, int use_gpu);
+
+int calc_potential_exact_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential);
 
