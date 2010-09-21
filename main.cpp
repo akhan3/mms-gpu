@@ -133,7 +133,8 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    assert(zdim == 1);
+    // assert(zdim == 1);
+if(zdim == 1)
     for(unsigned int z = 0; z < zdim; z++) {
         for(unsigned int y = 0; y < ydim; y++) {
             for(unsigned int x = 0; x < xdim; x++) {
@@ -149,6 +150,23 @@ int main(int argc, char **argv)
             }
         }
     }
+else if(zdim >= 3)
+    for(unsigned int z = 1; z < zdim-1; z++) {
+        for(unsigned int y = 0; y < ydim; y++) {
+            for(unsigned int x = 0; x < xdim; x++) {
+                if(!mask[y*xdim + x])
+                {
+                    fptype theta = frand_atob(0, 180) * M_PI/180;
+                    fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    // fptype theta = M_PI/2;
+                    // fptype phi   = 0;
+                    M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+                    material[z*ydim*xdim + y*xdim + x] = 1;
+                }
+            }
+        }
+    }
+
     delete []mask;
 
 // write M field to file
@@ -177,13 +195,17 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+fflush(NULL);
+if(use_fmm) {
     status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 1||use_fmm, P, verbose_level+200);
     if(status) return EXIT_FAILURE;
     status |= save_vector3d(H_fmm, zdim, ydim, xdim, "H_fmm.dat", verbose_level);
-
-    // status |= Hfield(M, H_exact, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 0&&use_fmm, P, verbose_level+200);
-    // if(status) return EXIT_FAILURE;
-    // status |= save_vector3d(H_exact, zdim, ydim, xdim, "H_exact.dat", verbose_level);
+}
+else {
+    status |= Hfield(M, H_exact, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, 0&&use_fmm, P, verbose_level+200);
+    if(status) return EXIT_FAILURE;
+    status |= save_vector3d(H_exact, zdim, ydim, xdim, "H_exact.dat", verbose_level);
+}
 
 
 // closing

@@ -13,7 +13,7 @@ void divergence_3d( const Vector3 *V,
     fptype meshwidth = 1.0;
     for(int z = 0; z < zdim; z++)
         #ifdef _OPENMP
-        #pragma omp parallel for
+        // #pragma omp parallel for
         #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
@@ -37,7 +37,7 @@ void gradient_3d(   const fptype *S,
     fptype meshwidth = 1.0;
     for(int z = 0; z < zdim; z++)
         #ifdef _OPENMP
-        #pragma omp parallel for
+        // #pragma omp parallel for
         #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
@@ -63,7 +63,7 @@ void add_exchange_field(const Vector3 *M,
     const fptype constant_multiple = 2 * Aexch / (mu * Ms*Ms) / (meshwidth*meshwidth);
     for(int z = 0; z < zdim; z++)
         #ifdef _OPENMP
-        #pragma omp parallel for
+        // #pragma omp parallel for
         #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {

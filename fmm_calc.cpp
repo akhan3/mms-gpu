@@ -79,25 +79,29 @@ int fmm_bfs(        const fptype *charge,
         // checking for source charges in the source box
         fptype charge_found = 0;
         fptype width = pow(2, actual_limit-n->level);
-// charge_found = 1;
-// if(0)
-        for(int l=0; l<=P; l++) {
-            for(int m=-l; m<=l; m++) {
-                for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
-                    for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                        fptype q = charge[yy*xdim + xx];
-                        if(q != 0) { // if charge found
-                            charge_found = 1;
-                            Cmpx r_(xx - n->cx, yy - n->cy);
+        int yy1 = ceil(n->cy-width/2);
+        int yy2 = floor(n->cy+width/2);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+        for(int yy=yy1; yy<=yy2; yy++) {
+        // for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
+            for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
+                fptype q = charge[yy*xdim + xx];
+                if(q != 0) { // if charge found
+                    charge_found = 1;
+                    Cmpx r_(xx - n->cx, yy - n->cy);
+                    for(int l=0; l<=P; l++) {
+                        for(int m=-l; m<=l; m++) {
                             Cmpx sph = spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
                             sph *= q * pow(r_.get_mag(), l);
                             multipole_coeff[l][m+l] += sph;
                             // multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
-                        } // if(q != 0)
-                    } // source charge loop
-                } // source charge loop
-            } // m loop
-        } // l loop
+                        } // m loop
+                    } // l loop
+                } // if(q != 0)
+            } // source charge loop
+        } // source charge loop
         // NEWLINE;
 
         if(! charge_found) {
@@ -107,10 +111,16 @@ int fmm_bfs(        const fptype *charge,
 
         if(charge_found)
         {
+    #ifdef _OPENMP
+    // #pragma omp parallel for
+    #endif
             for (int zp = 0; zp < zdim; zp++) // for each potential layer in zdim
             {
                 // printf("FMM:   charge layer %d, potential layer %d\n", zc, zp);
             // calculation of potential at the boxes in interaction list
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
                 for(int i=0; i<27; i++) {
                     Box *ni = n->interaction[i];
                     if(ni != NULL) {
@@ -204,7 +214,7 @@ int fmm_calc(   const fptype *charge,
     status |= gettimeofday(&time1, NULL);
 // for each charge layer in zdim
     #ifdef _OPENMP
-    #pragma omp parallel for
+    // #pragma omp parallel for
     #endif
     for (int zc = 0; zc < zdim; zc++) {
         if(verbose_level >= 3)

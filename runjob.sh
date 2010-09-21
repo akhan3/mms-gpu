@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set OpenMP threads
-export OMP_NUM_THREADS=2
+export OMP_NUM_THREADS=8
 echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
 
 # launch the simulation
@@ -13,7 +13,7 @@ echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
                 1e-9       \
                 128         \
                 128          \
-                1           \
+                3           \
                 1           \
                 1           \
                 0           \
