@@ -74,7 +74,7 @@ int fmm_bfs(        const fptype *charge,
         // n->get_idstring(idstring);
         // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) \n", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
 
-    // Calculate multipole moments for the source box
+    // Calculate multipole coefficients for the source box
         Cmpx multipole_coeff[P+1][2*P+1];
         // checking for source charges in the source box
         fptype charge_found = 0;
@@ -193,6 +193,7 @@ int fmm_calc(   const fptype *charge,
                 const int verbose_level )
 {
     int status = 0;
+    if(use_gpu) {}
     const unsigned int logN = ceil(log2(xdim * ydim) / log2(4));
     // FILE *paniclog = fopen("paniclog.dat", "w");
     FILE *paniclog = fopen("paniclog.dat", "a");
@@ -213,6 +214,14 @@ int fmm_calc(   const fptype *charge,
 
     // timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
+
+// reset potential before beginning
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for(int i = 0; i < zdim*ydim*xdim; i++)
+        potential[i] = 0;
+
 // for each charge layer in zdim
     #ifdef _OPENMP
     // #pragma omp parallel for
@@ -246,27 +255,35 @@ void calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential, int use_gpu)
 {
+    int status = 0;
+    timeval time1, time2;
+    status |= gettimeofday(&time1, NULL);
     if(use_gpu)
         calc_potential_exact_gpu(charge, xdim, ydim, zdim, potential);
     else
     {
-    int status = 0;
-    timeval time1, time2;
-    status |= gettimeofday(&time1, NULL);
-    for(int z_ = 0; z_ < zdim; z_++) {  // source loop
-        for(int y_ = 0; y_ < ydim; y_++) {
-            for(int x_ = 0; x_ < xdim; x_++) {
-                fptype q = charge[z_*ydim*xdim + y_*xdim + x_];
-                if(q == 0) continue;
-                for(int z = 0; z < zdim; z++) { // observation point loop
-                    #ifdef _OPENMP
-                    #pragma omp parallel for
-                    #endif
-                    for(int y = 0; y < ydim; y++) {
-                        for(int x = 0; x < xdim; x++) {
-                            if(z == z_ && y == y_ && x == x_) continue;    // skip on itself
-                            Vector3 R(x-x_, y-y_, z-z_);
-                            potential[z*ydim*xdim + y*xdim + x] += q / R.magnitude();
+    // reset potential before beginning
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for(int i = 0; i < zdim*ydim*xdim; i++)
+            potential[i] = 0;
+
+        for(int z_ = 0; z_ < zdim; z_++) {  // source loop
+            for(int y_ = 0; y_ < ydim; y_++) {
+                for(int x_ = 0; x_ < xdim; x_++) {
+                    fptype q = charge[z_*ydim*xdim + y_*xdim + x_];
+                    if(q == 0) continue;
+                    for(int z = 0; z < zdim; z++) { // observation point loop
+                        #ifdef _OPENMP
+                        #pragma omp parallel for
+                        #endif
+                        for(int y = 0; y < ydim; y++) {
+                            for(int x = 0; x < xdim; x++) {
+                                if(z == z_ && y == y_ && x == x_) continue;    // skip on itself
+                                Vector3 R(x-x_, y-y_, z-z_);
+                                potential[z*ydim*xdim + y*xdim + x] += q / R.magnitude();
+                            }
                         }
                     }
                 }
@@ -275,10 +292,9 @@ void calc_potential_exact( const fptype *charge,
     }
     status |= gettimeofday(&time2, NULL);
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(1)
+    if(0)
         printf("Exact: took %f seconds\n", deltatime);
     fflush(NULL);
-    }
 }
 
 

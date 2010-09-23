@@ -27,33 +27,32 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
     int status = 0;
     const int xyzdim = zdim*ydim*xdim;
     if(verbose_level) {}
-// reset H and potential before beginning
+// reset H before beginning
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for(int i = 0; i < xyzdim; i++) {
+    for(int i = 0; i < xyzdim; i++)
         H[i] = Vector3(0,0,0);
-        potential[i] = 0;
-    }
 
     if(demag) {
         // magnetic volume charge density
         divergence_3d(M, xdim, ydim, zdim, charge);
-        // calculate potential
+
+        // calculate potential from charge
         if(use_fmm)
             status |= fmm_calc(charge, potential, xdim, ydim, zdim, P, use_gpu, verbose_level);
         else
             calc_potential_exact(charge, xdim, ydim, zdim, potential, use_gpu); // Exact O(N^2) calculation
-        status |= matrix2file(charge, ydim, xdim, "charge.dat", 100);
-        status |= matrix2file(potential, ydim, xdim, "potential.dat", 100);
-        if(status) return EXIT_FAILURE;
+        // status |= matrix2file(charge, ydim, xdim, "charge.dat", 100);
+        // status |= matrix2file(potential+ydim*xdim*1, ydim, xdim, use_gpu ? "potential_gpu.dat" : "potential_cpu.dat", 100);
+
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);
     }
 
     if(exchange) {
         // add exchange field from magnetization = H_exch
-        // add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
+        add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
     }
 
     if(external) {
@@ -205,9 +204,6 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     fptype t = 0;
     fptype t2 = t;
 
-// // post-process initial state
-    // status |= postprocess_M();
-
     printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
     // getchar();
     printf("\n");
@@ -222,7 +218,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // energies before
         fptype E = 0;
         #ifdef _OPENMP
-        #pragma omp parallel for
+        // #pragma omp parallel for
         #endif
         for(int i = 0; i < xyzdim; i++) {
             if(material[i]) {
@@ -250,7 +246,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         if(status) return EXIT_FAILURE;
         status |= gettimeofday(&time2, NULL);
         double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-        if(verbose_level >= 0)
+        if(verbose_level >= 6)
             printf("RK4: took %f seconds\n", deltatime);
 
     // energies and torque after
@@ -295,13 +291,13 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             // if(E2 <= E) // if step was validated
             {
                 // append M to Mdynamics file
-                status |= append_vector3d(M, zdim, ydim, xdim, tindex, t, fhM, verbose_level);
+                status |= append_vector3d(M, zdim, ydim, xdim, fhM, verbose_level);
                 // calculate average magnetization
                 fptype Mmag_avg = 0;
                 int count = 0;
                 Vector3 M_avg(0,0,0);
                 #ifdef _OPENMP
-                #pragma omp parallel for
+                // #pragma omp parallel for
                 #endif
                 for(int i = 0; i < xyzdim; i++) {
                     if(material[i]) {
@@ -328,7 +324,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 
         fflush(NULL);
-        if(tindex >= 1) break;
+        if(tindex >= 10) break;
     } // time marching while loop
 
 // closing

@@ -31,10 +31,10 @@ endif
 ifeq ($(prof),1)
 	COMMONFLAGS += -pg
 endif
-ifeq ($(omp),1)
-	COMMONFLAGS += -fopenmp
-else
+ifeq ($(omp),0)
 	COMMONFLAGS +=
+else
+	COMMONFLAGS += -fopenmp
 endif
 
 NVCCFLAGS   += 	--compiler-options "-fno-strict-aliasing $(COMMONFLAGS)" $(CUDA_INCLUDES)
@@ -55,7 +55,7 @@ TARGET    	:= main
 all: $(TARGET)
 
 $(TARGET):	$(OBJS)
-	@echo "Linking..."
+	@echo "******** Linking ********"
 	$(LINKER) -o $@ $(OBJS) $(COMMONFLAGS) $(LIBRARIES) $(CUDA_LIBRARIES)
 
 Box.o 				: Box.cpp Box.hpp mydefs.hpp
@@ -66,31 +66,9 @@ helper_functions.o 	: helper_functions.cpp helper_functions.hpp mydefs.hpp
 vector_functions.o 	: vector_functions.cpp vector_functions.hpp mydefs.hpp
 ode_functions.o 	: ode_functions.cpp ode_functions.hpp mydefs.hpp
 fmm_calc.o			: fmm_calc.cpp mydefs.hpp
+main.o				: main.cpp mydefs.hpp
 potential_calc.o	: potential_calc.cu mydefs.hpp
 	$(NVCC) $(NVCCFLAGS) -o $@ -c potential_calc.cu
 
-main.o				: main.cpp mydefs.hpp
-
 clean:
 	rm -f $(OBJS) gmon.out $(TARGET)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#$(TARGET): $(OBJS)
-	#$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBPATH) $(LIBRARIES)

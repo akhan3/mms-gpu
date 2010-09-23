@@ -2,7 +2,6 @@
 
 # set OpenMP threads
 export OMP_NUM_THREADS=8
-echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
 
 # launch the simulation
 #valgrind --leak-check=full
@@ -11,10 +10,10 @@ echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
                 3           \
                 10e-9      \
                 1e-13       \
-                1e-9       \
-                64         \
-                64          \
-                1           \
+                20e-9       \
+                32         \
+                32          \
+                3           \
                 1           \
                 1           \
                 0           \
@@ -22,11 +21,10 @@ echo "Running with $OMP_NUM_THREADS OpenMP threads" | tee log
                 1           \
                 sim_cell20nm_dots_16x16     \
                 1985        \
-
-    #| tee -a log
+| tee -a log
 
 exit_status=$?
-echo "program exit staus = $exit_status" | tee -a log
+echo "program exit staus = $exit_status"
 exit $exit_status
 
 # default command line args

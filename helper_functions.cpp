@@ -206,7 +206,7 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
 
 // Append 3D vector field to file
 // ===============================
-int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const int tindex, const fptype time, FILE* fh, int verbose_level)
+int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbose_level)
 {
     if(verbose_level) {}
     int status = 0;
