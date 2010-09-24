@@ -3,22 +3,29 @@
 #include "Queue.hpp"
 
 
-// constructor
-Queue::Queue(int len) {
+// constructors
+// Queue::Queue(int len) {
+    // size = len;
+    // contents = new void*[len]();
+    // if(contents == NULL) {
+        // fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        // return;
+    // }
+    // front = 0;
+    // count = 0;
+// }
+
+Queue::Queue(int len, void **queue_mem) {
     size = len;
-    contents = new void*[len]();
-    if(contents == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return;
-    }
+    contents = queue_mem;
     front = 0;
     count = 0;
 }
 
 // destructor
-Queue::~Queue() {
-    delete []contents;
-}
+// Queue::~Queue() {
+    // delete []contents;
+// }
 
 void Queue::enqueue(void* n) {
     if(count >= size) {

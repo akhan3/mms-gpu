@@ -4,6 +4,9 @@
 // #include <string.h>
 #include <cmath>
 #include "Box.hpp"
+#include "Queue.hpp"
+
+#define MAXLIMIT 20
 
 // constructor
 Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
@@ -11,16 +14,16 @@ Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
     index = index1;
     pruned = 0;
     parent = NULL;
-    for(int i=0; i<4; i++)
+    for(int i = 0; i < 4; i++)
         child[i] = NULL;
-    for(int i=0; i<8; i++)
+    for(int i = 0; i < 8; i++)
         neighbor[i] = NULL;
-    for(int i=0; i<27; i++)
+    for(int i = 0; i < 27; i++)
         interaction[i] = NULL;
 
 // calculate id from index
     // byte *id = new byte[level+1]();
-    byte *id = new byte[limit+1]();
+    byte *id = new byte[MAXLIMIT+1]();
     if(id == NULL) {
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return;
@@ -38,20 +41,17 @@ Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
 }
 
 // destructor
-Box::~Box() {
-    for(int i=0; i<4; i++)
-        if(child[0] != NULL)
-            delete child[i];
-}
+// Box::~Box() {
+    // for(int i = 0; i < 4; i++)
+        // if(child[0] != NULL)
+            // delete child[i];
+// }
 
 // Split up parent Box into 4 children Boxs
-void Box::split(unsigned int limit) {
-    for(int i=0; i<4; i++) {
-        child[i] = new Box(level+1, index*4 + i, limit);
-        if(child[i] == NULL) {
-            fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-            return;
-        }
+void Box::split(Box *firstchild_address, unsigned int limit) {
+    for(int i = 0; i < 4; i++) {
+        firstchild_address[i] = Box(level+1, index*4 + i, limit);
+        child[i] = &firstchild_address[i];
         child[i]->parent = this;
     }
 }
@@ -90,7 +90,7 @@ void Box::grow() {
 void Box::find_neighbors(Box* root) {
     unsigned int Nx[8];
     unsigned int Ny[8];
-    byte *Nid = new byte[level+1]();
+    byte *Nid = new byte[MAXLIMIT+1]();
     if(Nid == NULL) {
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return;
@@ -170,7 +170,7 @@ void Box::calc_id(byte *id, unsigned int level1, unsigned int x1, unsigned int y
 
 // Gather Box-id in a string
 void Box::get_idstring(char *s) {
-    byte *id = new byte[level+1]();
+    byte *id = new byte[MAXLIMIT+1]();
     if(id == NULL) {
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return;
@@ -184,15 +184,15 @@ void Box::get_idstring(char *s) {
     delete []id;
 }
 
-void Box::create_tree_recurse(const unsigned int limit) {
-    // Recursion
-    if(level < limit) {
-        // function to perform on node
-        split(limit);
-        for(int i=0; i<=3; i++)
-            child[i]->create_tree_recurse(limit);
-    }
-}
+// void Box::create_tree_recurse(const unsigned int limit) {
+    // // Recursion
+    // if(level < limit) {
+        // // function to perform on node
+        // split(limit);
+        // for(int i=0; i<=3; i++)
+            // child[i]->create_tree_recurse(limit);
+    // }
+// }
 
 void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
     // function to perform on node
@@ -204,3 +204,25 @@ void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
     }
 }
 
+
+void Box::create_tree_bfs(const unsigned int limit, void **queue_mem) {
+    const unsigned int N = (unsigned int)pow(4, limit);
+    Queue Q_tree(N, queue_mem);
+    Q_tree.enqueue((void*)this);
+    printf("starting BFS Queue...\n\n");
+
+    Box *root = this;
+    unsigned int offset = 1;
+
+    while(!Q_tree.isEmpty()) {
+// Pick node from the queue
+        Box *n = (Box*)Q_tree.dequeue();
+// function to perform on node
+        n->split(root+offset, limit);
+        offset += 4;
+// populate queue with children nodes
+        if(n->level < limit-1)
+            for(int i=0; i<=3; i++)
+                Q_tree.enqueue(n->child[i]);
+    }
+}

@@ -12,8 +12,9 @@ public:
     int front;
 
 // constructors and destructor
-    Queue(int len);
-    ~Queue();
+    // Queue(int len);
+    Queue(int len, void **queue_mem);
+    // ~Queue();
 
 // member functions
     void            enqueue(void* n);

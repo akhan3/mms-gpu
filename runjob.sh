@@ -4,15 +4,16 @@
 export OMP_NUM_THREADS=8
 
 # launch the simulation
-#valgrind --leak-check=full
+#valgrind --leak-check=full \
+
 ./main                      \
                 dummy.png   \
                 3           \
                 10e-9      \
                 1e-13       \
                 20e-9       \
-                128         \
-                128          \
+                64         \
+                64          \
                 1           \
                 1           \
                 1           \

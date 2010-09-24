@@ -13,26 +13,28 @@ public:
     fptype cx;
     fptype cy;
 private:
-    // byte *id;
     unsigned int index;
     Box *parent;        // pointer to parent
     unsigned int x;
     unsigned int y;
     int pruned;
+    int filler_dummy;
 
 public:
 // constructors and destructor
     Box(unsigned int level1, unsigned int index1, unsigned int limit);
-    ~Box();
+    // ~Box();
 
 // member functions
     void            grow();
     void            prune();
     inline int      is_pruned() { return pruned; }
-    void            create_tree_recurse(const unsigned int limit);
+    void            create_tree_bfs(const unsigned int limit, void **queue_mem);
+    // void            create_tree_recurse(const unsigned int limit);
     void            find_neighbors_recurse(Box *root, const unsigned int limit);
 private:
-    void            split(const unsigned int limit);
+    // void            split(Box *start_address, const unsigned int limit);
+    void            split(Box *firstchild_address, unsigned int limit);
     unsigned int    calc_x(const byte *id);
     unsigned int    calc_y(const byte *id);
     void            idfromindex(byte *id);
