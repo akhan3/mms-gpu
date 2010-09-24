@@ -13,7 +13,8 @@ public:
     fptype cx;
     fptype cy;
 private:
-    byte *id;
+    // byte *id;
+    unsigned int index;
     Box *parent;        // pointer to parent
     unsigned int x;
     unsigned int y;
@@ -21,7 +22,7 @@ private:
 
 public:
 // constructors and destructor
-    Box(unsigned int level1, unsigned int limit);
+    Box(unsigned int level1, unsigned int index1, unsigned int limit);
     ~Box();
 
 // member functions
@@ -31,10 +32,11 @@ public:
     void            create_tree_recurse(const unsigned int limit);
     void            find_neighbors_recurse(Box *root, const unsigned int limit);
 private:
-    void            split(unsigned int limit);
-    unsigned int    calc_x();
-    unsigned int    calc_y();
-    void            calc_id(byte*id1, unsigned int level1, unsigned int x1, unsigned int y1);
+    void            split(const unsigned int limit);
+    unsigned int    calc_x(const byte *id);
+    unsigned int    calc_y(const byte *id);
+    void            idfromindex(byte *id);
+    void            calc_id(byte*id1, const unsigned int level1, const unsigned int x1, const unsigned int y1);
     void            get_idstring(char *s);
     void            find_neighbors(Box* root);
 };

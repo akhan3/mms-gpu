@@ -83,7 +83,7 @@ int fmm_bfs(        const fptype *charge,
 
 
 gettimeofday(&t1, NULL);
-fptype q;
+fptype q = 0;
     // Calculate multipole coefficients for the source box
         Cmpx multipole_coeff[P+1][2*P+1];
         // checking for source charges in the source box
@@ -240,7 +240,7 @@ int fmm_calc(   const fptype *charge,
     double deltatime;
     status |= gettimeofday(&time1, NULL);
 // generate the tree
-    Box *root = new Box(0, logN);
+    Box *root = new Box(0, 0, logN);
     root->create_tree_recurse(logN);
     root->find_neighbors_recurse(root, logN);
     status |= gettimeofday(&time2, NULL);

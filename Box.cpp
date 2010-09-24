@@ -6,8 +6,10 @@
 #include "Box.hpp"
 
 // constructor
-Box::Box(unsigned int level1, unsigned int limit) {
+Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
     level = level1;
+    index = index1;
+    pruned = 0;
     parent = NULL;
     for(int i=0; i<4; i++)
         child[i] = NULL;
@@ -15,25 +17,28 @@ Box::Box(unsigned int level1, unsigned int limit) {
         neighbor[i] = NULL;
     for(int i=0; i<27; i++)
         interaction[i] = NULL;
-    x = 0;
-    y = 0;
-    // cx = 0;
-    // cy = 0;
-    cx = (unsigned int)pow(2, limit-level) * x + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
-    cy = (unsigned int)pow(2, limit-level) * y + ((unsigned int)pow(2, limit-level) - 1) * 0.5;
-    // potential = 0;
-    pruned = 0;
-    id = new byte[level+1]();
+
+// calculate id from index
+    // byte *id = new byte[level+1]();
+    byte *id = new byte[limit+1]();
     if(id == NULL) {
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return;
     }
-    id[0] = 0;
+    idfromindex(id);
+
+// calculate spatial coordinates at level
+    x = calc_x(id);
+    y = calc_y(id);
+    delete []id;
+
+// calculate spatial coordinates at deepest level
+    cx = (unsigned int)pow(2, limit - level) * x + ((unsigned int)pow(2, limit - level) - 1) * 0.5;
+    cy = (unsigned int)pow(2, limit - level) * y + ((unsigned int)pow(2, limit - level) - 1) * 0.5;
 }
 
 // destructor
 Box::~Box() {
-    delete []id;
     for(int i=0; i<4; i++)
         if(child[0] != NULL)
             delete child[i];
@@ -42,28 +47,27 @@ Box::~Box() {
 // Split up parent Box into 4 children Boxs
 void Box::split(unsigned int limit) {
     for(int i=0; i<4; i++) {
-        // printf("Box::split(limit=%d) level+1=%d\n", limit, level+1);
-        child[i] = new Box(level+1, limit);
+        child[i] = new Box(level+1, index*4 + i, limit);
         if(child[i] == NULL) {
             fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
             return;
         }
-        Box *n = child[i];
-        n->parent = this;
-        n->level = level+1;
-    // calculate Box's id
-        for(unsigned int j=0; j<=level; j++)
-            n->id[j] = id[j];
-        n->id[level+1] = i;
-    // calculate spatial coordinates at level
-        n->x = n->calc_x();
-        n->y = n->calc_y();
-    // calculate spatial coordinates at deepest level
-        n->cx = (unsigned int)pow(2, limit-n->level) * n->x + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
-        n->cy = (unsigned int)pow(2, limit-n->level) * n->y + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
+        child[i]->parent = this;
     }
 }
 
+// calculate id from index
+void Box::idfromindex(byte *id) {
+    int indext = index;
+    id[level] = indext % 4; // indext % 4;
+    int l = level - 1;
+    while((indext /= 4) > 0) {
+        id[l] = indext % 4;
+        l--;
+    }
+    // for(; l >= 0; l--)
+        // id[l] = 0;
+}
 
 // Prune the tree from this node downward
 void Box::prune() {
@@ -141,13 +145,13 @@ void Box::find_neighbors(Box* root) {
 } // find_neighbors function
 
 // calculate x and y spatial coords from id
-unsigned int Box::calc_x() {
+unsigned int Box::calc_x(const byte *id) {
     unsigned int x1 = 0;
     for(int j=level; j>=1; j--)
         x1 |= (id[j]&1) << (level-j);
     return x1;
 }
-unsigned int Box::calc_y() {
+unsigned int Box::calc_y(const byte *id) {
     unsigned int y1 = 0;
     for(int j=level; j>=1; j--)
         y1 |= ((id[j]&2)>>1) << (level-j);
@@ -155,22 +159,29 @@ unsigned int Box::calc_y() {
 }
 
 // calculate id from x and y spatial coords
-void Box::calc_id(byte *id1, unsigned int level1, unsigned int x1, unsigned int y1) {
+void Box::calc_id(byte *id, unsigned int level1, unsigned int x1, unsigned int y1) {
     for(unsigned int k=0; k<=level1; k++)
-        id1[k] = 0;
+        id[k] = 0;
     for(int k=level1; k>=0; k--) {
-        id1[k] |= (x1 & (1<<(level1-k))) >> (level1-k);
-        id1[k] |= ((y1 & (1<<(level1-k))) >> (level1-k)) << 1;
+        id[k] |= (x1 & (1<<(level1-k))) >> (level1-k);
+        id[k] |= ((y1 & (1<<(level1-k))) >> (level1-k)) << 1;
     }
 }
 
 // Gather Box-id in a string
 void Box::get_idstring(char *s) {
+    byte *id = new byte[level+1]();
+    if(id == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return;
+    }
+    idfromindex(id);
     int c = 0;
     c += sprintf(s, "[");
     for(unsigned int a=0; a<=level; a++)
         c += sprintf(s+c, "%d", id[a]);
     c += sprintf(s+c, "]");
+    delete []id;
 }
 
 void Box::create_tree_recurse(const unsigned int limit) {
