@@ -56,8 +56,8 @@ void Box::split(unsigned int limit) {
             n->id[j] = id[j];
         n->id[level+1] = i;
     // calculate spatial coordinates at level
-        n->x = n->calc_x(n->level, n->id);
-        n->y = n->calc_y(n->level, n->id);
+        n->x = n->calc_x();
+        n->y = n->calc_y();
     // calculate spatial coordinates at deepest level
         n->cx = (unsigned int)pow(2, limit-n->level) * n->x + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
         n->cy = (unsigned int)pow(2, limit-n->level) * n->y + ((unsigned int)pow(2, limit-n->level) - 1) * 0.5;
@@ -141,21 +141,21 @@ void Box::find_neighbors(Box* root) {
 } // find_neighbors function
 
 // calculate x and y spatial coords from id
-unsigned int Box::calc_x (unsigned int level1, byte *id1) {
+unsigned int Box::calc_x() {
     unsigned int x1 = 0;
-    for(int j=level1; j>=1; j--)
-        x1 |= (id1[j]&1) << (level1-j);
+    for(int j=level; j>=1; j--)
+        x1 |= (id[j]&1) << (level-j);
     return x1;
 }
-unsigned int Box::calc_y (unsigned int level1, byte *id1) {
+unsigned int Box::calc_y() {
     unsigned int y1 = 0;
-    for(int j=level1; j>=1; j--)
-        y1 |= ((id1[j]&2)>>1) << (level1-j);
+    for(int j=level; j>=1; j--)
+        y1 |= ((id[j]&2)>>1) << (level-j);
     return y1;
 }
 
 // calculate id from x and y spatial coords
-void Box::calc_id (byte *id1, unsigned int level1, unsigned int x1, unsigned int y1) {
+void Box::calc_id(byte *id1, unsigned int level1, unsigned int x1, unsigned int y1) {
     for(unsigned int k=0; k<=level1; k++)
         id1[k] = 0;
     for(int k=level1; k>=0; k--) {
@@ -172,3 +172,24 @@ void Box::get_idstring(char *s) {
         c += sprintf(s+c, "%d", id[a]);
     c += sprintf(s+c, "]");
 }
+
+void Box::create_tree_recurse(const unsigned int limit) {
+    // Recursion
+    if(level < limit) {
+        // function to perform on node
+        split(limit);
+        for(int i=0; i<=3; i++)
+            child[i]->create_tree_recurse(limit);
+    }
+}
+
+void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
+    // function to perform on node
+    find_neighbors(root);
+    // Recursion
+    if(level < limit) {
+        for(int i=0; i<=3; i++)
+            child[i]->find_neighbors_recurse(root, limit);
+    }
+}
+

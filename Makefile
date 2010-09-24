@@ -31,10 +31,10 @@ endif
 ifeq ($(prof),1)
 	COMMONFLAGS += -pg
 endif
-ifeq ($(omp),0)
-	COMMONFLAGS +=
-else
+ifeq ($(omp),1)
 	COMMONFLAGS += -fopenmp
+else
+	COMMONFLAGS +=
 endif
 
 NVCCFLAGS   += 	--compiler-options "-fno-strict-aliasing $(COMMONFLAGS)" $(CUDA_INCLUDES)

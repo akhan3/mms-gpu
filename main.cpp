@@ -175,41 +175,41 @@ else if(zdim >= 3)
     status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
     if(status) return EXIT_FAILURE;
 
-// write material field to file
-    fptype *m = new fptype[xdim*ydim];
-    int z = 1;
-    for(unsigned int y = 0; y < ydim; y++)
-        for(unsigned int x = 0; x < xdim; x++)
-            m[y*xdim + x] = (fptype)material[z*ydim*xdim + y*xdim + x];
-    status |= matrix2file(m, ydim, xdim, "material.dat", 100);
-    if(status) return EXIT_FAILURE;
-    delete []m;
+// // write material field to file
+    // fptype *m = new fptype[xdim*ydim];
+    // int z = 1;
+    // for(unsigned int y = 0; y < ydim; y++)
+        // for(unsigned int x = 0; x < xdim; x++)
+            // m[y*xdim + x] = (fptype)material[z*ydim*xdim + y*xdim + x];
+    // status |= matrix2file(m, ydim, xdim, "material.dat", 100);
+    // if(status) return EXIT_FAILURE;
+    // delete []m;
     // if(1) return EXIT_FAILURE;
 
 // magnetization dynamics
 // ===================================================================
-    status |= time_marching(    material, M,
-                                finaltime, timestep,
-                                xdim, ydim, zdim, meshwidth, P,
-                                mu_0, Ms, Aexch, alfa, gamma,
-                                demag, exchange, external, use_fmm,
-                                use_gpu, verbose_level );
-    // const int xyzdim = zdim*ydim*xdim;
-    // Vector3 *H_fmm      = new Vector3[xyzdim]();
-    // Vector3 *H_exact    = new Vector3[xyzdim]();
-    // fptype *charge      = new fptype[xyzdim]();
-    // fptype *potential   = new fptype[xyzdim]();
-    // if(H_fmm == NULL && H_exact == NULL && charge == NULL && potential == NULL) {
-        // fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        // return EXIT_FAILURE;
-    // }
+    // status |= time_marching(    material, M,
+                                // finaltime, timestep,
+                                // xdim, ydim, zdim, meshwidth, P,
+                                // mu_0, Ms, Aexch, alfa, gamma,
+                                // demag, exchange, external, use_fmm,
+                                // use_gpu, verbose_level );
+
+    const int xyzdim = zdim*ydim*xdim;
+    Vector3 *H_fmm      = new Vector3[xyzdim]();
+    Vector3 *H_exact    = new Vector3[xyzdim]();
+    fptype *charge      = new fptype[xyzdim]();
+    fptype *potential   = new fptype[xyzdim]();
+    if(H_fmm == NULL && H_exact == NULL && charge == NULL && potential == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return EXIT_FAILURE;
+    }
 
 // call the potential function
-    // status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, 1 || use_gpu, verbose_level+200);    fflush(NULL);
-    // status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, 0 && use_gpu, verbose_level+200);    fflush(NULL);
-    // if(status) return EXIT_FAILURE;
+    status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level+200);    fflush(NULL);
+    if(status) return EXIT_FAILURE;
 
-    // status |= save_vector3d(H_fmm, zdim, ydim, xdim, use_fmm ? "H_fmm.dat" : "H_exact.dat", verbose_level);
+    status |= save_vector3d(H_fmm, zdim, ydim, xdim, use_fmm ? "H_fmm.dat" : "H_exact.dat", verbose_level);
     fflush(NULL);
     if(status) return EXIT_FAILURE;
 
@@ -217,10 +217,10 @@ else if(zdim >= 3)
 // closing
     delete []M;
     delete []material;
-    // delete []charge;
-    // delete []potential;
-    // delete []H_fmm;
-    // delete []H_exact;
+    delete []charge;
+    delete []potential;
+    delete []H_fmm;
+    delete []H_exact;
 
     printf("SEED = %d\n", seed);
     // printf("%s\n", status ? "failed to complete" : "successfuly completed");

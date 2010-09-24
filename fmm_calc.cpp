@@ -34,12 +34,19 @@ int fmm_bfs(        const fptype *charge,
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
     if(verbose_level >= 6)
-        printf("Executing FMM algorithm...\n");
+        printf("    Executing FMM algorithm...\n");
     unsigned int prev_level = 0;
 
     const unsigned int N = (unsigned int)pow(4, limit);
     Queue Q_tree(N);
     Q_tree.enqueue((void*)root);
+
+// timers for profiling
+    double t_coeff = 0;
+    double t_potential = 0;
+    double t_potential_nearest = 0;
+    double deltatime = 0;
+    timeval t1, t2;
 
 // iterate over all the boxes in tree
     while(!Q_tree.isEmpty()) {
@@ -63,7 +70,7 @@ int fmm_bfs(        const fptype *charge,
             }
             prev_level = n->level;
             if(verbose_level >= 6)
-                printf("Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+                printf("    Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
         }
 
         if(n->is_pruned()) {
@@ -74,6 +81,9 @@ int fmm_bfs(        const fptype *charge,
         // n->get_idstring(idstring);
         // printf("L%d%s(%d,%d)=L%d(%.1f,%.1f) \n", n->level, idstring, n->x, n->y, actual_limit, n->cx, n->cy);
 
+
+gettimeofday(&t1, NULL);
+fptype q;
     // Calculate multipole coefficients for the source box
         Cmpx multipole_coeff[P+1][2*P+1];
         // checking for source charges in the source box
@@ -81,13 +91,13 @@ int fmm_bfs(        const fptype *charge,
         fptype width = pow(2, actual_limit-n->level);
         int yy1 = ceil(n->cy-width/2);
         int yy2 = floor(n->cy+width/2);
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
+        #ifdef _OPENMP
+        // #pragma omp parallel for
+        #endif
         for(int yy=yy1; yy<=yy2; yy++) {
         // for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
             for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                fptype q = charge[yy*xdim + xx];
+                q = charge[yy*xdim + xx];
                 if(q != 0) { // if charge found
                     charge_found = 1;
                     Cmpx r_(xx - n->cx, yy - n->cy);
@@ -104,23 +114,30 @@ int fmm_bfs(        const fptype *charge,
         } // source charge loop
         // NEWLINE;
 
+gettimeofday(&t2, NULL);
+deltatime = (t2.tv_sec + t2.tv_usec/1e6) - (t1.tv_sec + t1.tv_usec/1e6);
+t_coeff += deltatime;
+
         if(! charge_found) {
             n->prune();
             continue;
         }
 
+// gettimeofday(&t1, NULL);
+
         if(charge_found)
         {
-    #ifdef _OPENMP
-    // #pragma omp parallel for
-    #endif
+            #ifdef _OPENMP
+            // #pragma omp parallel for
+            #endif
             for (int zp = 0; zp < zdim; zp++) // for each potential layer in zdim
             {
                 // printf("FMM:   charge layer %d, potential layer %d\n", zc, zp);
             // calculation of potential at the boxes in interaction list
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
+                #ifdef _OPENMP
+                // #pragma omp parallel for
+                #endif
+gettimeofday(&t1, NULL);
                 for(int i=0; i<27; i++) {
                     Box *ni = n->interaction[i];
                     if(ni != NULL) {
@@ -156,11 +173,18 @@ int fmm_bfs(        const fptype *charge,
                         }
                     } // if(ni != NULL)
                 } // interaction loop
+gettimeofday(&t2, NULL);
+deltatime = (t2.tv_sec + t2.tv_usec/1e6) - (t1.tv_sec + t1.tv_usec/1e6);
+t_potential += deltatime;
 
             // calculation with neighbor list at the deepest level
                 if(n->level == actual_limit) {
-                    assert(n->cx == n->x && n->cy == n->y);
-                    fptype q = charge[(int)(n->cy*xdim + n->cx)];
+gettimeofday(&t1, NULL);
+// printf("nearest potential calulcation.\n");
+                    // assert(n->cx == n->x && n->cy == n->y);
+                    // fptype q_prev = q;
+                    // q = charge[(int)(n->cy*xdim + n->cx)];
+                    // assert(q == q_prev);
                     if(zp != zc) { // neighbor on other layers at self position
                         Vector3 r(0, 0, zp - zc);
                         potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
@@ -172,15 +196,28 @@ int fmm_bfs(        const fptype *charge,
                             potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
                         }
                     } // neighbor loop
+gettimeofday(&t2, NULL);
+deltatime = (t2.tv_sec + t2.tv_usec/1e6) - (t1.tv_sec + t1.tv_usec/1e6);
+t_potential_nearest += deltatime;
+// printf("nearest potential calulcation took %f seconds so far.\n", t_potential_nearest);
                 } // if deepest level
             } // for each potential layer in zdim
         } // if(charge_found)
+
+// gettimeofday(&t2, NULL);
+// deltatime = (t2.tv_sec + t2.tv_usec/1e6) - (t1.tv_sec + t1.tv_usec/1e6);
+// t_potential += deltatime;
+
     } // while(!Q_tree.isEmpty())
 
     status |= gettimeofday(&time2, NULL);
-    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(verbose_level >= 10)
+    deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    if(verbose_level >= 10) {
         printf("done in %f seconds.\n", deltatime);
+        printf("FMM coeff calulcation took %f seconds.\n", t_coeff);
+        printf("FMM potential calulcation took %f seconds.\n", t_potential);
+        printf("nearest potential calulcation took %f seconds.\n", t_potential_nearest);
+    }
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -204,13 +241,16 @@ int fmm_calc(   const fptype *charge,
     status |= gettimeofday(&time1, NULL);
 // generate the tree
     Box *root = new Box(0, logN);
-    create_tree_recurse(root, logN);
-    find_neighbors_recurse(root, root, logN);
+    root->create_tree_recurse(logN);
+    root->find_neighbors_recurse(root, logN);
     status |= gettimeofday(&time2, NULL);
     deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
     if(verbose_level >= 0)
         printf("Tree: took %f seconds\n", deltatime);
     fflush(NULL);
+
+    int sizeofBox = sizeof(Box);
+    printf("sizeof(Box) = %d\n", sizeofBox);
 
     // timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
@@ -224,11 +264,11 @@ int fmm_calc(   const fptype *charge,
 
 // for each charge layer in zdim
     #ifdef _OPENMP
-    // #pragma omp parallel for
+    #pragma omp parallel for
     #endif
     for (int zc = 0; zc < zdim; zc++) {
         if(verbose_level >= 3)
-            printf("FMM: charge layer %d\n", zc);
+            printf("  FMM: charge layer %d\n", zc);
         fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);
         // call the actual function

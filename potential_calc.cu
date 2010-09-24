@@ -8,7 +8,7 @@
 #include "mydefs.hpp"
 
 // #define SDATA(index)      cutilBankChecker(sdata, index)
-#define SDATA(index)      sdata[index]
+// #define SDATA(index)      sdata[index]
 
 
 // Kernel definition (2nd version)
@@ -28,7 +28,7 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
 
 // reset shared memory
     extern __shared__ fptype sdata[];
-    SDATA(threadIdx.x) = 0;
+    sdata[threadIdx.x] = 0;
     // __syncthreads;
 
     if(ti1 < N) // calculate potential only if start of thread doesn't exceed
@@ -64,45 +64,45 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
                 }
             }
         }
-        SDATA(threadIdx.x) = pot;
+        sdata[threadIdx.x] = pot;
     }
     __syncthreads();
 
 // parallel reduction to sum up potential from threads
 // (must use all 1024 threads)
     if (threadIdx.x < 512)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x + 512);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 512];
     __syncthreads();
     if (threadIdx.x < 256)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x + 256);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 256];
     __syncthreads();
     if (threadIdx.x < 128)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x + 128);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 128];
     __syncthreads();
     if (threadIdx.x < 64)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x + 64);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 64];
     __syncthreads();
     if (threadIdx.x < 32)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x + 32);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 32];
     __syncthreads();
     if (threadIdx.x < 16)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x + 16);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 16];
     __syncthreads();
     if (threadIdx.x < 8)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x +  8);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 8];
     __syncthreads();
     if (threadIdx.x < 4)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x +  4);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 4];
     __syncthreads();
     if (threadIdx.x < 2)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x +  2);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 2];
     __syncthreads();
     if (threadIdx.x < 1)
-        SDATA(threadIdx.x) += SDATA(threadIdx.x +  1);
+        sdata[threadIdx.x] += sdata[threadIdx.x + 1];
     __syncthreads();
 // write summed potential to global memory
     if(threadIdx.x == 0)
-        potential_gmem[bi] = SDATA(0);
+        potential_gmem[bi] = sdata[0];
 }
 
 

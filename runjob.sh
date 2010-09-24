@@ -11,17 +11,18 @@ export OMP_NUM_THREADS=8
                 10e-9      \
                 1e-13       \
                 20e-9       \
-                32         \
-                32          \
-                3           \
+                256         \
+                256          \
+                1           \
                 1           \
                 1           \
                 0           \
-                0           \
                 1           \
+                0           \
                 sim_cell20nm_dots_16x16     \
                 1985        \
-| tee -a log
+
+#| tee -a log
 
 exit_status=$?
 echo "program exit staus = $exit_status"

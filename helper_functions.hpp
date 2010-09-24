@@ -8,30 +8,31 @@
 
 int rand_atob(const int a, const int b);
 fptype frand_atob(const fptype a, const fptype b);
-// int factorial(int x);
-inline int factorial(int x) {
-    // int fac = 1;
-    // for(int i = 2; i <= x; i++)
-        // fac *= i;
-    // return fac;
+int factorial(int x);
 
-    // return (x == 0) ? 1 : x*factorial(x-1);
+// inline int factorial(int x) {
+    // // int fac = 1;
+    // // for(int i = 2; i <= x; i++)
+        // // fac *= i;
+    // // return fac;
 
-    // // assert(x >= 0 && x <= 8);
-    switch (x) {
-        case 0: return     1;
-        case 1: return     1;
-        case 2: return     2;
-        case 3: return     6;
-        case 4: return    24;
-        case 5: return   120;
-        case 6: return   720;
-        case 7: return  5040;
-        case 8: return 40320;
-        default:
-            return (x == 0) ? 1 : x*factorial(x-1);
-    }
-}
+    // // return (x == 0) ? 1 : x*factorial(x-1);
+
+    // // // assert(x >= 0 && x <= 8);
+    // switch (x) {
+        // case 0: return     1;
+        // case 1: return     1;
+        // case 2: return     2;
+        // case 3: return     6;
+        // case 4: return    24;
+        // case 5: return   120;
+        // case 6: return   720;
+        // case 7: return  5040;
+        // case 8: return 40320;
+        // default:
+            // return (x == 0) ? 1 : x*factorial(x-1);
+    // }
+// }
 
 
 fptype legendre(int k, fptype x);
@@ -69,9 +70,6 @@ int calc_potential_exact_gpu( const fptype *charge,
 
 void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
                                 const int xdim, const int ydim, const int zdim );
-
-void create_tree_recurse(Box *thisBox, const unsigned int limit);
-void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit);
 
 #ifdef USE_FREEIMAGE
 #include <FreeImage.h>

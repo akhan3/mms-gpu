@@ -6,7 +6,7 @@
 #include "helper_functions.hpp"
 
 
-int _factorial_(int x)
+int factorial(int x)
 {
     int fac = 1;
     for(int i = 2; i <= x; i++)
@@ -236,61 +236,41 @@ int matrix2stdout(const fptype* matrix, const int rows, const int cols, const ch
     return EXIT_SUCCESS;
 }
 
-// Depth-first tarversal
-// ===============================
-void traverse_tree_dfs(Box *n, const unsigned int limit)
-{
-    // function to perform on node
-    char idstring[100];
-    n->get_idstring(idstring);
-    // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
-    // NEWLINE;
-    if(n->level < limit)
-        for(int i=0; i<=3; i++)
-            traverse_tree_dfs(n->child[i], limit);
-}
+// // Depth-first tarversal
+// // ===============================
+// void traverse_tree_dfs(Box *n, const unsigned int limit)
+// {
+    // // function to perform on node
+    // char idstring[100];
+    // n->get_idstring(idstring);
+    // // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
+    // // NEWLINE;
+    // if(n->level < limit)
+        // for(int i=0; i<=3; i++)
+            // traverse_tree_dfs(n->child[i], limit);
+// }
 
-// Breadth-first tarversal
-// ===============================
-void traverse_tree_bfs(Box *root, const unsigned int limit)
-{
-    const unsigned int N = (unsigned int)pow(4, limit);
-    Queue Q(N);
-    Q.enqueue(root);
-    while(!Q.isEmpty()) {
-        Box *n = (Box*)Q.dequeue();
-        if(n->level < limit)
-            for(int i=0; i<=3; i++)
-                Q.enqueue(n->child[i]);
-        // function to perform on node
-        char idstring[100];
-        n->get_idstring(idstring);
-        // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
-        // NEWLINE;
-        // populate queue with children nodes
-    }
-}
+// // Breadth-first tarversal
+// // ===============================
+// void traverse_tree_bfs(Box *root, const unsigned int limit)
+// {
+    // const unsigned int N = (unsigned int)pow(4, limit);
+    // Queue Q(N);
+    // Q.enqueue(root);
+    // while(!Q.isEmpty()) {
+        // Box *n = (Box*)Q.dequeue();
+        // if(n->level < limit)
+            // for(int i=0; i<=3; i++)
+                // Q.enqueue(n->child[i]);
+        // // function to perform on node
+        // char idstring[100];
+        // n->get_idstring(idstring);
+        // // printf("this Box is at L%d%s(%d,%d) = L%d(%.1f,%.1f)", n->level, idstring, n->x, n->y, limit, n->cx, n->cy);
+        // // NEWLINE;
+        // // populate queue with children nodes
+    // }
+// }
 
-
-void create_tree_recurse(Box *thisBox, const unsigned int limit) {
-    // Recursion
-    if(thisBox->level < limit) {
-        // function to perform on node
-        thisBox->split(limit);
-        for(int i=0; i<=3; i++)
-            create_tree_recurse(thisBox->child[i], limit);
-    }
-}
-
-void find_neighbors_recurse(Box *thisBox, Box *root, const unsigned int limit) {
-    // function to perform on node
-    thisBox->find_neighbors(root);
-    // Recursion
-    if(thisBox->level < limit) {
-        for(int i=0; i<=3; i++)
-            find_neighbors_recurse(thisBox->child[i], root, limit);
-    }
-}
 
 int rand_atob(const int a, const int b) {
     double r = rand() / (double)RAND_MAX;
