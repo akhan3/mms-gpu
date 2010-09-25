@@ -37,17 +37,18 @@ else
 	COMMONFLAGS +=
 endif
 
-NVCCFLAGS   += 	--compiler-options "-fno-strict-aliasing $(COMMONFLAGS)" $(CUDA_INCLUDES)
+NVCCFLAGS   += 	--compiler-options "-fno-strict-aliasing $(COMMONFLAGS) -W" $(CUDA_INCLUDES)
 CXXFLAGS    :=	-Wall -W $(INCPATH) $(COMMONFLAGS)
 OBJS        :=	Box.o \
 				Queue.o \
 				Cmpx.o \
 				Vector3.o \
+				potential_calc.o \
+				fmm_kernel.o \
 				helper_functions.o \
 				vector_functions.o \
 				ode_functions.o \
 				fmm_calc.o \
-				potential_calc.o \
 				main.o
 
 TARGET    	:= main
@@ -58,17 +59,24 @@ $(TARGET):	$(OBJS)
 	@echo "******** Linking ********"
 	$(LINKER) -o $@ $(OBJS) $(COMMONFLAGS) $(LIBRARIES) $(CUDA_LIBRARIES)
 
-Box.o 				: Box.cpp Box.hpp mydefs.hpp
-Queue.o				: Queue.cpp Queue.hpp mydefs.hpp
-Cmpx.o				: Cmpx.cpp Cmpx.hpp mydefs.hpp
-Vector3.o			: Vector3.cpp Vector3.hpp mydefs.hpp
+Box.o 				: Box.cu Box.hpp mydefs.hpp
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+Queue.o				: Queue.cu Queue.hpp mydefs.hpp
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+Cmpx.o				: Cmpx.cu Cmpx.hpp mydefs.hpp
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+Vector3.o			: Vector3.cu Vector3.hpp mydefs.hpp
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+potential_calc.o	: potential_calc.cu mydefs.hpp
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+fmm_kernel.o	: fmm_kernel.cu mydefs.hpp
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
+
 helper_functions.o 	: helper_functions.cpp helper_functions.hpp mydefs.hpp
 vector_functions.o 	: vector_functions.cpp vector_functions.hpp mydefs.hpp
 ode_functions.o 	: ode_functions.cpp ode_functions.hpp mydefs.hpp
 fmm_calc.o			: fmm_calc.cpp mydefs.hpp
 main.o				: main.cpp mydefs.hpp
-potential_calc.o	: potential_calc.cu mydefs.hpp
-	$(NVCC) $(NVCCFLAGS) -o $@ -c potential_calc.cu
 
 clean:
 	rm -f $(OBJS) gmon.out $(TARGET)

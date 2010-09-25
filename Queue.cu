@@ -15,6 +15,7 @@
     // count = 0;
 // }
 
+HOSTDEVICE
 Queue::Queue(int len, void **queue_mem) {
     size = len;
     contents = queue_mem;
@@ -27,22 +28,24 @@ Queue::Queue(int len, void **queue_mem) {
     // delete []contents;
 // }
 
+HOSTDEVICE
 void Queue::enqueue(void* n) {
     if(count >= size) {
-        printf("FATAL ERROR\n");
-        printf("FATAL ERROR: Cannot add more items. Queue is already full!\n");
-        printf("FATAL ERROR\n");
+        // printf("FATAL ERROR\n");
+        // printf("FATAL ERROR: Cannot add more items. Queue is already full!\n");
+        // printf("FATAL ERROR\n");
         return;
     }
     contents[(count+front) % size] = n;
     count++;
 }
 
+HOSTDEVICE
 void* Queue::dequeue() {
     if(isEmpty()) {
-        printf("FATAL ERROR\n");
-        printf("FATAL ERROR: Cannot pick any item. Queue is already empty!\n");
-        printf("FATAL ERROR\n");
+        // printf("FATAL ERROR\n");
+        // printf("FATAL ERROR: Cannot pick any item. Queue is already empty!\n");
+        // printf("FATAL ERROR\n");
         return NULL;
     }
     void *n1 = contents[front];

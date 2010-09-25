@@ -1,14 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
-// #include <iostream>
-// #include <string.h>
-#include <cmath>
 #include "Box.hpp"
 #include "Queue.hpp"
 
 #define MAXLIMIT 20
 
 // constructor
+HOSTDEVICE
 Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
     level = level1;
     index = index1;
@@ -22,22 +19,18 @@ Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
         interaction[i] = NULL;
 
 // calculate id from index
-    // byte *id = new byte[level+1]();
-    byte *id = new byte[MAXLIMIT+1]();
-    if(id == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return;
-    }
+    byte id[MAXLIMIT+1];
+    for(int i = 0; i < MAXLIMIT+1; i++)
+        id[i] = 0;
     idfromindex(id);
 
 // calculate spatial coordinates at level
     x = calc_x(id);
     y = calc_y(id);
-    delete []id;
 
 // calculate spatial coordinates at deepest level
-    cx = (unsigned int)pow(2, limit - level) * x + ((unsigned int)pow(2, limit - level) - 1) * 0.5;
-    cy = (unsigned int)pow(2, limit - level) * y + ((unsigned int)pow(2, limit - level) - 1) * 0.5;
+    cx = (unsigned int)powf(2, limit - level) * x + ((unsigned int)powf(2, limit - level) - 1) * 0.5;
+    cy = (unsigned int)powf(2, limit - level) * y + ((unsigned int)powf(2, limit - level) - 1) * 0.5;
 }
 
 // destructor
@@ -48,6 +41,7 @@ Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
 // }
 
 // Split up parent Box into 4 children Boxs
+HOSTDEVICE
 void Box::split(Box *firstchild_address, unsigned int limit) {
     for(int i = 0; i < 4; i++) {
         firstchild_address[i] = Box(level+1, index*4 + i, limit);
@@ -57,6 +51,7 @@ void Box::split(Box *firstchild_address, unsigned int limit) {
 }
 
 // calculate id from index
+HOSTDEVICE
 void Box::idfromindex(byte *id) {
     int indext = index;
     id[level] = indext % 4; // indext % 4;
@@ -70,6 +65,7 @@ void Box::idfromindex(byte *id) {
 }
 
 // Prune the tree from this node downward
+HOSTDEVICE
 void Box::prune() {
     pruned = 1;
     if(child[0] != NULL)
@@ -78,6 +74,7 @@ void Box::prune() {
 }
 
 // Grow the tree from this node downward
+HOSTDEVICE
 void Box::grow() {
     pruned = 0;
     if(child[0] != NULL)
@@ -87,14 +84,13 @@ void Box::grow() {
 
 
 // construct neighbors and intercation list
+HOSTDEVICE
 void Box::find_neighbors(Box* root) {
     unsigned int Nx[8];
     unsigned int Ny[8];
-    byte *Nid = new byte[MAXLIMIT+1]();
-    if(Nid == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return;
-    }
+    byte Nid[MAXLIMIT+1];
+    for(int i = 0; i < MAXLIMIT+1; i++)
+        Nid[i] = 0;
     Nx[0] = x-1; Ny[0] = y-1;
     Nx[1] = x  ; Ny[1] = y-1;
     Nx[2] = x+1; Ny[2] = y-1;
@@ -115,7 +111,6 @@ void Box::find_neighbors(Box* root) {
             }
         }
     }
-    delete []Nid;
 
     // Now construct the interaction list
     // by taking difference of two sets
@@ -145,12 +140,15 @@ void Box::find_neighbors(Box* root) {
 } // find_neighbors function
 
 // calculate x and y spatial coords from id
+HOSTDEVICE
 unsigned int Box::calc_x(const byte *id) {
     unsigned int x1 = 0;
     for(int j=level; j>=1; j--)
         x1 |= (id[j]&1) << (level-j);
     return x1;
 }
+
+HOSTDEVICE
 unsigned int Box::calc_y(const byte *id) {
     unsigned int y1 = 0;
     for(int j=level; j>=1; j--)
@@ -159,6 +157,7 @@ unsigned int Box::calc_y(const byte *id) {
 }
 
 // calculate id from x and y spatial coords
+HOSTDEVICE
 void Box::calc_id(byte *id, unsigned int level1, unsigned int x1, unsigned int y1) {
     for(unsigned int k=0; k<=level1; k++)
         id[k] = 0;
@@ -169,19 +168,17 @@ void Box::calc_id(byte *id, unsigned int level1, unsigned int x1, unsigned int y
 }
 
 // Gather Box-id in a string
+HOST
 void Box::get_idstring(char *s) {
-    byte *id = new byte[MAXLIMIT+1]();
-    if(id == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return;
-    }
+    byte id[MAXLIMIT+1];
+    for(int i = 0; i < MAXLIMIT+1; i++)
+        id[i] = 0;
     idfromindex(id);
     int c = 0;
     c += sprintf(s, "[");
     for(unsigned int a=0; a<=level; a++)
         c += sprintf(s+c, "%d", id[a]);
     c += sprintf(s+c, "]");
-    delete []id;
 }
 
 // void Box::create_tree_recurse(const unsigned int limit) {
@@ -194,6 +191,7 @@ void Box::get_idstring(char *s) {
     // }
 // }
 
+HOSTDEVICE
 void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
     // function to perform on node
     find_neighbors(root);
@@ -205,11 +203,13 @@ void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
 }
 
 
+HOSTDEVICE
 void Box::create_tree_bfs(const unsigned int limit, void **queue_mem) {
-    const unsigned int N = (unsigned int)pow(4, limit);
+    // assert(limit <= MAXLIMIT);
+    const unsigned int N = (unsigned int)powf(4, limit);
     Queue Q_tree(N, queue_mem);
     Q_tree.enqueue((void*)this);
-    printf("starting BFS Queue...\n\n");
+    // printf("starting BFS Queue...\n\n");
 
     Box *root = this;
     unsigned int offset = 1;

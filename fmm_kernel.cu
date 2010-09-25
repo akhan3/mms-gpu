@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+// #include <time.h>
 #include <sys/time.h>
 #include <cutil_inline.h>
 // #include "Vector3.hpp"
@@ -12,10 +13,10 @@
 
 // Kernel definition (2nd version)
 __global__ void
-calc_potential_exact_kernel(   const fptype *charge_gmem,
-                                const int xdim, const int ydim, const int zdim,
-                                const int stride,
-                                fptype *potential_gmem  )
+fmm_kernel( const fptype *charge_gmem,
+            const int xdim, const int ydim, const int zdim,
+            const int stride,
+            fptype *potential_gmem  )
 {
     const int N = xdim*ydim*zdim;
     // const int n = blockIdx.x * blockDim.x + threadIdx.x;
@@ -107,7 +108,7 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
 
 
 // Exact O(N^2) calculation of potential
-int calc_potential_exact_gpu( const fptype *charge,
+int fmm_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential)
 {
@@ -165,7 +166,7 @@ int calc_potential_exact_gpu( const fptype *charge,
     status |= gettimeofday(&time1, NULL);
 
     // launch the kernel
-    calc_potential_exact_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
+    fmm_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
         (charge_d, xdim, ydim, zdim, stride, potential_d);
     cutilCheckMsg("Kernel execution failed");
     cudaThreadSynchronize();

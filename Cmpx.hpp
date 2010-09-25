@@ -12,29 +12,29 @@ private:
 
 public:
 // constructors
-    Cmpx();
-    Cmpx(const fptype x, const fptype y);
+    HOSTDEVICE Cmpx();
+    HOSTDEVICE Cmpx(const fptype x, const fptype y);
 
 // member functions
 // get functions
-    inline fptype get_re()  const  { return re;  }
-    inline fptype get_im()  const  { return im;  }
-    inline fptype get_mag() const  { return sqrt(re*re + im*im); }
-    inline fptype get_ang() const  { return atan2(im, re); }
+    HOSTDEVICE inline fptype get_re()  const  { return re;  }
+    HOSTDEVICE inline fptype get_im()  const  { return im;  }
+    HOSTDEVICE inline fptype get_mag() const  { return sqrt(re*re + im*im); }
+    HOSTDEVICE inline fptype get_ang() const  { return atan2(im, re); }
 
 // set functions
     // Cmpx& set_re(const fptype x);
     // Cmpx& set_im(const fptype x);
 
 // complex number operations
-    inline Cmpx conjugate() const { return Cmpx(re, -im); }
+    HOSTDEVICE inline Cmpx conjugate() const { return Cmpx(re, -im); }
 
 // overloaded operators
-    void operator+=(const Cmpx &z);
-    void operator-=(const Cmpx &z);
-    void operator*=(const Cmpx &z);
-    void operator/=(const Cmpx &z);
-    void operator*=(const fptype k);
+    HOSTDEVICE void operator+=(const Cmpx &z);
+    HOSTDEVICE void operator-=(const Cmpx &z);
+    HOSTDEVICE void operator*=(const Cmpx &z);
+    HOSTDEVICE void operator/=(const Cmpx &z);
+    HOSTDEVICE void operator*=(const fptype k);
 
     // Cmpx& operator+=(const Cmpx &z);
     // Cmpx& operator-=(const Cmpx &z);
@@ -49,8 +49,8 @@ public:
     // inline Cmpx operator*(const fptype k) const  { return Cmpx(*this) *= k; }
 
 // print methods
-    char* polar() const;
-    char* cartesian() const;
+    HOST char* polar() const;
+    HOST char* cartesian() const;
 };
 
 // inline Cmpx operator*(const fptype k, const Cmpx z) {

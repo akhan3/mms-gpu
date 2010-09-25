@@ -22,25 +22,25 @@ private:
 
 public:
 // constructors and destructor
-    Box(unsigned int level1, unsigned int index1, unsigned int limit);
+    HOSTDEVICE Box(unsigned int level1, unsigned int index1, unsigned int limit);
     // ~Box();
 
 // member functions
-    void            grow();
-    void            prune();
-    inline int      is_pruned() { return pruned; }
-    void            create_tree_bfs(const unsigned int limit, void **queue_mem);
+    HOSTDEVICE void            grow();
+    HOSTDEVICE void            prune();
+    HOSTDEVICE inline int      is_pruned() { return pruned; }
+    HOSTDEVICE void            create_tree_bfs(const unsigned int limit, void **queue_mem);
     // void            create_tree_recurse(const unsigned int limit);
-    void            find_neighbors_recurse(Box *root, const unsigned int limit);
+    HOSTDEVICE void            find_neighbors_recurse(Box *root, const unsigned int limit);
 private:
     // void            split(Box *start_address, const unsigned int limit);
-    void            split(Box *firstchild_address, unsigned int limit);
-    unsigned int    calc_x(const byte *id);
-    unsigned int    calc_y(const byte *id);
-    void            idfromindex(byte *id);
-    void            calc_id(byte*id1, const unsigned int level1, const unsigned int x1, const unsigned int y1);
-    void            get_idstring(char *s);
-    void            find_neighbors(Box* root);
+    HOSTDEVICE void            split(Box *firstchild_address, unsigned int limit);
+    HOSTDEVICE unsigned int    calc_x(const byte *id);
+    HOSTDEVICE unsigned int    calc_y(const byte *id);
+    HOSTDEVICE void            idfromindex(byte *id);
+    HOSTDEVICE void            calc_id(byte*id1, const unsigned int level1, const unsigned int x1, const unsigned int y1);
+    HOST       void            get_idstring(char *s);
+    HOSTDEVICE void            find_neighbors(Box* root);
 };
 
 // #ifdef __CUDACC__

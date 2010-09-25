@@ -13,13 +13,13 @@ public:
 
 // constructors and destructor
     // Queue(int len);
-    Queue(int len, void **queue_mem);
+    HOSTDEVICE Queue(int len, void **queue_mem);
     // ~Queue();
 
 // member functions
-    void            enqueue(void* n);
-    void*           dequeue();
-    inline int      isEmpty() {
+    HOSTDEVICE void            enqueue(void* n);
+    HOSTDEVICE void*           dequeue();
+    HOSTDEVICE inline int      isEmpty() {
         return count == 0;
     }
 
