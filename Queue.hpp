@@ -26,4 +26,8 @@ public:
     // void            printQueue();
 };
 
+#ifdef __CUDACC__
+#include "Queue.cu"
+#endif
+
 #endif // #ifndef  _QUEUE_H_

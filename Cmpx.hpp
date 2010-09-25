@@ -57,4 +57,8 @@ public:
     // return z * k;
 // }
 
+#ifdef __CUDACC__
+#include "Cmpx.cu"
+#endif
+
 #endif // #ifndef  _CMPX_H_

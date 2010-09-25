@@ -1,118 +1,173 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-// #include <time.h>
+#include <time.h>
 #include <sys/time.h>
+#include <cmath>
 #include <cutil_inline.h>
-// #include "Vector3.hpp"
 #include "mydefs.hpp"
+#include "Box.hpp"
+#include "Queue.hpp"
+#include "Cmpx.hpp"
+#include "Vector3.hpp"
+#include "numerics.hpp"
+#include "helper_functions.hpp"
+
+#include "potential_calc.cu"
 
 // #define SDATA(index)      cutilBankChecker(sdata, index)
 // #define SDATA(index)      sdata[index]
 
 
-// Kernel definition (2nd version)
-__global__ void
-fmm_kernel( const fptype *charge_gmem,
-            const int xdim, const int ydim, const int zdim,
-            const int stride,
-            fptype *potential_gmem  )
+// FMM algorithm in BFS
+// ===============================
+__global__
+void fmm_kernel(    const fptype *charge_gmem,
+                    fptype *potential_gmem,
+                    void **queue_gmem,
+                    const Box *root,
+                    const unsigned int limit,
+                    const int P,    // multipole series truncation (l = 0...P)
+                    const int xdim, const int ydim, const int zdim,
+                    const int zc   // charge layer
+                )
 {
-    const int N = xdim*ydim*zdim;
-    // const int n = blockIdx.x * blockDim.x + threadIdx.x;
-    int bi = blockIdx.x;
-    int ti1 = threadIdx.x * stride;
+    int ti = threadIdx.x;
 
-    if(bi >= N) // if block exceeds, don't proceed (unnecessary check)
-        return;
-
-// reset shared memory
-    extern __shared__ fptype sdata[];
-    sdata[threadIdx.x] = 0;
-    // __syncthreads;
-
-    if(ti1 < N) // calculate potential only if start of thread doesn't exceed
-    {
-        __shared__ int xs, ys, zs; // target coords per block
-        if(threadIdx.x == 0) {
-            xs = bi % xdim;
-            ys = ((bi - xs) / xdim) % ydim;
-            zs = (bi - xs - ys*xdim) / (xdim*ydim);
-        }
-        __syncthreads();
-        int x = xs;
-        int y = ys;
-        int z = zs;
-
-        fptype pot = 0;
-        // int i = ti1;
-        for(int i = ti1; i < ti1 + stride; i++)
-        {
-            if(i < N) { // calculate potential only if this point doesn't exceed
-                fptype q = charge_gmem[i];
-                // __syncthreads();
-                // if(q != 0)
-                {
-                    int x_ = i % xdim; // source coords per thread
-                    int y_ = ((i - x_) / xdim) % ydim;
-                    int z_ = (i - x_ - y_*xdim) / (xdim*ydim);
-                    // potential due this thread's charge
-                    if(bi != i) { // skip on itself to avoid div by zero
-                        fptype R = sqrtf( (x-x_)*(x-x_) + (y-y_)*(y-y_) + (z-z_)*(z-z_) );
-                        pot += q / R;
-                    }
-                }
-            }
-        }
-        sdata[threadIdx.x] = pot;
-    }
-    __syncthreads();
-
-// parallel reduction to sum up potential from threads
-// (must use all 1024 threads)
-    if (threadIdx.x < 512)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 512];
-    __syncthreads();
-    if (threadIdx.x < 256)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 256];
-    __syncthreads();
-    if (threadIdx.x < 128)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 128];
-    __syncthreads();
-    if (threadIdx.x < 64)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 64];
-    __syncthreads();
-    if (threadIdx.x < 32)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 32];
-    __syncthreads();
-    if (threadIdx.x < 16)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 16];
-    __syncthreads();
-    if (threadIdx.x < 8)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 8];
-    __syncthreads();
-    if (threadIdx.x < 4)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 4];
-    __syncthreads();
-    if (threadIdx.x < 2)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 2];
-    __syncthreads();
-    if (threadIdx.x < 1)
-        sdata[threadIdx.x] += sdata[threadIdx.x + 1];
-    __syncthreads();
-// write summed potential to global memory
     if(threadIdx.x == 0)
-        potential_gmem[bi] = sdata[0];
+    {
+        const unsigned int N = (unsigned int)powf(4, limit);
+        Queue Q_tree(N, queue_gmem);
+        Q_tree.enqueue((void*)root);
+
+    // iterate over all the boxes in tree
+        while(!Q_tree.isEmpty()) {
+            Box *n = (Box*)Q_tree.dequeue();
+            // populate queue with children nodes
+            if(n->level < limit)
+                for(int i=0; i<=3; i++)
+                    Q_tree.enqueue(n->child[i]);
+
+            if(n->level <= 1)   // no FMM steps for Level-0 and Level-1
+                continue;
+
+    // function to perform on node
+            if(n->is_pruned()) {
+                continue;
+            }
+
+        // Calculate multipole coefficients for the source box
+            fptype q = 0;
+            Cmpx multipole_coeff[3+1][2*3+1];
+            // checking for source charges in the source box
+            fptype charge_found = 0;
+            fptype width = powf(2, limit-n->level);
+            int yy1 = ceil(n->cy-width/2);
+            int yy2 = floor(n->cy+width/2);
+            for(int yy=yy1; yy<=yy2; yy++) {
+            // for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
+                for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
+                    q = charge_gmem[yy*xdim + xx];
+                    if(q != 0) { // if charge found
+                        charge_found = 1;
+                        Cmpx r_(xx - n->cx, yy - n->cy);
+                        for(int l=0; l<=P; l++) {
+                            for(int m=-l; m<=l; m++) {
+                                Cmpx sph = spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
+                                sph *= q * pow(r_.get_mag(), l);
+                                multipole_coeff[l][m+l] += sph;
+                                // multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
+                            } // m loop
+                        } // l loop
+                    } // if(q != 0)
+                } // source charge loop
+            } // source charge loop
+            // NEWLINE;
+
+
+            if(! charge_found) {
+                n->prune();
+                continue;
+            }
+
+            if(charge_found)
+            {
+                for (int zp = 0; zp < zdim; zp++) // for each potential layer in zdim
+                {
+                // calculation of potential at the boxes in interaction list
+                    for(int i=0; i<27; i++) {
+                        Box *ni = n->interaction[i];
+                        if(ni != NULL) {
+                            for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
+                                for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
+                                    Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
+                                    Cmpx sum_over_lm;
+                                    for(int l=0; l<=P; l++) {
+                                        Cmpx sum_over_m;
+                                        for(int m=-l; m<=l; m++) {
+                                            Cmpx sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+                                            sph *= (1.0*factorial(l-abs(m))) / factorial(l+abs(m));
+                                            sph *= multipole_coeff[l][m+l];
+                                            sum_over_m += sph;
+                                            // sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+                                        }
+                                        sum_over_m *= 1 / pow(r.magnitude(), l+1);
+                                        sum_over_lm += sum_over_m;
+                                        // sum_over_lm += 1 / pow(r.magnitude(), l+1) * sum_over_m;
+                                    }
+                                    potential_gmem[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
+                                    // potential[yy*xdim+xx] += (sum_over_lm.get_re() > 0) ? sum_over_lm.get_mag() : -sum_over_lm.get_mag();
+
+                                    // const fptype threshold = 1e-2;
+                                    // fptype modangle = fabs(sum_over_lm.get_ang());
+                                    // modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
+                                    // if(modangle > threshold) {
+                                        // if(verbose_level >= 0)
+                                            // printf("PANIC!! L%d   R=%g   angle=%g\n", n->level, r.magnitude(), modangle);
+                                        // fprintf(paniclog, "%d   %g   %g\n", n->level, r.magnitude(), modangle);
+                                    // }
+                                }
+                            }
+                        } // if(ni != NULL)
+                    } // interaction loop
+
+                // calculation with neighbor list at the deepest level
+                    if(n->level == limit) {
+                        if(zp != zc) { // neighbor on other layers at self position
+                            Vector3 r(0, 0, zp - zc);
+                            potential_gmem[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
+                        }
+                        for(int i=0; i<8; i++) {
+                            Box *nb = n->neighbor[i];
+                            if(nb != NULL) {
+                                Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
+                                potential_gmem[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
+                            }
+                        } // neighbor loop
+                    } // if deepest level
+                } // for each potential layer in zdim
+            } // if(charge_found)
+        } // while(!Q_tree.isEmpty())
+    } // if(threadIdx.x == 0)
+    return;
 }
 
 
 
-// Exact O(N^2) calculation of potential
-int fmm_gpu( const fptype *charge,
-                        const int xdim, const int ydim, const int zdim,
-                        fptype *potential)
-{
 
+int fmm_gpu(        const fptype *charge,
+                    fptype *potential,
+                    const Box *root,
+                    const unsigned int limit,
+                    const unsigned int actual_limit,
+                    const int P,    // multipole series truncation (l = 0...P)
+                    const int xdim, const int ydim, const int zdim,
+                    const int zc,   // charge layer
+                    FILE *paniclog,
+                    const int verbose_level
+                )
+{
+    assert(zdim == 1);
     int status = 0;
     static int first_time = 1;
 
@@ -149,9 +204,9 @@ int fmm_gpu( const fptype *charge,
     int problem_size = zdim*ydim*xdim;
     // dim3 grid = ceil(total_threads / (fptype)MAXTHREADSPERBLOCK);
     // dim3 threads(MAXTHREADSPERBLOCK, 1, 1);
-    dim3 grid = problem_size;
+    dim3 grid = 1;
     const int stride = ceil(problem_size / (fptype)MAXTHREADSPERBLOCK);
-    dim3 threads(MAXTHREADSPERBLOCK, 1, 1);
+    dim3 threads = 32;
     assert(threads.x <= MAXTHREADSPERBLOCK);    // max_threads_per_block
 
     // if(first_time) {
@@ -161,13 +216,23 @@ int fmm_gpu( const fptype *charge,
                     // grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
     // }
 
+// allocate memory for FMM Queue
+    void **queue_mem = (void**)malloc(xdim*ydim * sizeof(void*));
+    if(queue_mem == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return EXIT_FAILURE;
+    }
+    // Queue Q_tree(xdim*ydim, queue_mem);
+
     // start timer
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
 
     // launch the kernel
     fmm_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
-        (charge_d, xdim, ydim, zdim, stride, potential_d);
+        (charge_d, potential_d, queue_mem, root,
+                    limit, P, xdim, ydim, zdim, zc);
+
     cutilCheckMsg("Kernel execution failed");
     cudaThreadSynchronize();
 

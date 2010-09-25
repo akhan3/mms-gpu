@@ -9,6 +9,7 @@
 #include "Box.hpp"
 #include "Cmpx.hpp"
 #include "Vector3.hpp"
+#include "numerics.hpp"
 #include "helper_functions.hpp"
 #include "vector_functions.hpp"
 #include "ode_functions.hpp"

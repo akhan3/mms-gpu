@@ -48,4 +48,8 @@ HOST inline std::ostream& operator<<(std::ostream& output, const Vector3 &vec) {
     return output;
 }
 
+#ifdef __CUDACC__
+#include "Vector3.cu"
+#endif
+
 #endif // #ifndef  _VECTOR3_H_

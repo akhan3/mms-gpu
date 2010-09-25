@@ -6,39 +6,6 @@
 #include "Queue.hpp"
 #include "Cmpx.hpp"
 
-int rand_atob(const int a, const int b);
-fptype frand_atob(const fptype a, const fptype b);
-int factorial(int x);
-
-// inline int factorial(int x) {
-    // // int fac = 1;
-    // // for(int i = 2; i <= x; i++)
-        // // fac *= i;
-    // // return fac;
-
-    // // return (x == 0) ? 1 : x*factorial(x-1);
-
-    // // // assert(x >= 0 && x <= 8);
-    // switch (x) {
-        // case 0: return     1;
-        // case 1: return     1;
-        // case 2: return     2;
-        // case 3: return     6;
-        // case 4: return    24;
-        // case 5: return   120;
-        // case 6: return   720;
-        // case 7: return  5040;
-        // case 8: return 40320;
-        // default:
-            // return (x == 0) ? 1 : x*factorial(x-1);
-    // }
-// }
-
-
-fptype legendre(int k, fptype x);
-fptype associated_legendre(int l, int m, fptype x);
-Cmpx spherical_harmonic(int l, int m, fptype theta, fptype phi);
-
 // int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbose_level);
 int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbose_level);
 int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
@@ -67,6 +34,18 @@ void calc_potential_exact( const fptype *charge,
 int calc_potential_exact_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential);
+
+int fmm_gpu(        const fptype *charge,
+                    fptype *potential,
+                    const Box *root,
+                    const unsigned int limit,
+                    const unsigned int actual_limit,
+                    const int P,    // multipole series truncation (l = 0...P)
+                    const int xdim, const int ydim, const int zdim,
+                    const int zc,   // charge layer
+                    FILE *paniclog,
+                    const int verbose_level
+                );
 
 void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
                                 const int xdim, const int ydim, const int zdim );

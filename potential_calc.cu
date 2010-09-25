@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <cutil_inline.h>
-// #include "Vector3.hpp"
+#include "Vector3.hpp"
 #include "mydefs.hpp"
 
 // #define SDATA(index)      cutilBankChecker(sdata, index)
@@ -57,6 +57,8 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
                     int z_ = (i - x_ - y_*xdim) / (xdim*ydim);
                     // potential due this thread's charge
                     if(bi != i) { // skip on itself to avoid div by zero
+                        // Vector3 V(x-x_, y-y_, z-z_);
+                        // fptype dist = V.magnitude();
                         fptype R = sqrtf( (x-x_)*(x-x_) + (y-y_)*(y-y_) + (z-z_)*(z-z_) );
                         pot += q / R;
                     }

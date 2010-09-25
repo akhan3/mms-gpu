@@ -11,6 +11,7 @@
 #include "Queue.hpp"
 #include "Cmpx.hpp"
 #include "Vector3.hpp"
+#include "numerics.hpp"
 #include "helper_functions.hpp"
 
 
@@ -237,7 +238,6 @@ int fmm_calc(   const fptype *charge,
                 const int verbose_level )
 {
     int status = 0;
-    if(use_gpu) {}
     const unsigned int logN = ceil(log2(xdim * ydim) / log2(4));
     // FILE *paniclog = fopen("paniclog.dat", "w");
     FILE *paniclog = fopen("paniclog.dat", "a");
@@ -269,6 +269,7 @@ int fmm_calc(   const fptype *charge,
     // root->create_tree_recurse(logN);
     root->create_tree_bfs(logN, queue_mem);
     root->find_neighbors_recurse(root, logN);
+    free(queue_mem);
 
     status |= gettimeofday(&time2, NULL);
     deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
@@ -297,8 +298,12 @@ int fmm_calc(   const fptype *charge,
         fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);
         // call the actual function
-        status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, verbose_level);
-        // if(status) return EXIT_FAILURE;
+        if(use_gpu)
+            status |= fmm_gpu(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, verbose_level);
+        else
+            status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, verbose_level);
+
+        if(status) return EXIT_FAILURE;
         root->grow();
     }
     if(status) return EXIT_FAILURE;
@@ -312,7 +317,6 @@ int fmm_calc(   const fptype *charge,
     fclose(paniclog);
     // delete root;
     free(tree);
-    free(queue_mem);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

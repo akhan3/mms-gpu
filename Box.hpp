@@ -43,8 +43,8 @@ private:
     HOSTDEVICE void            find_neighbors(Box* root);
 };
 
-// #ifdef __CUDACC__
-// #include "Box.cpp"
-// #endif
+#ifdef __CUDACC__
+#include "Box.cu"
+#endif
 
 #endif // #ifndef  _BOX_H_
