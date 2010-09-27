@@ -44,13 +44,13 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
         else
             calc_potential_exact(charge, xdim, ydim, zdim, potential, use_gpu); // Exact O(N^2) calculation
 
-        char filename_pot[200];
-        if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu.dat");
-        else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu.dat");
-        else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu.dat");
-        else                  sprintf(filename_pot, "potential_gpugpu.dat");
-        status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
-        status |= matrix2file(charge, ydim, xdim, "charge.dat", 100);
+        // char filename_pot[200];
+        // if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu.dat");
+        // else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu.dat");
+        // else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu.dat");
+        // else                  sprintf(filename_pot, "potential_gpugpu.dat");
+        // status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
+        // status |= matrix2file(charge, ydim, xdim, "charge.dat", 100);
 
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);

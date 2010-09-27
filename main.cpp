@@ -210,7 +210,9 @@ else if(zdim >= 3)
     status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level+200);    fflush(NULL);
     if(status) return EXIT_FAILURE;
 
-    // status |= save_vector3d(H_fmm, zdim, ydim, xdim, use_fmm ? "H_fmm.dat" : "H_exact.dat", verbose_level);
+    char filename[200];
+    sprintf(filename, "H_%s_%s.dat", use_fmm?"fmm":"exact", use_gpu?"gpu":"cpu");
+    status |= save_vector3d(H_fmm, zdim, ydim, xdim, filename, verbose_level);
     fflush(NULL);
     if(status) return EXIT_FAILURE;
 

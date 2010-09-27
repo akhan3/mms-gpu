@@ -79,13 +79,13 @@ int fmm_bfs(        const fptype *charge,
                 if(verbose_level >= 10)
                     printf("done in %f seconds.\n", deltatime); fflush(NULL);
             // saving this level potential
-                char filename_pot[200];
-                if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu_L%d.dat", n->level - 1);
-                else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu_L%d.dat", n->level - 1);
-                else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu_L%d.dat", n->level - 1);
-                else                  sprintf(filename_pot, "potential_gpugpu_L%d.dat", n->level - 1);
-                status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
-                if(status) return EXIT_FAILURE;
+                // char filename_pot[200];
+                // if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu_L%d.dat", n->level - 1);
+                // else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu_L%d.dat", n->level - 1);
+                // else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu_L%d.dat", n->level - 1);
+                // else                  sprintf(filename_pot, "potential_gpugpu_L%d.dat", n->level - 1);
+                // status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
+                // if(status) return EXIT_FAILURE;
             }
             prev_level = n->level;
             if(verbose_level >= 6)
@@ -106,8 +106,7 @@ int fmm_bfs(        const fptype *charge,
         fptype q = 0;
 
     // Calculate multipole coefficients for the source box
-        // Cmpx multipole_coeff[P+1][2*P+1];
-        Cmpx multipole_coeff[(P+1) * (2*P+1)];
+        Cmpx mpc[(P+1)*(P+1)];
         // checking for source charges in the source box
         fptype charge_found = 0;
         fptype width = pow(2, actual_limit-n->level);
@@ -127,9 +126,8 @@ int fmm_bfs(        const fptype *charge,
                         for(int m=-l; m<=l; m++) {
                             Cmpx sph = spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
                             sph *= q * pow(r_.get_mag(), l);
-                            // multipole_coeff[l][m+l] += sph;
-                            multipole_coeff[l*(2*P+1) + m+l] += sph;
-                            // multipole_coeff[l][m+l] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
+                            mpc[l*l+l+m] += sph;
+                            // mpc[l*l+l+m] += q * pow(r_.get_mag(), l) * spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
                         } // m loop
                     } // l loop
                 } // if(q != 0)
@@ -155,7 +153,7 @@ int fmm_bfs(        const fptype *charge,
             // calculation of potential at the boxes in 27 boxes of interaction list
             if(use_gpu) {
                 status |= fmm_gpu(  n,
-                                    multipole_coeff,
+                                    mpc,
                                     potential, limit, P,
                                     xdim, ydim, zdim, zc,
                                     use_gpu, verbose_level);
@@ -177,10 +175,9 @@ int fmm_bfs(        const fptype *charge,
                                         for(int m=-l; m<=l; m++) {
                                             Cmpx sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
                                             sph *= (1.0*factorial(l-abs(m))) / factorial(l+abs(m));
-                                            // sph *= multipole_coeff[l][m+l];
-                                            sph *= multipole_coeff[l*(2*P+1) + m+l];
+                                            sph *= mpc[l*l+l+m];
                                             sum_over_m += sph;
-                                            // sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * multipole_coeff[l][m+l] * spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+                                            // sum_over_m += (1.0*factorial(l-abs(m))) / factorial(l+abs(m)) * mpc[l*l+l+m] * spherical_harmonic(l, m, r.colatitude(), r.azimuth());
                                         }
                                         sum_over_m *= 1 / pow(r.magnitude(), l+1);
                                         sum_over_lm += sum_over_m;
@@ -209,34 +206,34 @@ int fmm_bfs(        const fptype *charge,
             t_potential += deltatime;
 
             // calculation with neighbor list at the deepest level
-            // if(n->level == actual_limit) {
-                // gettimeofday(&t1, NULL);
-                // // printf("nearest potential calulcation.\n");
-                // // assert(n->cx == n->x && n->cy == n->y);
-                // // fptype q_prev = q;
-                // // q = charge[(int)(n->cy*xdim + n->cx)];
-                // // assert(q == q_prev);
+            if(n->level == actual_limit) {
+                gettimeofday(&t1, NULL);
+                // printf("nearest potential calulcation.\n");
+                // assert(n->cx == n->x && n->cy == n->y);
+                // fptype q_prev = q;
+                // q = charge[(int)(n->cy*xdim + n->cx)];
+                // assert(q == q_prev);
 
-                // for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
-                    // if(zp != zc) { // neighbor on other layers at self position
-                        // Vector3 r(0, 0, zp - zc);
-                        // potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
-                    // }
-                    // for(int i=0; i<8; i++) {
-                        // Box *nb = n->neighbor[i];
-                        // if(nb != NULL) {
-                            // Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
-                            // potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
-                        // }
-                    // } // neighbor loop
+                for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
+                    if(zp != zc) { // neighbor on other layers at self position
+                        Vector3 r(0, 0, zp - zc);
+                        potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
+                    }
+                    for(int i=0; i<8; i++) {
+                        Box *nb = n->neighbor[i];
+                        if(nb != NULL) {
+                            Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
+                            potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
+                        }
+                    } // neighbor loop
 
-                    // gettimeofday(&t2, NULL);
-                    // deltatime = (t2.tv_sec + t2.tv_usec/1e6) - (t1.tv_sec + t1.tv_usec/1e6);
-                    // t_potential_nearest += deltatime;
-                    // // printf("nearest potential calulcation took %f seconds so far.\n", t_potential_nearest);
+                    gettimeofday(&t2, NULL);
+                    deltatime = (t2.tv_sec + t2.tv_usec/1e6) - (t1.tv_sec + t1.tv_usec/1e6);
+                    t_potential_nearest += deltatime;
+                    // printf("nearest potential calulcation took %f seconds so far.\n", t_potential_nearest);
 
-                // } // for each potential layer in zdim
-            // } // if deepest level
+                } // for each potential layer in zdim
+            } // if deepest level
 
         } // if(charge_found)
 
@@ -251,13 +248,13 @@ int fmm_bfs(        const fptype *charge,
     if(verbose_level >= 10)
         printf("done in %f seconds.\n", deltatime); fflush(NULL);
     // saving this level potential
-    char filename_pot[200];
-    if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu_L%d.dat", limit);
-    else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu_L%d.dat", limit);
-    else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu_L%d.dat", limit);
-    else                  sprintf(filename_pot, "potential_gpugpu_L%d.dat", limit);
-    status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
-    if(status) return EXIT_FAILURE;
+    // char filename_pot[200];
+    // if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu_L%d.dat", limit);
+    // else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu_L%d.dat", limit);
+    // else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu_L%d.dat", limit);
+    // else                  sprintf(filename_pot, "potential_gpugpu_L%d.dat", limit);
+    // status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
+    // if(status) return EXIT_FAILURE;
     // if(verbose_level >= 10) {
         // printf("done in %f seconds.\n", deltatime);
         // printf("FMM coeff calulcation took %f seconds.\n", t_coeff);
