@@ -31,9 +31,33 @@ void fmm_kernel0(const Cmpx sph, const Cmpx mpc, int l, int m, Vector3 r, Cmpx *
     }
 }
 
+__global__
+void fmm_kernel1(const Cmpx mpc, int l, int m, Vector3 r, Cmpx *ans_d)
+{
+    if(threadIdx.x == 0) {
+        Cmpx product = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+        product *= (1.0*factorial(l-fabsf(m))) / factorial(l+fabsf(m));
+        product *= mpc;
+        product *= powf(r.magnitude(), -(l+1));
+        *ans_d = product;
+    }
+}
 
 __global__
-void fmm_kernel2(   const Cmpx *const multipole_coeff_gmem,
+void fmm_kernel2(Cmpx *mpc_gmem, int l, int m, int P, Vector3 r, Cmpx *ans_d)
+{
+    if(threadIdx.x == 0) {
+        Cmpx product = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+        product *= (1.0*factorial(l-fabsf(m))) / factorial(l+fabsf(m));
+        product *= mpc_gmem[l*(2*P+1) + m+l];
+        product *= powf(r.magnitude(), -(l+1));
+        *ans_d = product;
+    }
+}
+
+
+__global__
+void fmm_kernel22(  const Cmpx *const multipole_coeff_gmem,
                     fptype *potential_gmem,
                     const unsigned int limit,
                     const fptype width,
@@ -170,7 +194,7 @@ int fmm_gpu(        const Box *const n_ptr,
         // allocate memory on device
         cudaMalloc((void**)&n_gmem, sizeof(Box));         checkCUDAError("Allocate n_gmem");
         cudaMalloc((void**)&ni_gmem, 27 * sizeof(Box));
-        cudaMalloc((void**)&multipole_coeff_gmem, P*(2*P+1) * sizeof(Cmpx));
+        cudaMalloc((void**)&multipole_coeff_gmem, (P+1)*(2*P+1) * sizeof(Cmpx));
         cudaMalloc((void**)&potential_gmem, zdim*ydim*xdim * sizeof(fptype));
         if(n_gmem == NULL || ni_gmem == NULL || multipole_coeff_gmem == NULL || potential_gmem == NULL) {
             fprintf(stderr, "%s:%d Error allocating memory on GPU\n", __FILE__, __LINE__);
@@ -183,7 +207,7 @@ int fmm_gpu(        const Box *const n_ptr,
     checkCUDAError("Copying n_gmem");
     cudaMemcpy(ni_gmem, ni_cpumem, 27 * sizeof(Box), cudaMemcpyHostToDevice);
     checkCUDAError("Copying ni_cpumem");
-    cudaMemcpy(multipole_coeff_gmem, multipole_coeff, P*(2*P+1) * sizeof(Cmpx), cudaMemcpyHostToDevice);
+    cudaMemcpy(multipole_coeff_gmem, multipole_coeff, (P+1)*(2*P+1) * sizeof(Cmpx), cudaMemcpyHostToDevice);
     checkCUDAError("Copying multipole_coeff_gmem");
     cudaMemcpy(potential_gmem, potential, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyHostToDevice);
     checkCUDAError("Copying potential_gmem");
@@ -214,7 +238,7 @@ int fmm_gpu(        const Box *const n_ptr,
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
 
-
+    // if(0)
     if(use_gpu == 2 || use_gpu == 3) {
         if(first_time)
             printf("\n\nEmulating GPU...\n\n");
@@ -232,9 +256,10 @@ int fmm_gpu(        const Box *const n_ptr,
                             Cmpx sum_over_lm;
                             for(int l=0; l<=P; l++) {
                                 for(int m=-l; m<=l; m++) {
-                                    Cmpx sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
-                                    Cmpx mpc = multipole_coeff[l*(2*P+1) + m+l];
+                                    Cmpx sph;
                                     if(use_gpu != 3) {
+                                        Cmpx mpc = multipole_coeff[l*(2*P+1) + m+l];
+                                        sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
                                         sph *= (1.0*factorial(l-fabsf(m))) / factorial(l+fabsf(m));
                                         sph *= mpc;
                                         sph *= powf(r.magnitude(), -(l+1));
@@ -242,7 +267,9 @@ int fmm_gpu(        const Box *const n_ptr,
                                     else {
                                         Cmpx *ans_d = NULL;
                                         cudaMalloc((void**)&ans_d, sizeof(Cmpx)); checkCUDAError("Allocate ans_d");
-                                        fmm_kernel0 <<<1, 1>>> (sph, mpc, l, m, r, ans_d);
+                                        // fmm_kernel0 <<<1, 1>>> (sph, mpc, l, m, r, ans_d);
+                                        // fmm_kernel1 <<<1, 1>>> (mpc, l, m, r, ans_d);
+                                        fmm_kernel2 <<<1, 1>>> (multipole_coeff_gmem, l, m, P, r, ans_d);
                                         cudaMemcpy(&sph, ans_d, sizeof(Cmpx), cudaMemcpyDeviceToHost);
                                         checkCUDAError("Copying summation");
                                     }
@@ -260,12 +287,21 @@ int fmm_gpu(        const Box *const n_ptr,
 
 
 
+// debug MPC
+    Cmpx *mpc = (Cmpx*)malloc((P+1)*(2*P+1) * sizeof(Cmpx));
+    cudaMemcpy(mpc, multipole_coeff_gmem, (P+1)*(2*P+1) * sizeof(Cmpx), cudaMemcpyDeviceToHost);
+    checkCUDAError("Copying multipole_coeff_gmem");
+    printf("Box(%.1f,%.1f):\n", n_ptr->cx, n_ptr->cy);
+    for(int i = 0; i < (P+1)*(2*P+1); i++) {
+        printf("MPC[%d] = %s = %s\n", i, multipole_coeff[i].cartesian(), mpc[i].cartesian());
+    }
+    printf("\n");
+    return 0;
+
+
     // launch the kernel
     // fmm_kernel <<<grid, threads>>>
         // (n_gmem, ni_gmem, multipole_coeff_gmem, potential_gmem, limit, P, xdim, ydim, zdim, zc);
-    for(int nbi = 0; nbi < 27; nbi++)
-        fmm_kernel <<<1, 1>>>
-            (n_gmem, ni_gmem, nbi, multipole_coeff_gmem, potential_gmem, limit, P, xdim, ydim, zdim, zc);
 
     checkCUDAError("Exeuting Kernel fmm_kernel()");
     cudaThreadSynchronize();

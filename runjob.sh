@@ -12,14 +12,14 @@ export OMP_NUM_THREADS=8
                 10e-9      \
                 1e-13       \
                 20e-9       \
-                4         \
-                4          \
+                8         \
+                8          \
                 1           \
                 1           \
                 1           \
                 0           \
                 1           \
-                3           \
+                2           \
                 sim_cell20nm_dots_16x16     \
                 1985        \
 
