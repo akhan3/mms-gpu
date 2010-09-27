@@ -22,12 +22,11 @@ void checkCUDAError(const char *msg) {
 __global__ void
 calc_potential_exact_kernel(   const fptype *charge_gmem,
                                 const int xdim, const int ydim, const int zdim,
-                                const int stride,
                                 fptype *potential_gmem  )
 {
     const int N = xdim*ydim*zdim;
-    // const int n = blockIdx.x * blockDim.x + threadIdx.x;
     int bi = blockIdx.x;
+    int stride = ceilf(N / (fptype)blockDim.x);
     int ti1 = threadIdx.x * stride;
 
     if(bi >= N) // if block exceeds, don't proceed (unnecessary check)
@@ -153,25 +152,13 @@ int calc_potential_exact_gpu( const fptype *charge,
 
 
     // set up kernel parameters
-    #ifdef __DEVICE_EMULATION__
-        #define MAXTHREADSPERBLOCK    64
-    #else
-        #define MAXTHREADSPERBLOCK    1024
-    #endif
     int problem_size = zdim*ydim*xdim;
-    // dim3 grid = ceil(total_threads / (fptype)MAXTHREADSPERBLOCK);
-    // dim3 threads(MAXTHREADSPERBLOCK, 1, 1);
     dim3 grid = problem_size;
-    const int stride = ceil(problem_size / (fptype)MAXTHREADSPERBLOCK);
-    dim3 threads(MAXTHREADSPERBLOCK, 1, 1);
-    assert(threads.x <= MAXTHREADSPERBLOCK);    // max_threads_per_block
+    dim3 threads = 1024;
 
-    // if(first_time) {
-        // printf("x=%u, y=%u, z=%u, threads.x=%u, threads.y=%u, threads.z=%u, stride=%u, grid.x=%u, grid.y=%u, grid.z=%u\n",
-                // xdim, ydim, zdim, threads.x,    threads.y,    threads.z,    stride,    grid.x,    grid.y,    grid.z);
-        // printf("launching kernel with %u blocks and %u threads...\n",
-                    // grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
-    // }
+    if(first_time)
+        printf("launching kernel with %u blocks and %u threads...\n",
+                    grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
 
     // start timer
     timeval time1, time2;
@@ -179,7 +166,7 @@ int calc_potential_exact_gpu( const fptype *charge,
 
     // launch the kernel
     calc_potential_exact_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
-        (charge_gmem, xdim, ydim, zdim, stride, potential_gmem);
+        (charge_gmem, xdim, ydim, zdim, potential_gmem);
     checkCUDAError("Exeuting Kernel calc_potential_exact_kernel()");
     cudaThreadSynchronize();
 

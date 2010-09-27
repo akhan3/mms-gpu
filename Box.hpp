@@ -23,6 +23,7 @@ private:
 public:
 // constructors and destructor
     HOST Box(unsigned int level1, unsigned int index1, unsigned int limit);
+    HOSTDEVICE Box();
     // ~Box();
 
 // member functions

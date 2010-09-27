@@ -88,8 +88,12 @@ int fmm_bfs(        const fptype *charge,
                 // if(status) return EXIT_FAILURE;
             }
             prev_level = n->level;
-            if(verbose_level >= 6)
-                printf("    Level%d (%d boxes)... ", n->level, (int)pow(4, n->level)); fflush(NULL);
+            if(verbose_level >= 6) {
+                int width = pow(2, actual_limit-n->level);
+                printf("    Level%d (%dx%d boxes, size=%dx%d)... ",
+                    n->level, (int)pow(2, n->level), (int)pow(2, n->level), width, width);
+                fflush(NULL);
+            }
         }
 
         if(n->is_pruned()) {

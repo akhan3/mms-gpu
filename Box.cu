@@ -5,6 +5,11 @@
 #define MAXLIMIT 20
 
 // constructor
+HOSTDEVICE
+Box::Box() {
+
+}
+
 HOST
 Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
     level = level1;

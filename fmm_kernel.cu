@@ -15,52 +15,77 @@
 
 #include "potential_calc.cu"
 
+
 // FMM interaction evaluation kernel
 // ===================================
 __global__
-void fmm_kernel(    const Box *const n_gmem,
-                    const Box *const ni_gmem,
-                    const Cmpx *const mpc_gmem,
-                    fptype *potential_gmem,
-                    const unsigned int limit,
-                    const int P,
-                    const int xdim,
-                    const int ydim,
-                    const int zdim,
-                    const int zc
-                )
+void fmm_kernel
+    (   const Box *const n_gmem,
+        const Box *const ni_gmem,
+        const Cmpx *const mpc_gmem,
+        fptype *potential_gmem,
+        const unsigned int limit,
+        const int P,
+        const int xdim,
+        const int ydim,
+        const int zdim,
+        const int zc    )
 {
     int bi = blockIdx.x;
     int ti = threadIdx.x;
+
+    __shared__ Box n;
+    __shared__ Box ni;
+    __shared__ int x1;
+    __shared__ int y1;
+    __shared__ int width;
+    __shared__ int stride;
+
     if(ti == 0) {
-        const Box n = *n_gmem;
-        fptype width = powf(2, limit - n.level);
+        n = *n_gmem;
+    }
+    __syncthreads();
+
+    if(n.interaction[bi] == NULL)
+        return;
+
+    if(ti == 0) {
         // block index as interaction loop
-        if(n.interaction[bi] != NULL) {
-            Box ni = ni_gmem[bi];
-            for(int yy = ceilf(ni.cy-width/2); yy <= floorf(ni.cy+width/2); yy++) {
-                for(int xx = ceilf(ni.cx-width/2); xx <= floorf(ni.cx+width/2); xx++) {
-                    for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
-                        Vector3 r(xx-n.cx, yy-n.cy, zp-zc);
-                        Cmpx sum_over_lm;
-                        for(int l=0; l<=P; l++) {
-                            Cmpx sum_over_m;
-                            for(int m=-l; m<=l; m++) {
-                                Cmpx sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
-                                sph *= (1.0*factorial(l-fabsf(m))) / factorial(l+fabsf(m));
-                                sph *= mpc_gmem[l*l+l+m];
-                                sum_over_m += sph;
-                            }
-                            sum_over_m *= 1 / powf(r.magnitude(), l+1);
-                            sum_over_lm += sum_over_m;
+        ni = ni_gmem[bi];
+        width = powf(2, limit - n.level);
+        x1 = ceilf(ni.cx - width/2);
+        y1 = ceilf(ni.cy - width/2);
+        stride = ceilf(width*width / (fptype)blockDim.x);
+    }
+    __syncthreads();
+
+    // int ti1 = ti * stride;
+    if(ti * stride < width*width) {
+        for(int i = ti * stride; i < ti * stride + stride; i++) {
+            if(i < width*width) {
+                int x = x1 + i % width;
+                int y = y1 + (i - (x - x1)) / width;
+                for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
+                    Vector3 r(x-n.cx, y-n.cy, zp-zc);
+                    Cmpx sum_over_lm;
+                    for(int l=0; l<=P; l++) {
+                        Cmpx sum_over_m;
+                        for(int m=-l; m<=l; m++) {
+                            Cmpx sph = spherical_harmonic(l, m, r.colatitude(), r.azimuth());
+                            sph *= (1.0*factorial(l-fabsf(m))) / factorial(l+fabsf(m));
+                            sph *= mpc_gmem[l*l+l+m];
+                            sum_over_m += sph;
                         }
-                        potential_gmem[zp*ydim*xdim + yy*xdim + xx] += sum_over_lm.get_re();
+                        sum_over_m *= powf(r.magnitude(), -(l+1));
+                        sum_over_lm += sum_over_m;
                     }
+                    potential_gmem[zp*ydim*xdim + y*xdim + x] += sum_over_lm.get_re();
                 }
             }
-        } // if(ni != NULL)
-    } // if thread 0
+        } // thread loop
+    } // if thread within limits
 }
+
 
 
 
@@ -130,21 +155,15 @@ int fmm_gpu(        const Box *const n_ptr,
 
     // set up kernel parameters
     #define MAXTHREADSPERBLOCK    1024
-    int problem_size = xdim*ydim;
-    // dim3 grid = ceil(total_threads / (fptype)MAXTHREADSPERBLOCK);
-    // dim3 threads(MAXTHREADSPERBLOCK, 1, 1);
+    int width = (int)powf(2, limit - n_ptr->level);
+    int problem_size = width * width;
     dim3 grid = 27;
-    const int stride = ceil(problem_size / (fptype)MAXTHREADSPERBLOCK);
-    dim3 threads = 32;
+    dim3 threads = (problem_size <= 256) ? problem_size : 256;
     assert(threads.x <= MAXTHREADSPERBLOCK);    // max_threads_per_block
 
-    if(first_time) {
-        // printf("x=%u, y=%u, threads.x=%u, threads.y=%u, threads.z=%u, stride=%u, grid.x=%u, grid.y=%u, grid.z=%u\n",
-                // xdim, ydim, threads.x,    threads.y,    threads.z,    stride,    grid.x,    grid.y,    grid.z);
-        printf("\n\nlaunching kernel with %u blocks and %u threads...\n\n",
+    if(first_time)
+        printf("launching kernel with %u blocks and %u threads...\n",
                     grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
-        fflush(NULL);
-    }
 
     // start timer
     timeval time1, time2;
