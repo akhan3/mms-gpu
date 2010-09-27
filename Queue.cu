@@ -15,7 +15,7 @@
     // count = 0;
 // }
 
-HOSTDEVICE
+HOST
 Queue::Queue(int len, void **queue_mem) {
     size = len;
     contents = queue_mem;
@@ -28,7 +28,7 @@ Queue::Queue(int len, void **queue_mem) {
     // delete []contents;
 // }
 
-HOSTDEVICE
+HOST
 void Queue::enqueue(void* n) {
     if(count >= size) {
         // printf("FATAL ERROR\n");
@@ -40,7 +40,7 @@ void Queue::enqueue(void* n) {
     count++;
 }
 
-HOSTDEVICE
+HOST
 void* Queue::dequeue() {
     if(isEmpty()) {
         // printf("FATAL ERROR\n");

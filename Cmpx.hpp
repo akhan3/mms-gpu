@@ -19,8 +19,8 @@ public:
 // get functions
     HOSTDEVICE inline fptype get_re()  const  { return re;  }
     HOSTDEVICE inline fptype get_im()  const  { return im;  }
-    HOSTDEVICE inline fptype get_mag() const  { return sqrt(re*re + im*im); }
-    HOSTDEVICE inline fptype get_ang() const  { return atan2(im, re); }
+    HOSTDEVICE fptype get_mag() const;
+    HOSTDEVICE fptype get_ang() const;
 
 // set functions
     // Cmpx& set_re(const fptype x);

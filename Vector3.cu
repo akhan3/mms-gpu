@@ -77,17 +77,17 @@ Vector3 Vector3::cross(const Vector3 &b) const {
 
 HOSTDEVICE
 fptype Vector3::magnitude() const {
-    return sqrt(x*x + y*y + z*z);
+    return sqrtf(x*x + y*y + z*z);
 }
 
 HOSTDEVICE
 fptype Vector3::colatitude() const {
-    return acos(z / sqrt(x * x + y * y + z * z));
+    return acosf(z / sqrtf(x*x + y*y + z*z));
 }
 
 HOSTDEVICE
 fptype Vector3::azimuth() const {
-    return atan2(y, x);
+    return atan2f(y, x);
 }
 
 HOST

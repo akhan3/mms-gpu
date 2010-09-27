@@ -29,6 +29,16 @@ Cmpx::Cmpx(const fptype x, const fptype y) {
     // return Cmpx(re, -im);
 // }
 
+HOSTDEVICE
+fptype Cmpx::get_mag() const {
+    return sqrtf(re*re + im*im);
+}
+
+HOSTDEVICE
+fptype Cmpx::get_ang() const {
+    return atan2f(im, re);
+}
+
 // Cmpx& Cmpx::operator+=(const Cmpx &z) {
 HOSTDEVICE
 void Cmpx::operator+=(const Cmpx &z) {

@@ -24,8 +24,10 @@ endif
 COMMONFLAGS		+= $(DEFINES)
 ifeq ($(dbg),1)
 	COMMONFLAGS += -g
+	NVCCFLAGS	+= -g -G
 else
 	COMMONFLAGS += -O3
+	NVCCFLAGS	+= -O3
 endif
 
 ifeq ($(prof),1)

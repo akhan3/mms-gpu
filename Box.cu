@@ -5,7 +5,7 @@
 #define MAXLIMIT 20
 
 // constructor
-HOSTDEVICE
+HOST
 Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
     level = level1;
     index = index1;
@@ -41,7 +41,7 @@ Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
 // }
 
 // Split up parent Box into 4 children Boxs
-HOSTDEVICE
+HOST
 void Box::split(Box *firstchild_address, unsigned int limit) {
     for(int i = 0; i < 4; i++) {
         firstchild_address[i] = Box(level+1, index*4 + i, limit);
@@ -51,7 +51,7 @@ void Box::split(Box *firstchild_address, unsigned int limit) {
 }
 
 // calculate id from index
-HOSTDEVICE
+HOST
 void Box::idfromindex(byte *id) {
     int indext = index;
     id[level] = indext % 4; // indext % 4;
@@ -65,7 +65,7 @@ void Box::idfromindex(byte *id) {
 }
 
 // Prune the tree from this node downward
-HOSTDEVICE
+HOST
 void Box::prune() {
     pruned = 1;
     if(child[0] != NULL)
@@ -74,7 +74,7 @@ void Box::prune() {
 }
 
 // Grow the tree from this node downward
-HOSTDEVICE
+HOST
 void Box::grow() {
     pruned = 0;
     if(child[0] != NULL)
@@ -84,7 +84,7 @@ void Box::grow() {
 
 
 // construct neighbors and intercation list
-HOSTDEVICE
+HOST
 void Box::find_neighbors(Box* root) {
     unsigned int Nx[8];
     unsigned int Ny[8];
@@ -140,7 +140,7 @@ void Box::find_neighbors(Box* root) {
 } // find_neighbors function
 
 // calculate x and y spatial coords from id
-HOSTDEVICE
+HOST
 unsigned int Box::calc_x(const byte *id) {
     unsigned int x1 = 0;
     for(int j=level; j>=1; j--)
@@ -148,7 +148,7 @@ unsigned int Box::calc_x(const byte *id) {
     return x1;
 }
 
-HOSTDEVICE
+HOST
 unsigned int Box::calc_y(const byte *id) {
     unsigned int y1 = 0;
     for(int j=level; j>=1; j--)
@@ -157,7 +157,7 @@ unsigned int Box::calc_y(const byte *id) {
 }
 
 // calculate id from x and y spatial coords
-HOSTDEVICE
+HOST
 void Box::calc_id(byte *id, unsigned int level1, unsigned int x1, unsigned int y1) {
     for(unsigned int k=0; k<=level1; k++)
         id[k] = 0;
@@ -191,7 +191,7 @@ void Box::get_idstring(char *s) {
     // }
 // }
 
-HOSTDEVICE
+HOST
 void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
     // function to perform on node
     find_neighbors(root);
@@ -203,7 +203,7 @@ void Box::find_neighbors_recurse(Box *root, const unsigned int limit) {
 }
 
 
-HOSTDEVICE
+HOST
 void Box::create_tree_bfs(const unsigned int limit, void **queue_mem) {
     // assert(limit <= MAXLIMIT);
     const unsigned int N = (unsigned int)powf(4, limit);

@@ -2,13 +2,21 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/time.h>
-#include <cutil_inline.h>
+// #include <cutil_inline.h>
 #include "Vector3.hpp"
 #include "mydefs.hpp"
 
 // #define SDATA(index)      cutilBankChecker(sdata, index)
 // #define SDATA(index)      sdata[index]
 
+// Print a message if a CUDA error occurred
+void checkCUDAError(const char *msg) {
+    cudaError_t err = cudaGetLastError();
+    if(cudaSuccess != err) {
+        fprintf(stderr, "Cuda error: %s: %s.\n", msg, cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+}
 
 // Kernel definition (2nd version)
 __global__ void
@@ -59,7 +67,7 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
                     if(bi != i) { // skip on itself to avoid div by zero
                         // Vector3 V(x-x_, y-y_, z-z_);
                         // fptype dist = V.magnitude();
-                        fptype R = sqrtf( (x-x_)*(x-x_) + (y-y_)*(y-y_) + (z-z_)*(z-z_) );
+                        fptype R = sqrtf((x-x_)*(x-x_) + (y-y_)*(y-y_) + (z-z_)*(z-z_));
                         pot += q / R;
                     }
                 }
@@ -118,16 +126,18 @@ int calc_potential_exact_gpu( const fptype *charge,
     static int first_time = 1;
 
     // set up device memory pointers
-    static fptype *charge_d = NULL;
-    static fptype *potential_d = NULL;
+    static fptype *charge_gmem = NULL;
+    static fptype *potential_gmem = NULL;
 
     if(first_time) {
         // select device to use
         cudaSetDevice(1);
         // allocate memory on device
-        cutilSafeCall( cudaMalloc( (void**)&charge_d,    zdim*ydim*xdim * sizeof(fptype) ) );
-        cutilSafeCall( cudaMalloc( (void**)&potential_d, zdim*ydim*xdim * sizeof(fptype) ) );
-        if(charge_d == NULL || potential_d == NULL) {
+        cudaMalloc((void**)&charge_gmem,    zdim*ydim*xdim * sizeof(fptype));
+        checkCUDAError("Allocate charge_gmem");
+        cudaMalloc((void**)&potential_gmem, zdim*ydim*xdim * sizeof(fptype));
+        checkCUDAError("Allocate potential_gmem");
+        if(charge_gmem == NULL || potential_gmem == NULL) {
             fprintf(stderr, "%s:%d Error allocating memory on GPU\n", __FILE__, __LINE__);
             return EXIT_FAILURE;
         }
@@ -138,7 +148,8 @@ int calc_potential_exact_gpu( const fptype *charge,
     // printf("using device %d\n", currentDevice);
 
     // copy charge array to device global memory
-    cutilSafeCall( cudaMemcpy( charge_d, charge, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyHostToDevice ) );
+    cudaMemcpy(charge_gmem, charge, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyHostToDevice);
+    checkCUDAError("Copying charge_gmem");
 
 
     // set up kernel parameters
@@ -168,8 +179,8 @@ int calc_potential_exact_gpu( const fptype *charge,
 
     // launch the kernel
     calc_potential_exact_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
-        (charge_d, xdim, ydim, zdim, stride, potential_d);
-    cutilCheckMsg("Kernel execution failed");
+        (charge_gmem, xdim, ydim, zdim, stride, potential_gmem);
+    checkCUDAError("Exeuting Kernel calc_potential_exact_kernel()");
     cudaThreadSynchronize();
 
     // read the timer
@@ -178,9 +189,10 @@ int calc_potential_exact_gpu( const fptype *charge,
     // printf("  Kernel completed in %f seconds.\n", deltatime);
 
     // copy potential (the result of kernel) to host main memory
-    cutilSafeCall( cudaMemcpy( potential, potential_d, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyDeviceToHost ) );
-    // cutilSafeCall( cudaFree(charge_d) );
-    // cutilSafeCall( cudaFree(potential_d) );
+    cudaMemcpy(potential, potential_gmem, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyDeviceToHost);
+    checkCUDAError("Copying potential_gmem");
+    // cudaFree(charge_gmem);
+    // cudaFree(potential_gmem);
     cudaThreadSynchronize();
 
     first_time = 0;

@@ -173,8 +173,8 @@ else if(zdim >= 3)
     delete []mask;
 
 // write M field to file
-    status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
-    if(status) return EXIT_FAILURE;
+    // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
+    // if(status) return EXIT_FAILURE;
 
 // // write material field to file
     // fptype *m = new fptype[xdim*ydim];
@@ -210,7 +210,7 @@ else if(zdim >= 3)
     status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level+200);    fflush(NULL);
     if(status) return EXIT_FAILURE;
 
-    status |= save_vector3d(H_fmm, zdim, ydim, xdim, use_fmm ? "H_fmm.dat" : "H_exact.dat", verbose_level);
+    // status |= save_vector3d(H_fmm, zdim, ydim, xdim, use_fmm ? "H_fmm.dat" : "H_exact.dat", verbose_level);
     fflush(NULL);
     if(status) return EXIT_FAILURE;
 

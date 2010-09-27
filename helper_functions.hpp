@@ -35,15 +35,14 @@ int calc_potential_exact_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential);
 
-int fmm_gpu(        const fptype *charge,
+int fmm_gpu(        const Box *const n,
+                    const Cmpx *const multipole_coeff,
                     fptype *potential,
-                    const Box *root,
                     const unsigned int limit,
-                    const unsigned int actual_limit,
                     const int P,    // multipole series truncation (l = 0...P)
                     const int xdim, const int ydim, const int zdim,
                     const int zc,   // charge layer
-                    FILE *paniclog,
+                    const int use_gpu,
                     const int verbose_level
                 );
 
