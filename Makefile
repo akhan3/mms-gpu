@@ -49,7 +49,6 @@ OBJS        :=	fmm_kernel.o \
 				helper_functions.o \
 				vector_functions.o \
 				ode_functions.o \
-				fmm_calc.o \
 				main.o
 
 TARGET    	:= main
@@ -60,12 +59,11 @@ $(TARGET):	$(OBJS)
 	@echo "******** Linking ********"
 	$(LINKER) -o $@ $(OBJS) $(COMMONFLAGS) $(LIBRARIES) $(CUDA_LIBRARIES)
 
-fmm_kernel.o	: fmm_kernel.cu Box.* Queue.* Cmpx.* Vector3.* numerics.* potential_calc.* mydefs.hpp
+fmm_kernel.o	: fmm_kernel.cu fmm_calc.cu potential_calc.cu Box.* Queue.* Cmpx.* Vector3.* numerics.*  mydefs.hpp
 	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
 helper_functions.o 	: helper_functions.cpp helper_functions.hpp mydefs.hpp
 vector_functions.o 	: vector_functions.cpp vector_functions.hpp mydefs.hpp
 ode_functions.o 	: ode_functions.cpp ode_functions.hpp mydefs.hpp
-fmm_calc.o			: fmm_calc.cpp mydefs.hpp
 main.o				: main.cpp mydefs.hpp
 
 clean:

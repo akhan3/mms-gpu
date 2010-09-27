@@ -36,6 +36,7 @@ Box::Box(unsigned int level1, unsigned int index1, unsigned int limit) {
 // calculate spatial coordinates at deepest level
     cx = (unsigned int)powf(2, limit - level) * x + ((unsigned int)powf(2, limit - level) - 1) * 0.5;
     cy = (unsigned int)powf(2, limit - level) * y + ((unsigned int)powf(2, limit - level) - 1) * 0.5;
+    // printf("Box created: level=%d, index=%d, (x,y)=(%d,%d)\n", level, index, x, y);
 }
 
 // destructor

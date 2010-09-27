@@ -19,6 +19,7 @@
 // ===============================
 int fmm_bfs(        const fptype *charge,
                     fptype *potential,
+                    fptype *potential_gmem,
                     Box *const root,
                     const unsigned int limit,
                     const unsigned int actual_limit,
@@ -158,7 +159,7 @@ int fmm_bfs(        const fptype *charge,
             if(use_gpu && width >= 4) {
                 status |= fmm_gpu(  n,
                                     mpc,
-                                    potential, limit, P,
+                                    potential_gmem, limit, P,
                                     xdim, ydim, zdim, zc,
                                     use_gpu, verbose_level);
             }
@@ -271,6 +272,9 @@ int fmm_bfs(        const fptype *charge,
 }
 
 
+
+
+
 int fmm_calc(   const fptype *charge,
                 fptype *potential,
                 const int xdim, const int ydim, const int zdim,
@@ -280,7 +284,7 @@ int fmm_calc(   const fptype *charge,
 {
     static int first_time = 1;
     int status = 0;
-    const unsigned int logN = ceil(log2(xdim * ydim) / log2(4));
+    const unsigned int logN = ceil(log2f(xdim * ydim) / log2f(4));
     // FILE *paniclog = fopen("paniclog.dat", "w");
     FILE *paniclog = fopen("paniclog.dat", "a");
     fprintf(paniclog, "# FMM: New run\n");
@@ -323,21 +327,22 @@ int fmm_calc(   const fptype *charge,
     // timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
 
-// pinned host memory
+// pinned host memory and associated device memory
     static fptype *potential_pinned = NULL;
-    if(first_time)
+    static fptype *potential_gmem = NULL;
+    if(first_time) {
         cudaHostAlloc((void **)&potential_pinned, zdim*ydim*xdim * sizeof(fptype), cudaHostAllocMapped);
         checkCUDAError("cudaHostAllocMapped");
+        // Get the device pointers to the mapped memory
+        cudaHostGetDevicePointer((void **)&potential_gmem, (void *)potential_pinned, 0);
+        checkCUDAError("cudaHostGetDevicePointer");
     }
+// reset potential before beginning
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for(int i = 0; i < zdim*ydim*xdim; i++)
         potential_pinned[i] = 0;
-// Get the device pointers to the mapped memory
-    cudaHostGetDevicePointer((void **)&potential_gmem, (void *)potential_pinned, 0);
-    checkCUDAError("cudaHostGetDevicePointer");
-
 
 // reset potential before beginning
     #ifdef _OPENMP
@@ -347,20 +352,20 @@ int fmm_calc(   const fptype *charge,
         potential[i] = 0;
 
 // for each charge layer in zdim
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
     for (int zc = 0; zc < zdim; zc++) {
         if(verbose_level >= 3)
             printf("  FMM: charge layer %d\n", zc);
         fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);
         // call the actual function
-        status |= fmm_bfs(charge+zc*ydim*xdim, potential, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, use_gpu, verbose_level);
+        status |= fmm_bfs(charge+zc*ydim*xdim, potential_pinned, potential_gmem, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, use_gpu, verbose_level);
 
         if(status) return EXIT_FAILURE;
         // root->grow();
     }
+
+    memcpy(potential, potential_pinned, zdim*ydim*xdim*sizeof(fptype));
+
     if(status) return EXIT_FAILURE;
     status |= gettimeofday(&time2, NULL);
     deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
