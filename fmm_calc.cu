@@ -28,15 +28,16 @@ int fmm_bfs(        const fptype *charge,
                     const int zc,   // charge layer
                     FILE *paniclog,
                     const int use_gpu,
-                    const int verbose_level
+                    const int verbosity
                 )
 {
+    static int first_time = 1;
     int status = 0;
     assert(limit == actual_limit);  // unable to support arbitrary depth calculations.
     assert(limit <= actual_limit);
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
-    if(verbose_level >= 6)
+    if(verbosity >= 10)
         printf("    Executing FMM algorithm...\n");
     unsigned int prev_level = 0;
 
@@ -77,7 +78,7 @@ int fmm_bfs(        const fptype *charge,
                 status |= gettimeofday(&time2, NULL);
                 double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
                 status |= gettimeofday(&time1, NULL);
-                if(verbose_level >= 10)
+                if(verbosity >= 20)
                     printf("done in %f seconds.\n", deltatime); fflush(NULL);
             // saving this level potential
                 // char filename_pot[200];
@@ -89,7 +90,7 @@ int fmm_bfs(        const fptype *charge,
                 // if(status) return EXIT_FAILURE;
             }
             prev_level = n->level;
-            if(verbose_level >= 6) {
+            if(verbosity >= 20) {
                 int width = pow(2, actual_limit-n->level);
                 printf("    Level%d (%dx%d boxes, size=%dx%d)... ",
                     n->level, (int)pow(2, n->level), (int)pow(2, n->level), width, width);
@@ -111,8 +112,18 @@ int fmm_bfs(        const fptype *charge,
         fptype q = 0;
 
     // Calculate multipole coefficients for the source box
-        Cmpx mpc[(P+1)*(P+1)];
-        // checking for source charges in the source box
+        static Cmpx *mpc = NULL;      // pinned memory on CPU
+        static Cmpx *mpc_gmem = NULL; // mapped pointer on device memory
+        if(first_time) {
+            cudaHostAlloc((void**)&mpc, (P+1)*(P+1)*sizeof(Cmpx), cudaHostAllocMapped);
+            checkCUDAError("cudaHostAllocMapped");
+            // Get the device pointer to the mapped memory
+            cudaHostGetDevicePointer((void**)&mpc_gmem, (void*)mpc, 0);
+            checkCUDAError("cudaHostGetDevicePointer");
+        }
+        memset(mpc, 0, (P+1)*(P+1)*sizeof(Cmpx));
+
+    // checking for source charges in the source box
         fptype charge_found = 0;
         fptype width = pow(2, actual_limit-n->level);
         int yy1 = ceil(n->cy-width/2);
@@ -156,12 +167,13 @@ int fmm_bfs(        const fptype *charge,
             gettimeofday(&t1, NULL);
 
             // calculation of potential at the boxes in 27 boxes of interaction list
-            if(use_gpu && width >= 4) {
+            // if(use_gpu) {
+            if(use_gpu && (n->level <= limit-1)) {
                 status |= fmm_gpu(  n,
-                                    mpc,
+                                    mpc_gmem,
                                     potential_gmem, limit, P,
                                     xdim, ydim, zdim, zc,
-                                    use_gpu, verbose_level);
+                                    use_gpu, verbosity);
             }
             else {
                 #ifdef _OPENMP
@@ -195,7 +207,7 @@ int fmm_bfs(        const fptype *charge,
                                     // fptype modangle = fabs(sum_over_lm.get_ang());
                                     // modangle = (modangle < M_PI-modangle) ? modangle : M_PI-modangle;
                                     // if(modangle > threshold) {
-                                        // if(verbose_level >= 0)
+                                        // if(verbosity >= 3)
                                             // printf("PANIC!! L%d   R=%g   angle=%g\n", n->level, r.magnitude(), modangle);
                                         // fprintf(paniclog, "%d   %g   %g\n", n->level, r.magnitude(), modangle);
                                     // }
@@ -250,7 +262,7 @@ int fmm_bfs(        const fptype *charge,
 
     status |= gettimeofday(&time2, NULL);
     deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(verbose_level >= 10)
+    if(verbosity >= 20)
         printf("done in %f seconds.\n", deltatime); fflush(NULL);
     // saving this level potential
     // char filename_pot[200];
@@ -260,7 +272,7 @@ int fmm_bfs(        const fptype *charge,
     // else                  sprintf(filename_pot, "potential_gpugpu_L%d.dat", limit);
     // status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
     // if(status) return EXIT_FAILURE;
-    // if(verbose_level >= 10) {
+    // if(verbosity >= 10) {
         // printf("done in %f seconds.\n", deltatime);
         // printf("FMM coeff calulcation took %f seconds.\n", t_coeff);
         // printf("FMM potential calulcation took %f seconds.\n", t_potential);
@@ -268,6 +280,7 @@ int fmm_bfs(        const fptype *charge,
     // }
 
     free(queue_mem);
+    first_time = 0;
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -280,14 +293,14 @@ int fmm_calc(   const fptype *charge,
                 const int xdim, const int ydim, const int zdim,
                 const int P,    // multipole series truncation (l = 0...P)
                 const int use_gpu,
-                const int verbose_level )
+                const int verbosity )
 {
     static int first_time = 1;
     int status = 0;
     const unsigned int logN = ceil(log2f(xdim * ydim) / log2f(4));
-    // FILE *paniclog = fopen("paniclog.dat", "w");
-    FILE *paniclog = fopen("paniclog.dat", "a");
-    fprintf(paniclog, "# FMM: New run\n");
+    FILE *paniclog = NULL;
+    // FILE *paniclog = fopen("paniclog.dat", "a");
+    // fprintf(paniclog, "# FMM: New run\n");
 
     timeval time1, time2;
     double deltatime;
@@ -298,7 +311,7 @@ int fmm_calc(   const fptype *charge,
     printf("sizeof(Box) = %lu\n", sizeof(Box));
     printf("total Boxes in the tree = %d\n", total_boxes);
     printf("memory required for the tree = %lu Bytes\n", total_boxes * sizeof(Box));
-    // printf("memory required for the tree = %.0f KB\n", total_boxes * sizeof(Box) / 1024.0);
+    printf("memory required for the tree = %.0f MB\n", ceil(total_boxes*sizeof(Box)/1024.0/1024.0));
     Box *tree = (Box*)malloc(total_boxes * sizeof(Box));
     int len = xdim * ydim;
     // void **contents_ = new void*[len]();
@@ -319,7 +332,7 @@ int fmm_calc(   const fptype *charge,
 
     status |= gettimeofday(&time2, NULL);
     deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(verbose_level >= 0)
+    if(verbosity >= 15)
         printf("Tree: took %f seconds\n", deltatime);
     fflush(NULL);
 
@@ -331,6 +344,7 @@ int fmm_calc(   const fptype *charge,
     static fptype *potential_pinned = NULL;
     static fptype *potential_gmem = NULL;
     if(first_time) {
+        printf("memory required for potential array = %.0f MB\n", ceil(zdim*ydim*xdim*sizeof(fptype)/1024.0/1024.0));
         cudaHostAlloc((void **)&potential_pinned, zdim*ydim*xdim * sizeof(fptype), cudaHostAllocMapped);
         checkCUDAError("cudaHostAllocMapped");
         // Get the device pointers to the mapped memory
@@ -353,12 +367,12 @@ int fmm_calc(   const fptype *charge,
 
 // for each charge layer in zdim
     for (int zc = 0; zc < zdim; zc++) {
-        if(verbose_level >= 3)
+        if(verbosity >= 10)
             printf("  FMM: charge layer %d\n", zc);
-        fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
+        // fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);
         // call the actual function
-        status |= fmm_bfs(charge+zc*ydim*xdim, potential_pinned, potential_gmem, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, use_gpu, verbose_level);
+        status |= fmm_bfs(charge+zc*ydim*xdim, potential_pinned, potential_gmem, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, use_gpu, verbosity);
 
         if(status) return EXIT_FAILURE;
         // root->grow();
@@ -369,12 +383,12 @@ int fmm_calc(   const fptype *charge,
     if(status) return EXIT_FAILURE;
     status |= gettimeofday(&time2, NULL);
     deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(verbose_level >= 0)
+    if(verbosity >= 10)
         printf("FMM: took %f seconds\n", deltatime);
     fflush(NULL);
 
 // closing
-    fclose(paniclog);
+    // status |= fclose(paniclog);
     // delete root;
     free(tree);
     first_time = 0;
@@ -383,9 +397,9 @@ int fmm_calc(   const fptype *charge,
 
 
 // Exact O(N^2) calculation of potential
-void calc_potential_exact( const fptype *charge,
+int calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
-                        fptype *potential, int use_gpu)
+                        fptype *potential, int use_gpu, int verbosity)
 {
     int status = 0;
     timeval time1, time2;
@@ -424,9 +438,10 @@ void calc_potential_exact( const fptype *charge,
     }
     status |= gettimeofday(&time2, NULL);
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(0)
+    if(verbosity >= 10)
         printf("Exact: took %f seconds\n", deltatime);
     fflush(NULL);
+    return EXIT_SUCCESS;
 }
 
 

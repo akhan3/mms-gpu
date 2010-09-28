@@ -7,7 +7,7 @@
 
 // // Read matrix from file
 // // ===============================
-// int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbose_level)
+// int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbosity)
 // {
     // int status = 0;
     // FILE *fh = fopen(filename, "r");
@@ -23,14 +23,14 @@
         // dummy = fscanf(fh, "\n");
     // }
     // fclose(fh);
-    // if(verbose_level >= 3)
+    // if(verbosity >= 8)
         // printf("INFO: Read file %s with status=%d\n", filename, status);
     // return status ? EXIT_FAILURE : EXIT_SUCCESS;
 // }
 
 // Write matrix to file
 // ===============================
-int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbose_level)
+int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbosity)
 {
     int status = 0;
     FILE *fh = fopen(filename, "w");
@@ -45,14 +45,14 @@ int matrix2file(const fptype* matrix, const int rows, const int cols, const char
         fprintf(fh, "\n");
     }
     fclose(fh);
-    if(verbose_level >= 3)
+    if(verbosity >= 8)
         printf("INFO: Written file %s with status=%d\n", filename, status);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 // Write 3D scalar field to file
 // ===============================
-int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level)
+int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity)
 {
     int status = 0;
     FILE *fh = fopen(filename, "w");
@@ -70,14 +70,14 @@ int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, con
         fprintf(fh, "\n");
     }
     fclose(fh);
-    if(verbose_level >= 3)
+    if(verbosity >= 8)
         printf("INFO: Written file %s with status=%d\n", filename, status);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 // Write 3D vector field to file
 // ===============================
-int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level)
+int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity)
 {
     int status = 0;
     FILE *fh = fopen(filename, "w");
@@ -96,7 +96,7 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
     }
     // fprintf(fh, "# yxz done\n");
     fclose(fh);
-    if(verbose_level >= 3) {
+    if(verbosity >= 8) {
         printf("INFO: Written file %s with status=%d\n", filename, status);
     }
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
@@ -104,9 +104,9 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
 
 // Append 3D vector field to file
 // ===============================
-int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbose_level)
+int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbosity)
 {
-    if(verbose_level) {}
+    if(verbosity) {}
     int status = 0;
     for(int z = 0; z < zdim; z++) {
         for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB

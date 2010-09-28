@@ -5,6 +5,7 @@ bin/*
 *.mat
 *.dat
 *.ods
+*.png
 *.o
 *.out
 log*

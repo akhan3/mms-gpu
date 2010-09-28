@@ -18,7 +18,6 @@ private:
     unsigned int x;
     unsigned int y;
     int pruned;
-    int filler_dummy;
 
 public:
 // constructors and destructor

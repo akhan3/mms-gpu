@@ -6,11 +6,11 @@
 #include "Queue.hpp"
 #include "Cmpx.hpp"
 
-// int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbose_level);
-int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbose_level);
-int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
-int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbose_level);
-int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbose_level);
+// int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbosity);
+int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbosity);
+int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity);
+int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbosity);
+int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity);
 // int matrix2stdout(const fptype* matrix, const int rows, const int cols, const char* matrixname);
 
 // Depth-first tarversal
@@ -25,25 +25,26 @@ int fmm_calc(   const fptype *charge,
                 fptype *potential,
                 const int xdim, const int ydim, const int zdim,
                 const int P,    // multipole series truncation (l = 0...P)
-                const int use_gpu, const int verbose_level );
+                const int use_gpu, const int verbosity );
 
-void calc_potential_exact( const fptype *charge,
+int calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
-                        fptype *potential, int use_gpu);
+                        fptype *potential, int use_gpu,
+                        const int verbosity);
 
 int calc_potential_exact_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
                         fptype *potential);
 
 int fmm_gpu(        const Box *const n,
-                    const Cmpx *const multipole_coeff,
-                    fptype *potential,
+                    const Cmpx *const mpc_gmem,
+                    fptype *potential_gmem,
                     const unsigned int limit,
                     const int P,    // multipole series truncation (l = 0...P)
                     const int xdim, const int ydim, const int zdim,
                     const int zc,   // charge layer
                     const int use_gpu,
-                    const int verbose_level
+                    const int verbosity
                 );
 
 void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,

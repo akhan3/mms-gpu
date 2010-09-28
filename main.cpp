@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     int status = 0;
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
-    const int verbose_level = 2;
+    const int verbosity = 10;
 
 // intial command line arguments
     char filename_arg[1000] = "verysmall_16x16.png";
@@ -173,7 +173,7 @@ else if(zdim >= 3)
     delete []mask;
 
 // write M field to file
-    // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbose_level);
+    // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbosity);
     // if(status) return EXIT_FAILURE;
 
 // // write material field to file
@@ -194,7 +194,7 @@ else if(zdim >= 3)
                                 // xdim, ydim, zdim, meshwidth, P,
                                 // mu_0, Ms, Aexch, alfa, gamma,
                                 // demag, exchange, external, use_fmm,
-                                // use_gpu, verbose_level );
+                                // use_gpu, verbosity );
 
     const int xyzdim = zdim*ydim*xdim;
     Vector3 *H_fmm      = new Vector3[xyzdim]();
@@ -207,12 +207,12 @@ else if(zdim >= 3)
     }
 
 // call the potential function
-    status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbose_level+200);    fflush(NULL);
+    status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);    fflush(NULL);
     if(status) return EXIT_FAILURE;
 
     char filename[200];
     sprintf(filename, "H_%s_%s.dat", use_fmm?"fmm":"exact", use_gpu?"gpu":"cpu");
-    status |= save_vector3d(H_fmm, zdim, ydim, xdim, filename, verbose_level);
+    status |= save_vector3d(H_fmm, zdim, ydim, xdim, filename, verbosity);
     fflush(NULL);
     if(status) return EXIT_FAILURE;
 

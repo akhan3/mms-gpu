@@ -124,6 +124,16 @@ int calc_potential_exact_gpu( const fptype *charge,
     int status = 0;
     static int first_time = 1;
 
+// setup device
+    if(first_time) {
+        // select device to use
+        // cudaSetDevice(1);
+
+        int currentDevice;
+        cudaGetDevice(&currentDevice);
+        printf("using device %d\n", currentDevice);
+    }
+
     // set up device memory pointers
     static fptype *charge_gmem = NULL;
     static fptype *potential_gmem = NULL;
@@ -141,10 +151,6 @@ int calc_potential_exact_gpu( const fptype *charge,
             return EXIT_FAILURE;
         }
     }
-
-    // int currentDevice;
-    // cudaGetDevice(&currentDevice);
-    // printf("using device %d\n", currentDevice);
 
     // copy charge array to device global memory
     cudaMemcpy(charge_gmem, charge, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyHostToDevice);
@@ -168,7 +174,7 @@ int calc_potential_exact_gpu( const fptype *charge,
     calc_potential_exact_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
         (charge_gmem, xdim, ydim, zdim, potential_gmem);
     checkCUDAError("Exeuting Kernel calc_potential_exact_kernel()");
-    cudaThreadSynchronize();
+    // cudaThreadSynchronize();
 
     // read the timer
     status |= gettimeofday(&time2, NULL);
@@ -178,9 +184,10 @@ int calc_potential_exact_gpu( const fptype *charge,
     // copy potential (the result of kernel) to host main memory
     cudaMemcpy(potential, potential_gmem, zdim*ydim*xdim * sizeof(fptype), cudaMemcpyDeviceToHost);
     checkCUDAError("Copying potential_gmem");
+    // cudaThreadSynchronize();
+
     // cudaFree(charge_gmem);
     // cudaFree(potential_gmem);
-    cudaThreadSynchronize();
 
     first_time = 0;
     return EXIT_SUCCESS;
