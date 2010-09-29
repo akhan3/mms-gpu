@@ -13,9 +13,10 @@ export OMP_NUM_THREADS=8
                 10e-9       \
                 1e-13       \
                             \
-                200e-9       \
-                200e-9       \
+                50e-9       \
+                50e-9       \
                 20e-9        \
+                            \
                 32          \
                 32          \
                 3           \
@@ -27,7 +28,7 @@ export OMP_NUM_THREADS=8
                 0           \
                 1           \
                             \
-                sim_disc_200x20nm     \
+                sim_disc_50x20nm_InitialRandom     \
                 1985        \
 
 #| tee -a log.dat
@@ -47,6 +48,7 @@ exit $exit_status
 # sample_width  = 10e-9
 # sample_height = 10e-9
 # sample_depth  = 1e-9
+
 # xdim = 16
 # ydim = 16
 # zdim = 3

@@ -138,24 +138,25 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    // assert(zdim == 1);
-if(zdim == 1)
-    for(unsigned int z = 0; z < zdim; z++) {
-        for(unsigned int y = 0; y < ydim; y++) {
-            for(unsigned int x = 0; x < xdim; x++) {
-                if(!mask[y*xdim + x])
-                {
-                    // fptype theta = frand_atob(0, 180) * M_PI/180;
-                    fptype phi   = frand_atob(0, 360) * M_PI/180;
-                    fptype theta = M_PI/2;
-                    // fptype phi   = 0;
-                    M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
-                    material[z*ydim*xdim + y*xdim + x] = 1;
-                }
-            }
-        }
-    }
-else if(zdim >= 3)
+// if(zdim == 1)
+    // for(unsigned int z = 0; z < zdim; z++) {
+        // for(unsigned int y = 0; y < ydim; y++) {
+            // for(unsigned int x = 0; x < xdim; x++) {
+                // if(!mask[y*xdim + x])
+                // {
+                    // // fptype theta = frand_atob(0, 180) * M_PI/180;
+                    // fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    // fptype theta = M_PI/2;
+                    // // fptype phi   = 0;
+                    // M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+                    // material[z*ydim*xdim + y*xdim + x] = 1;
+                // }
+            // }
+        // }
+    // }
+// else if(zdim >= 3)
+
+    assert(zdim >= 3);
     for(unsigned int z = 1; z < zdim-1; z++) {
         for(unsigned int y = 0; y < ydim; y++) {
             for(unsigned int x = 0; x < xdim; x++) {
@@ -163,8 +164,11 @@ else if(zdim >= 3)
                 {
                     fptype theta = frand_atob(0, 180) * M_PI/180;
                     fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    // fptype theta = M_PI/2 + frand_atob(-10, 10) * M_PI/180;
+                    // fptype phi   = 0 + frand_atob(-90, 90) * M_PI/180;
                     // fptype theta = M_PI/2;
                     // fptype phi   = 0;
+
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                     material[z*ydim*xdim + y*xdim + x] = 1;
                 }
