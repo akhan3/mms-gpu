@@ -105,9 +105,9 @@ int fmm_gpu(        const Box *const n_ptr,
         // select device to use
         // cudaSetDevice(1);
 
-        // int currentDevice;
-        // cudaGetDevice(&currentDevice);
-        // printf("using device %d\n", currentDevice);
+        int currentDevice;
+        cudaGetDevice(&currentDevice);
+        printf("using device %d\n", currentDevice);
     }
 
 // concatenate coordinates of 27 interaction boxes in CPU pinned memory
@@ -136,8 +136,9 @@ int fmm_gpu(        const Box *const n_ptr,
     int problem_size = width * width;
     dim3 grid = 27;
     dim3 threads = (problem_size <= 256) ? problem_size : 256;
-    assert(threads.x <= MAXTHREADSPERBLOCK);    // max_threads_per_block
     if(first_time) {
+        assert(grid.x <= MAXBLOCKS);
+        assert(threads.x <= MAXTHREADSPERBLOCK);
         printf("launching kernel with %u blocks and %u threads...\n",
                     grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
     }

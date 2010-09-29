@@ -12,7 +12,7 @@ export OMP_NUM_THREADS=8
                 10e-9       \
                 1e-13       \
                             \
-                20e-9       \
+                10e-9       \
                 32          \
                 32          \
                 3           \
@@ -23,7 +23,7 @@ export OMP_NUM_THREADS=8
                             \
                 0           \
                 1           \
-                sim_square_32x32_20nm     \
+                sim_square_32x32_10nm     \
                 1985        \
 
 #| tee -a log.dat

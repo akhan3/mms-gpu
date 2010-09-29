@@ -7,7 +7,9 @@ typedef float fptype;
 typedef unsigned char byte;
 
 // Cuda directives
-#define MAXTHREADSPERBLOCK    1024
+#define MAXBLOCKS           65535
+// #define MAXBLOCKS           14
+#define MAXTHREADSPERBLOCK  1024
 
 #ifdef __CUDACC__
     #define HOST __host__

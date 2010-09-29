@@ -44,14 +44,6 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
         else
             status |= calc_potential_exact(charge, xdim, ydim, zdim, potential, use_gpu, verbosity); // Exact O(N^2) calculation
 
-        // char filename_pot[200];
-        // if     (use_gpu == 0) sprintf(filename_pot, "potential_cpu.dat");
-        // else if(use_gpu == 1) sprintf(filename_pot, "potential_gpu.dat");
-        // else if(use_gpu == 2) sprintf(filename_pot, "potential_gpuemu.dat");
-        // else                  sprintf(filename_pot, "potential_gpugpu.dat");
-        // status |= save_scalar3d(potential, zdim, ydim, xdim, filename_pot, 100);
-        // status |= matrix2file(charge, ydim, xdim, "charge.dat", 100);
-
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);
     }
@@ -224,7 +216,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // getchar();
     printf("\n");
 
-
+    int consecutive_error_count = 0;
 
 // Time-marching loop
 // ======================================
@@ -233,9 +225,6 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     {
     // energies before
         fptype E = 0;
-        #ifdef _OPENMP
-        // #pragma omp parallel for
-        #endif
         for(int i = 0; i < xyzdim; i++) {
             if(material[i]) {
                 E += M[i].dot(H[i]);
@@ -269,9 +258,6 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         status |= Hfield(M2, H2, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);
         fptype E2 = 0;
         fptype torque = 0;
-        #ifdef _OPENMP
-        // #pragma omp parallel for
-        #endif
         for(int i = 0; i < xyzdim; i++) {
             if(material[i]) {
                 E2 += M2[i].dot(H2[i]);
@@ -286,12 +272,18 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // check energies and adjust stepsize
         if(E2 > E) { // reject and invalidate this step
             dt = dt / 2.5; // reduce the stepsize
-            printf("PANIC!! energy is increasing, so halving the step\n");
-            fprintf(fhp, "%d, %g, %g, %g, %g PANIC!! energy is increasing, so halving the step\n",
+            printf("PANIC!! energy is increasing, so halving the step.\n");
+            fprintf(fhp, "PANIC!! energy is increasing, so halving the step. %d, %g, %g, %g, %g \n",
                         tindex, t, dt, E2, torque);
-            // continue;
+            consecutive_error_count++;
+            if(consecutive_error_count > 50) {
+                fprintf(stdout, "PANIC!! Stuck in energy violation errors. Terminating the simulation.\n");
+                fprintf(fhp, "PANIC!! Stuck in energy violation errors. Terminating the simulation.\n");
+                break;
+            }
         }
         else { // accept the step
+            consecutive_error_count = 0;
             if(adjust_step)
                 dt = 1e-13 / torque/2;
             t = t2;
@@ -314,9 +306,6 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 fptype Mmag_avg = 0;
                 int count = 0;
                 Vector3 M_avg(0,0,0);
-                #ifdef _OPENMP
-                // #pragma omp parallel for
-                #endif
                 for(int i = 0; i < xyzdim; i++) {
                     if(material[i]) {
                         Mmag_avg += M[i].magnitude();
@@ -342,7 +331,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 
         fflush(NULL);
-        // if(tindex >= 10) break;
+        // if(tindex >= 100) break;
     } // time marching while loop
 
 // closing

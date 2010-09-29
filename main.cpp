@@ -117,7 +117,6 @@ int main(int argc, char **argv)
     sprintf(filename, "%s", filename_arg);
 // read the mask from file
     load_mask(filename, &mask, &xdim, &ydim);
-    zdim = 1;
 #else
     byte *mask = new byte[ydim*xdim](); // mask matrix
 // specimen magnet 20x20x20
@@ -164,9 +163,9 @@ else if(zdim >= 3)
             for(unsigned int x = 0; x < xdim; x++) {
                 if(!mask[y*xdim + x])
                 {
-                    // fptype theta = frand_atob(0, 180) * M_PI/180;
+                    fptype theta = frand_atob(0, 180) * M_PI/180;
                     fptype phi   = frand_atob(0, 360) * M_PI/180;
-                    fptype theta = M_PI/2;
+                    // fptype theta = M_PI/2;
                     // fptype phi   = 0;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                     material[z*ydim*xdim + y*xdim + x] = 1;

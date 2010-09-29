@@ -411,8 +411,10 @@ int calc_potential_exact( const fptype *charge,
     int status = 0;
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
-    if(use_gpu)
-        calc_potential_exact_gpu(charge, xdim, ydim, zdim, potential);
+    if(use_gpu) {
+        status |= calc_potential_exact_gpu(charge, xdim, ydim, zdim, potential);
+        if(status) return EXIT_FAILURE;
+    }
     else
     {
     // reset potential before beginning
