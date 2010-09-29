@@ -25,6 +25,7 @@ int fmm_bfs(        const fptype *charge,
                     const unsigned int actual_limit,
                     const int P,    // multipole series truncation (l = 0...P)
                     const int xdim, const int ydim, const int zdim,
+                    const fptype dx, const fptype dy, const fptype dz,
                     const int zc,   // charge layer
                     FILE *paniclog,
                     const int use_gpu,
@@ -134,10 +135,11 @@ int fmm_bfs(        const fptype *charge,
         for(int yy=yy1; yy<=yy2; yy++) {
         // for(int yy=ceil(n->cy-width/2); yy<=floor(n->cy+width/2); yy++) {
             for(int xx=ceil(n->cx-width/2); xx<=floor(n->cx+width/2); xx++) {
-                q = charge[yy*xdim + xx];
+                fptype dV = dx*dy*dz;
+                q = charge[yy*xdim + xx] * dV;
                 if(q != 0) { // if charge found
                     charge_found = 1;
-                    Cmpx r_(xx - n->cx, yy - n->cy);
+                    Cmpx r_((xx-n->cx)*dx, (yy-n->cy)*dy);
                     for(int l=0; l<=P; l++) {
                         for(int m=-l; m<=l; m++) {
                             Cmpx sph = spherical_harmonic(l, m, M_PI/2, r_.get_ang()).conjugate();
@@ -172,7 +174,9 @@ int fmm_bfs(        const fptype *charge,
                 status |= fmm_gpu(  n,
                                     mpc_gmem,
                                     potential_gmem, limit, P,
-                                    xdim, ydim, zdim, zc,
+                                    xdim, ydim, zdim,
+                                    dx, dy, dz,
+                                    zc,
                                     use_gpu, verbosity);
             }
             else {
@@ -185,7 +189,7 @@ int fmm_bfs(        const fptype *charge,
                         for(int yy=ceil(ni->cy-width/2); yy<=floor(ni->cy+width/2); yy++) {
                             for(int xx=ceil(ni->cx-width/2); xx<=floor(ni->cx+width/2); xx++) {
                                 for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
-                                    Vector3 r(xx - n->cx, yy - n->cy, zp - zc);
+                                    Vector3 r((xx-n->cx)*dx, (yy-n->cy)*dy, (zp-zc)*dz);
                                     Cmpx sum_over_lm;
                                     for(int l=0; l<=P; l++) {
                                         Cmpx sum_over_m;
@@ -233,13 +237,13 @@ int fmm_bfs(        const fptype *charge,
 
                 for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
                     if(zp != zc) { // neighbor on other layers at self position
-                        Vector3 r(0, 0, zp - zc);
+                        Vector3 r(0, 0, (zp - zc)*dz);
                         potential[zp*ydim*xdim + (int)(n->cy*xdim + n->cx)] += q / r.magnitude();
                     }
                     for(int i=0; i<8; i++) {
                         Box *nb = n->neighbor[i];
                         if(nb != NULL) {
-                            Vector3 r(nb->cx - n->cx, nb->cy - n->cy, zp - zc);
+                            Vector3 r((nb->cx - n->cx)*dx, (nb->cy - n->cy)*dy, (zp - zc)*dz);
                             potential[zp*ydim*xdim + (int)(nb->cy*xdim + nb->cx)] += q / r.magnitude();
                         }
                     } // neighbor loop
@@ -291,6 +295,7 @@ int fmm_bfs(        const fptype *charge,
 int fmm_calc(   const fptype *charge,
                 fptype *potential,
                 const int xdim, const int ydim, const int zdim,
+                const fptype dx, const fptype dy, const fptype dz,
                 const int P,    // multipole series truncation (l = 0...P)
                 const int use_gpu,
                 const int verbosity )
@@ -379,7 +384,7 @@ int fmm_calc(   const fptype *charge,
         // fprintf(paniclog, "# FMM:   charge layer %d\n", zc);
         fflush(NULL);
         // call the actual function
-        status |= fmm_bfs(charge+zc*ydim*xdim, potential_pinned, potential_gmem, root, logN, logN, P, xdim, ydim, zdim, zc, paniclog, use_gpu, verbosity);
+        status |= fmm_bfs(charge+zc*ydim*xdim, potential_pinned, potential_gmem, root, logN, logN, P, xdim, ydim, zdim, dx, dy, dz, zc, paniclog, use_gpu, verbosity);
 
         if(status) return EXIT_FAILURE;
         // root->grow();
@@ -406,13 +411,14 @@ int fmm_calc(   const fptype *charge,
 // Exact O(N^2) calculation of potential
 int calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
+                        const fptype dx, const fptype dy, const fptype dz,
                         fptype *potential, int use_gpu, int verbosity)
 {
     int status = 0;
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
     if(use_gpu) {
-        status |= calc_potential_exact_gpu(charge, xdim, ydim, zdim, potential);
+        status |= calc_potential_exact_gpu(charge, xdim, ydim, zdim, dx, dy, dz, potential);
         if(status) return EXIT_FAILURE;
     }
     else
@@ -427,7 +433,8 @@ int calc_potential_exact( const fptype *charge,
         for(int z_ = 0; z_ < zdim; z_++) {  // source loop
             for(int y_ = 0; y_ < ydim; y_++) {
                 for(int x_ = 0; x_ < xdim; x_++) {
-                    fptype q = charge[z_*ydim*xdim + y_*xdim + x_];
+                    fptype dV = dx*dy*dz;
+                    fptype q = charge[z_*ydim*xdim + y_*xdim + x_] * dV;
                     if(q == 0) continue;
                     for(int z = 0; z < zdim; z++) { // observation point loop
                         #ifdef _OPENMP
@@ -436,7 +443,7 @@ int calc_potential_exact( const fptype *charge,
                         for(int y = 0; y < ydim; y++) {
                             for(int x = 0; x < xdim; x++) {
                                 if(z == z_ && y == y_ && x == x_) continue;    // skip on itself
-                                Vector3 R(x-x_, y-y_, z-z_);
+                                Vector3 R((x-x_)*dx, (y-y_)*dy, (z-z_)*dz);
                                 potential[z*ydim*xdim + y*xdim + x] += q / R.magnitude();
                             }
                         }

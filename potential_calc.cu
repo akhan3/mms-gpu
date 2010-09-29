@@ -16,8 +16,9 @@ void checkCUDAError(const char *msg) {
 
 // Kernel definition (2nd version)
 __global__ void
-calc_potential_exact_kernel(   const fptype *charge_gmem,
+calc_potential_exact_kernel(    const fptype *charge_gmem,
                                 const int xdim, const int ydim, const int zdim,
+                                const fptype dx, const fptype dy, const fptype dz,
                                 fptype *potential_gmem  )
 {
     const int N = xdim*ydim*zdim;
@@ -56,7 +57,8 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
             for(int i = ti1; i < ti1 + tstride; i++)
             {
                 if(i < N) { // calculate potential only if this point doesn't exceed
-                    fptype q = charge_gmem[i];
+                    fptype dV = dx*dy*dz;
+                    fptype q = charge_gmem[i] * dV;
                     // __syncthreads();
                     // if(q != 0)
                     {
@@ -65,10 +67,8 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
                         int z_ = (i - x_ - y_*xdim) / (xdim*ydim);
                         // potential due this thread's charge
                         if(bi != i) { // skip on itself to avoid div by zero
-                            // Vector3 V(x-x_, y-y_, z-z_);
-                            // fptype dist = V.magnitude();
-                            fptype R = sqrtf((x-x_)*(x-x_) + (y-y_)*(y-y_) + (z-z_)*(z-z_));
-                            pot += q / R;
+                            Vector3 R((x-x_)*dx, (y-y_)*dy, (z-z_)*dz);
+                            pot += q / R.magnitude();
                         }
                     }
                 }
@@ -119,6 +119,7 @@ calc_potential_exact_kernel(   const fptype *charge_gmem,
 // Exact O(N^2) calculation of potential
 int calc_potential_exact_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
+                        const fptype dx, const fptype dy, const fptype dz,
                         fptype *potential)
 {
 
@@ -170,7 +171,7 @@ int calc_potential_exact_gpu( const fptype *charge,
 
 // launch the kernel
     calc_potential_exact_kernel <<<grid, threads, 1024 * sizeof(fptype)>>>
-        (charge_gmem, xdim, ydim, zdim, potential_gmem);
+        (charge_gmem, xdim, ydim, zdim, dx, dy, dz, potential_gmem);
     checkCUDAError("Exeuting Kernel calc_potential_exact_kernel()");
     // cudaThreadSynchronize();
 

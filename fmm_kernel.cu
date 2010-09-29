@@ -27,9 +27,8 @@ void fmm_kernel
         const Cmpx *const mpc_gmem,
         fptype *potential_gmem,
         const int P,
-        const int xdim,
-        const int ydim,
-        const int zdim,
+        const int xdim, const int ydim, const int zdim,
+        const fptype dx, const fptype dy, const fptype dz,
         const int zc    )
 {
     int bi = blockIdx.x;
@@ -61,7 +60,7 @@ void fmm_kernel
                 int x = x1 + i % width;
                 int y = y1 + (i - (x - x1)) / width;
                 for (int zp = 0; zp < zdim; zp++) { // for each potential layer in zdim
-                    Vector3 r(x-n_cxy.get_re(), y-n_cxy.get_im(), zp-zc);
+                    Vector3 r((x-n_cxy.get_re())*dx, (y-n_cxy.get_im())*dy, (zp-zc)*dz);
                     Cmpx sum_over_lm;
                     for(int l=0; l<=P; l++) {
                         Cmpx sum_over_m;
@@ -92,6 +91,7 @@ int fmm_gpu(        const Box *const n_ptr,
                     const unsigned int limit,
                     const int P,    // multipole series truncation (l = 0...P)
                     const int xdim, const int ydim, const int zdim,
+                    const fptype dx, const fptype dy, const fptype dz,
                     const int zc,   // charge layer
                     const int use_gpu,
                     const int verbosity
@@ -145,7 +145,7 @@ int fmm_gpu(        const Box *const n_ptr,
 
 // launch the kernel
     fmm_kernel <<<grid, threads>>>
-        (n_cxy, width, num_interactions, ni_cxy_gmem, mpc_gmem, potential_gmem, P, xdim, ydim, zdim, zc);
+        (n_cxy, width, num_interactions, ni_cxy_gmem, mpc_gmem, potential_gmem, P, xdim, ydim, zdim, dx, dy, dz, zc);
     checkCUDAError("Exeuting Kernel fmm_kernel()");
     cudaThreadSynchronize();
 

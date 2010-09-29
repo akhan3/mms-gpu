@@ -7,12 +7,15 @@ export OMP_NUM_THREADS=8
 #valgrind --leak-check=full \
 
 ./main                      \
-                dummy.png   \
+                disc_32x32.png   \
                 3           \
+                            \
                 10e-9       \
                 1e-13       \
                             \
-                10e-9       \
+                200e-9       \
+                200e-9       \
+                20e-9        \
                 32          \
                 32          \
                 3           \
@@ -23,7 +26,8 @@ export OMP_NUM_THREADS=8
                             \
                 0           \
                 1           \
-                sim_square_32x32_10nm     \
+                            \
+                sim_disc_200x20nm     \
                 1985        \
 
 #| tee -a log.dat
@@ -36,16 +40,23 @@ exit $exit_status
 # =====================================
 # imagefile = dummy.png
 # P = 3
+
 # finaltime = 1e-9
 # timestep = 1e-14
-# meshwidth = 1e-9
+
+# sample_width  = 10e-9
+# sample_height = 10e-9
+# sample_depth  = 1e-9
 # xdim = 16
 # ydim = 16
 # zdim = 3
+
 # demag = 1
 # exchange = 1
 # external = 0
+
 # use_fmm = 0
 # use_gpu = 0
+
 # sim_name = sim_untitled
 # SEED = time(NULL)

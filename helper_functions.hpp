@@ -24,16 +24,19 @@ void traverse_tree_bfs(Box *root, const unsigned int limit);
 int fmm_calc(   const fptype *charge,
                 fptype *potential,
                 const int xdim, const int ydim, const int zdim,
+                const fptype dx, const fptype dy, const fptype dz,
                 const int P,    // multipole series truncation (l = 0...P)
                 const int use_gpu, const int verbosity );
 
 int calc_potential_exact( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
+                        const fptype dx, const fptype dy, const fptype dz,
                         fptype *potential, int use_gpu,
                         const int verbosity);
 
 int calc_potential_exact_gpu( const fptype *charge,
                         const int xdim, const int ydim, const int zdim,
+                        const fptype dx, const fptype dy, const fptype dz,
                         fptype *potential);
 
 int fmm_gpu(        const Box *const n,
@@ -42,6 +45,7 @@ int fmm_gpu(        const Box *const n,
                     const unsigned int limit,
                     const int P,    // multipole series truncation (l = 0...P)
                     const int xdim, const int ydim, const int zdim,
+                    const fptype dx, const fptype dy, const fptype dz,
                     const int zc,   // charge layer
                     const int use_gpu,
                     const int verbosity

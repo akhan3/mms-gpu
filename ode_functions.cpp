@@ -19,9 +19,11 @@ Vector3 LLG_Mprime( const Vector3 &M,
 
 
 int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
-                const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                const int xdim, const int ydim, const int zdim,
+                const fptype dx, const fptype dy, const fptype dz,
+                const int P,
                 const fptype mu_0, const fptype Ms, const fptype Aexch,
-                const int demag, const int exchange, const int external, const int use_fmm, const int P,
+                const int demag, const int exchange, const int external, const int use_fmm,
                 const int use_gpu, const int verbosity )
 {
     int status = 0;
@@ -36,21 +38,21 @@ int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
 
     if(demag) {
         // magnetic volume charge density
-        divergence_3d(M, xdim, ydim, zdim, charge);
+        divergence_3d(M, xdim, ydim, zdim, dx, dy, dz, charge);
 
         // calculate potential from charge
         if(use_fmm)
-            status |= fmm_calc(charge, potential, xdim, ydim, zdim, P, use_gpu, verbosity);
+            status |= fmm_calc(charge, potential, xdim, ydim, zdim, dx, dy, dz, P, use_gpu, verbosity);
         else
-            status |= calc_potential_exact(charge, xdim, ydim, zdim, potential, use_gpu, verbosity); // Exact O(N^2) calculation
+            status |= calc_potential_exact(charge, xdim, ydim, zdim, dx, dy, dz, potential, use_gpu, verbosity); // Exact O(N^2) calculation
 
         // magnetostatic field from potential = H_demag
-        gradient_3d(potential, xdim, ydim, zdim, 1/(4.0*M_PI), H);
+        gradient_3d(potential, xdim, ydim, zdim, dx, dy, dz, 1/(4.0*M_PI), H);
     }
 
     if(exchange) {
         // add exchange field from magnetization = H_exch
-        add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, meshwidth, H);
+        add_exchange_field(M, Ms, Aexch, mu_0, xdim, ydim, zdim, dx, dy, dz, H);
     }
 
     if(external) {
@@ -74,9 +76,11 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
                 const byte *material, const Vector3 *M, Vector3 *M2,
                 Vector3 *H, Vector3 *slope, Vector3 *this_slope,
                 fptype *charge, fptype *potential,
-                const int xdim, const int ydim, const int zdim, const fptype meshwidth,
+                const int xdim, const int ydim, const int zdim,
+                const fptype dx, const fptype dy, const fptype dz,
+                const int P,
                 const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
-                const int demag, const int exchange, const int external, const int use_fmm, const int P,
+                const int demag, const int exchange, const int external, const int use_fmm,
                 const int normalize,
                 const int use_gpu,
                 const int verbosity)
@@ -101,7 +105,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
         }
     }
 // k2 @ t1 + dt/2
-    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);
+    Hfield(M2, H, charge, potential, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -113,7 +117,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
         }
     }
 // k3 @ t1 + dt/2
-    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);
+    Hfield(M2, H, charge, potential, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -125,7 +129,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
         }
     }
 // k4 @ t1 + dt
-    Hfield(M2, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);
+    Hfield(M2, H, charge, potential, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -152,7 +156,9 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
 // =============================================
 int time_marching(  byte *material, Vector3 *M, // initial state. This will be overwritten in each time step
                     const fptype finaltime, const fptype timestep,
-                    const int xdim, const int ydim, const int zdim, const fptype meshwidth, const int P,
+                    const int xdim, const int ydim, const int zdim,
+                    const fptype dx, const fptype dy, const fptype dz,
+                    const int P,
                     const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                     const int demag, const int exchange, const int external, const int use_fmm,
                     const int use_gpu, const char *sim_name, const int verbosity )
@@ -220,7 +226,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 // Time-marching loop
 // ======================================
-    status |= Hfield(M, H, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);
+    status |= Hfield(M, H, charge, potential, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
     while(t <= finaltime)
     {
     // energies before
@@ -230,7 +236,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 E += M[i].dot(H[i]);
             }
         }
-        E *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth) / 1.6e-19;
+        E *= -0.5*mu_0 * (dx*dy*dz) / 1.6e-19;
 
     // RK4 step
         #ifdef _OPENMP
@@ -244,8 +250,10 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                             material, M, M2,
                             H3, slope, this_slope,
                             charge, potential,
-                            xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, alfa, gamma,
-                            demag, exchange, external, use_fmm, P,
+                            xdim, ydim, zdim,
+                            dx, dy, dz,
+                            P, mu_0, Ms, Aexch, alfa, gamma,
+                            demag, exchange, external, use_fmm,
                             normalize,
                             use_gpu, verbosity );
         if(status) return EXIT_FAILURE;
@@ -255,7 +263,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             printf("RK4: took %f seconds\n", deltatime);
 
     // energies and torque after
-        status |= Hfield(M2, H2, charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);
+        status |= Hfield(M2, H2, charge, potential, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
         fptype E2 = 0;
         fptype torque = 0;
         for(int i = 0; i < xyzdim; i++) {
@@ -265,7 +273,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 torque = (torque > this_torque) ? torque : this_torque;
             }
         }
-        E2 *= -0.5*mu_0 * (meshwidth*meshwidth*meshwidth) / 1.6e-19;
+        E2 *= -0.5*mu_0 * (dx*dy*dz) / 1.6e-19;
         torque *= (1/Ms/Ms);
         // printf("dt=%g, E=%f , E2=%f\n", dt, E, E2);
 
@@ -331,7 +339,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 
         fflush(NULL);
-        // if(tindex >= 100) break;
+        // if(tindex >= 10) break;
     } // time marching while loop
 
 // closing

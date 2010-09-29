@@ -31,10 +31,12 @@ int main(int argc, char **argv)
     unsigned int P = 3;
     fptype finaltime = 1e-9;
     fptype timestep = 1e-14;
-    fptype meshwidth = 1e-9;
+    fptype sample_width  = 10e-9;
+    fptype sample_height = 10e-9;
+    fptype sample_depth  = 1e-9;
     unsigned int xdim = 16;
     unsigned int ydim = 16;
-    unsigned int zdim = 1;
+    unsigned int zdim = 3;
     int demag = true;
     int exchange = true;
     int external = false;
@@ -49,32 +51,21 @@ int main(int argc, char **argv)
         sscanf(argv[2], "%u", &P);
         assert(P <= 4); // very important
     }
-    if(argc >= 4)
-        sscanf(argv[3], "%f", &finaltime);
-    if(argc >= 5)
-        sscanf(argv[4], "%f", &timestep);
-    if(argc >= 6)
-        sscanf(argv[5], "%f", &meshwidth);
-    if(argc >= 7)
-        sscanf(argv[6], "%d", &xdim);
-    if(argc >= 8)
-        sscanf(argv[7], "%d", &ydim);
-    if(argc >= 9)
-        sscanf(argv[8], "%d", &zdim);
-    if(argc >= 10)
-        sscanf(argv[9], "%d", &demag);
-    if(argc >= 11)
-        sscanf(argv[10], "%d", &exchange);
-    if(argc >= 12)
-        sscanf(argv[11], "%d", &external);
-    if(argc >= 13)
-        sscanf(argv[12], "%d", &use_fmm);
-    if(argc >= 14)
-        sscanf(argv[13], "%d", &use_gpu);
-    if(argc >= 15)
-        sscanf(argv[14], "%s", sim_name);
-    if(argc >= 16)
-        sscanf(argv[15], "%u", &seed);
+    if(argc >=  4)  sscanf(argv[ 3], "%f", &finaltime);
+    if(argc >=  5)  sscanf(argv[ 4], "%f", &timestep);
+    if(argc >=  6)  sscanf(argv[ 5], "%f", &sample_width);
+    if(argc >=  7)  sscanf(argv[ 6], "%f", &sample_height);
+    if(argc >=  8)  sscanf(argv[ 7], "%f", &sample_depth);
+    if(argc >=  9)  sscanf(argv[ 8], "%d", &xdim);
+    if(argc >= 10)  sscanf(argv[ 9], "%d", &ydim);
+    if(argc >= 11)  sscanf(argv[10], "%d", &zdim);
+    if(argc >= 12)  sscanf(argv[11], "%d", &demag);
+    if(argc >= 13)  sscanf(argv[12], "%d", &exchange);
+    if(argc >= 14)  sscanf(argv[13], "%d", &external);
+    if(argc >= 15)  sscanf(argv[14], "%d", &use_fmm);
+    if(argc >= 16)  sscanf(argv[15], "%d", &use_gpu);
+    if(argc >= 17)  sscanf(argv[16], "%s", sim_name);
+    if(argc >= 18)  sscanf(argv[17], "%u", &seed);
     srand(seed);
 // print command line arguments
 #ifdef _OPENMP
@@ -85,7 +76,9 @@ int main(int argc, char **argv)
         printf("P = %d \n", P);
         printf("finaltime = %g \n", finaltime);
         printf("timestep = %g \n", timestep);
-        printf("meshwidth = %g \n", meshwidth);
+        printf("sample_width  = %g \n", sample_width);
+        printf("sample_height = %g \n", sample_height);
+        printf("sample_depth  = %g \n", sample_depth);
         printf("xdim = %d \n", xdim);
         printf("ydim = %d \n", ydim);
         printf("zdim = %d \n", zdim);
@@ -110,6 +103,9 @@ int main(int argc, char **argv)
     const fptype Aexch = 1.3e-11;        // exchange constant (permalloy)
     const fptype alfa = 0.5;             // damping coefficient (permalloy)
     const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
+    const fptype dx = sample_width  / xdim;
+    const fptype dy = sample_height / ydim;
+    const fptype dz = sample_depth  / zdim;
 
 // Mask configuration for magnetic material
 #ifdef USE_FREEIMAGE
@@ -131,6 +127,8 @@ int main(int argc, char **argv)
 #endif
     // assert(xdim == ydim);
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
+    printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g)\n", sample_width, sample_height, sample_depth);
+    printf("(dx, dy, dz) = (%g, %g, %g)\n", dx, dy, dz);
 
 // generate the initial magnetization distribution
     byte *material = new byte[zdim*ydim*xdim]();  // material matrix
@@ -199,8 +197,8 @@ else if(zdim >= 3)
 // ===================================================================
     status |= time_marching(    material, M,
                                 finaltime, timestep,
-                                xdim, ydim, zdim, meshwidth, P,
-                                mu_0, Ms, Aexch, alfa, gamma,
+                                xdim, ydim, zdim, dx, dy, dz,
+                                P, mu_0, Ms, Aexch, alfa, gamma,
                                 demag, exchange, external, use_fmm,
                                 use_gpu, sim_name, verbosity );
 

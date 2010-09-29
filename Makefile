@@ -16,7 +16,10 @@ DEFINES		:=
 COMMONFLAGS	:=
 LIBRARIES	:=
 
-ifeq ($(use_freeimage),1)
+ifeq ($(use_freeimage),0)
+	LIBRARIES	+=
+	DEFINES 	+=
+else
 	LIBRARIES	+= -lfreeimage
 	DEFINES 	+= -DUSE_FREEIMAGE
 endif
