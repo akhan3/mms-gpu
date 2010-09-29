@@ -9,21 +9,24 @@ export OMP_NUM_THREADS=8
 ./main                      \
                 dummy.png   \
                 3           \
-                10e-9      \
+                10e-9       \
                 1e-13       \
+                            \
                 20e-9       \
-                64         \
-                64          \
+                32          \
+                32          \
                 3           \
+                            \
                 1           \
                 1           \
                 0           \
+                            \
                 0           \
                 1           \
-                sim_cell20nm_dots_16x16     \
+                sim_square_32x32_20nm     \
                 1985        \
 
-#| tee -a log
+#| tee -a log.dat
 
 exit_status=$?
 echo "program exit staus = $exit_status"

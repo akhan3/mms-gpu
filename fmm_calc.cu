@@ -304,38 +304,44 @@ int fmm_calc(   const fptype *charge,
 
     timeval time1, time2;
     double deltatime;
-    status |= gettimeofday(&time1, NULL);
 
-// allocate memory for the Tree and its associated BFS Queue
-    int total_boxes = (4*xdim*ydim - 1) / 3;
-    printf("sizeof(Box) = %lu\n", sizeof(Box));
-    printf("total Boxes in the tree = %d\n", total_boxes);
-    printf("memory required for the tree = %lu Bytes\n", total_boxes * sizeof(Box));
-    printf("memory required for the tree = %.0f MB\n", ceil(total_boxes*sizeof(Box)/1024.0/1024.0));
-    Box *tree = (Box*)malloc(total_boxes * sizeof(Box));
-    int len = xdim * ydim;
-    // void **contents_ = new void*[len]();
-    void **queue_mem = (void**)malloc(len * sizeof(void*));
-    if(tree == NULL || queue_mem == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return EXIT_FAILURE;
+    static Box* tree = NULL;
+    static Box* root = NULL;
+
+    if(first_time) {
+        status |= gettimeofday(&time1, NULL);
+    // allocate memory for the Tree and its associated BFS Queue
+        int total_boxes = (4*xdim*ydim - 1) / 3;
+        if(verbosity >= 15) {
+            printf("sizeof(Box) = %lu\n", sizeof(Box));
+            printf("total Boxes in the tree = %d\n", total_boxes);
+            printf("memory required for the tree = %lu Bytes\n", total_boxes * sizeof(Box));
+            printf("memory required for the tree = %.0f MB\n", ceil(total_boxes*sizeof(Box)/1024.0/1024.0));
+        }
+        tree = (Box*)malloc(total_boxes * sizeof(Box));
+        int len = xdim * ydim;
+        // void **contents_ = new void*[len]();
+        void **queue_mem = (void**)malloc(len * sizeof(void*));
+        if(tree == NULL || queue_mem == NULL) {
+            fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+            return EXIT_FAILURE;
+        }
+
+    // generate the tree
+        tree[0] = Box(0, 0, logN);
+        root = &tree[0];
+        // Box *root = new Box(0, 0, logN);
+        // root->create_tree_recurse(logN);
+        root->create_tree_bfs(logN, queue_mem);
+        root->find_neighbors_recurse(root, logN);
+        free(queue_mem);
+
+        status |= gettimeofday(&time2, NULL);
+        deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+        if(verbosity >= 15)
+            printf("Tree: took %f seconds\n", deltatime);
+        fflush(NULL);
     }
-
-// generate the tree
-    tree[0] = Box(0, 0, logN);
-    Box *root = &tree[0];
-    // Box *root = new Box(0, 0, logN);
-    // root->create_tree_recurse(logN);
-    root->create_tree_bfs(logN, queue_mem);
-    root->find_neighbors_recurse(root, logN);
-    free(queue_mem);
-
-    status |= gettimeofday(&time2, NULL);
-    deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    if(verbosity >= 15)
-        printf("Tree: took %f seconds\n", deltatime);
-    fflush(NULL);
-
 
     // timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
@@ -344,7 +350,8 @@ int fmm_calc(   const fptype *charge,
     static fptype *potential_pinned = NULL;
     static fptype *potential_gmem = NULL;
     if(first_time) {
-        printf("memory required for potential array = %.0f MB\n", ceil(zdim*ydim*xdim*sizeof(fptype)/1024.0/1024.0));
+        if(verbosity >= 15)
+            printf("memory required for potential array = %.0f MB\n", ceil(zdim*ydim*xdim*sizeof(fptype)/1024.0/1024.0));
         cudaHostAlloc((void **)&potential_pinned, zdim*ydim*xdim * sizeof(fptype), cudaHostAllocMapped);
         checkCUDAError("cudaHostAllocMapped");
         // Get the device pointers to the mapped memory
@@ -390,7 +397,7 @@ int fmm_calc(   const fptype *charge,
 // closing
     // status |= fclose(paniclog);
     // delete root;
-    free(tree);
+    // free(tree);
     first_time = 0;
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }

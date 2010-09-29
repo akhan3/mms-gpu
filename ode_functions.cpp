@@ -163,7 +163,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                     const int xdim, const int ydim, const int zdim, const fptype meshwidth, const int P,
                     const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                     const int demag, const int exchange, const int external, const int use_fmm,
-                    const int use_gpu, const int verbosity )
+                    const int use_gpu, const char *sim_name, const int verbosity )
 {
     int status = 0;
     const int xyzdim = zdim*ydim*xdim;
@@ -182,16 +182,26 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         return EXIT_FAILURE;
     }
 
+    char filename[1000];
+
 // open file for logging runtime statistics
-    char filename[] = "dynamics.dat";
+    sprintf(filename, "%s/%s", sim_name, "dynamics.dat");
     FILE *fh = fopen(filename, "w");
     if(fh == NULL) {
         printf("FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
 // open file for logging time evolution of M
-    FILE *fhM = fopen("Mdynamics.dat", "w");
+    sprintf(filename, "%s/%s", sim_name, "Mdynamics.dat");
+    FILE *fhM = fopen(filename, "w");
     if(fhM == NULL) {
+        printf("FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+// open file for logging panics
+    sprintf(filename, "%s/%s", sim_name, "panic.dat");
+    FILE *fhp = fopen(filename, "w");
+    if(fhp == NULL) {
         printf("FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
@@ -277,6 +287,8 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         if(E2 > E) { // reject and invalidate this step
             dt = dt / 2.5; // reduce the stepsize
             printf("PANIC!! energy is increasing, so halving the step\n");
+            fprintf(fhp, "%d, %g, %g, %g, %g PANIC!! energy is increasing, so halving the step\n",
+                        tindex, t, dt, E2, torque);
             // continue;
         }
         else { // accept the step
@@ -330,7 +342,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 
         fflush(NULL);
-        if(tindex >= 10) break;
+        // if(tindex >= 10) break;
     } // time marching while loop
 
 // closing

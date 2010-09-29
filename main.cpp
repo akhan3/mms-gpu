@@ -6,6 +6,7 @@
 #include <cmath>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include "Box.hpp"
 #include "Cmpx.hpp"
 #include "Vector3.hpp"
@@ -20,9 +21,10 @@
 int main(int argc, char **argv)
 {
     int status = 0;
+    const int verbosity = 4;
+
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
-    const int verbosity = 10;
 
 // intial command line arguments
     char filename_arg[1000] = "verysmall_16x16.png";
@@ -45,7 +47,7 @@ int main(int argc, char **argv)
         sscanf(argv[1], "%s", filename_arg);
     if(argc >= 3) {
         sscanf(argv[2], "%u", &P);
-        assert(P <= 4);
+        assert(P <= 4); // very important
     }
     if(argc >= 4)
         sscanf(argv[3], "%f", &finaltime);
@@ -78,21 +80,28 @@ int main(int argc, char **argv)
 #ifdef _OPENMP
     printf("Compiled with OpenMP and running with %s threads.\n", getenv("OMP_NUM_THREADS"));
 #endif
-    // printf("imagefile = %s \n", filename_arg);
-    // printf("P = %d \n", P);
-    // printf("finaltime = %g \n", finaltime);
-    // printf("timestep = %g \n", timestep);
-    // printf("meshwidth = %g \n", meshwidth);
-    // printf("xdim = %d \n", xdim);
-    // printf("ydim = %d \n", ydim);
-    // printf("zdim = %d \n", zdim);
-    // printf("demag = %d \n", demag);
-    // printf("exchange = %d \n", exchange);
-    // printf("external = %d \n", external);
-    // printf("use_fmm = %d \n", use_fmm);
-    // printf("use_gpu = %d \n", use_gpu);
-    // printf("sim_name = %s \n", sim_name);
-    // printf("SEED = %d \n", seed);
+    if(verbosity >= 2) {
+        printf("imagefile = %s \n", filename_arg);
+        printf("P = %d \n", P);
+        printf("finaltime = %g \n", finaltime);
+        printf("timestep = %g \n", timestep);
+        printf("meshwidth = %g \n", meshwidth);
+        printf("xdim = %d \n", xdim);
+        printf("ydim = %d \n", ydim);
+        printf("zdim = %d \n", zdim);
+        printf("demag = %d \n", demag);
+        printf("exchange = %d \n", exchange);
+        printf("external = %d \n", external);
+        printf("use_fmm = %d \n", use_fmm);
+        printf("use_gpu = %d \n", use_gpu);
+        printf("sim_name = %s \n", sim_name);
+        printf("SEED = %d \n", seed);
+    }
+
+// create directory to hold results
+    mkdir(sim_name, 0755);
+    char filename[1000];
+    // if(status) return EXIT_FAILURE;
 
 // Material parameters
 // ================================================
@@ -105,7 +114,6 @@ int main(int argc, char **argv)
 // Mask configuration for magnetic material
 #ifdef USE_FREEIMAGE
     BYTE *mask = NULL; // mask matrix
-    char filename[1000];
     sprintf(filename, "%s", filename_arg);
 // read the mask from file
     load_mask(filename, &mask, &xdim, &ydim);
@@ -140,9 +148,9 @@ if(zdim == 1)
             for(unsigned int x = 0; x < xdim; x++) {
                 if(!mask[y*xdim + x])
                 {
-                    fptype theta = frand_atob(0, 180) * M_PI/180;
+                    // fptype theta = frand_atob(0, 180) * M_PI/180;
                     fptype phi   = frand_atob(0, 360) * M_PI/180;
-                    // fptype theta = M_PI/2;
+                    fptype theta = M_PI/2;
                     // fptype phi   = 0;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                     material[z*ydim*xdim + y*xdim + x] = 1;
@@ -157,73 +165,49 @@ else if(zdim >= 3)
                 if(!mask[y*xdim + x])
                 {
                     // fptype theta = frand_atob(0, 180) * M_PI/180;
-                    // fptype phi   = frand_atob(0, 360) * M_PI/180;
+                    fptype phi   = frand_atob(0, 360) * M_PI/180;
                     fptype theta = M_PI/2;
-                    fptype phi   = 0;
+                    // fptype phi   = 0;
                     M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
                     material[z*ydim*xdim + y*xdim + x] = 1;
                 }
             }
         }
-        fptype theta = 0;
-        fptype phi   = frand_atob(0, 360) * M_PI/180;
-        M[z*ydim*xdim + ydim/2*xdim + xdim/2] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+        // fptype theta = 0;
+        // fptype phi   = frand_atob(0, 360) * M_PI/180;
+        // M[z*ydim*xdim + ydim/2*xdim + xdim/2] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
     }
 
     delete []mask;
 
 // write M field to file
-    // status |= save_vector3d(M, zdim, ydim, xdim, "M.dat", verbosity);
-    // if(status) return EXIT_FAILURE;
+    sprintf(filename, "%s/%s", sim_name, "M.dat");
+    status |= save_vector3d(M, zdim, ydim, xdim, filename, verbosity);
+    if(status) return EXIT_FAILURE;
 
-// // write material field to file
-    // fptype *m = new fptype[xdim*ydim];
-    // int z = 1;
-    // for(unsigned int y = 0; y < ydim; y++)
-        // for(unsigned int x = 0; x < xdim; x++)
-            // m[y*xdim + x] = (fptype)material[z*ydim*xdim + y*xdim + x];
-    // status |= matrix2file(m, ydim, xdim, "material.dat", 100);
-    // if(status) return EXIT_FAILURE;
-    // delete []m;
-    // if(1) return EXIT_FAILURE;
+// write material field to file
+    fptype *m = new fptype[xdim*ydim];
+    int z = 1;
+    for(unsigned int y = 0; y < ydim; y++)
+        for(unsigned int x = 0; x < xdim; x++)
+            m[y*xdim + x] = (fptype)material[z*ydim*xdim + y*xdim + x];
+    sprintf(filename, "%s/%s", sim_name, "material.dat");
+    status |= matrix2file(m, ydim, xdim, filename, verbosity);
+    if(status) return EXIT_FAILURE;
+    delete []m;
 
 // magnetization dynamics
 // ===================================================================
-    // status |= time_marching(    material, M,
-                                // finaltime, timestep,
-                                // xdim, ydim, zdim, meshwidth, P,
-                                // mu_0, Ms, Aexch, alfa, gamma,
-                                // demag, exchange, external, use_fmm,
-                                // use_gpu, verbosity );
-
-    const int xyzdim = zdim*ydim*xdim;
-    Vector3 *H_fmm      = new Vector3[xyzdim]();
-    Vector3 *H_exact    = new Vector3[xyzdim]();
-    fptype *charge      = new fptype[xyzdim]();
-    fptype *potential   = new fptype[xyzdim]();
-    if(H_fmm == NULL && H_exact == NULL && charge == NULL && potential == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return EXIT_FAILURE;
-    }
-
-// call the potential function
-    status |= Hfield(M, H_fmm,   charge, potential, xdim, ydim, zdim, meshwidth, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, P, use_gpu, verbosity);    fflush(NULL);
-    if(status) return EXIT_FAILURE;
-
-    char filename[200];
-    sprintf(filename, "H_%s_%s.dat", use_fmm?"fmm":"exact", use_gpu?"gpu":"cpu");
-    status |= save_vector3d(H_fmm, zdim, ydim, xdim, filename, verbosity);
-    fflush(NULL);
-    if(status) return EXIT_FAILURE;
-
+    status |= time_marching(    material, M,
+                                finaltime, timestep,
+                                xdim, ydim, zdim, meshwidth, P,
+                                mu_0, Ms, Aexch, alfa, gamma,
+                                demag, exchange, external, use_fmm,
+                                use_gpu, sim_name, verbosity );
 
 // closing
     delete []M;
     delete []material;
-    delete []charge;
-    delete []potential;
-    delete []H_fmm;
-    delete []H_exact;
 
     printf("SEED = %d\n", seed);
     // printf("%s\n", status ? "failed to complete" : "successfuly completed");
