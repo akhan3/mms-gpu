@@ -103,7 +103,7 @@ int fmm_gpu(        const Box *const n_ptr,
 // setup device
     if(first_time) {
         // select device to use
-        // cudaSetDevice(1);
+        cudaSetDevice(1); // device-0 is tied to display output
 
         int currentDevice;
         cudaGetDevice(&currentDevice);

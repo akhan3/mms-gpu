@@ -106,6 +106,9 @@ int main(int argc, char **argv)
     const fptype dx = sample_width  / xdim;
     const fptype dy = sample_height / ydim;
     const fptype dz = sample_depth  / zdim;
+    assert(dx == dy);
+    assert(dy == dz);
+    assert(dx <= 2.5e-9);
 
 // Mask configuration for magnetic material
 #ifdef USE_FREEIMAGE

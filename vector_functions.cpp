@@ -68,14 +68,36 @@ void add_exchange_field(const Vector3 *M,
         #endif
         for(int y = 0; y < ydim; y++)
             for(int x = 0; x < xdim; x++) {
-                Vector3 x2 = (x != xdim-1) ? M[(z  )*ydim*xdim + (y  )*xdim + (x+1)] : Vector3(0,0,0);
-                Vector3 x0 = (x != 0     ) ? M[(z  )*ydim*xdim + (y  )*xdim + (x-1)] : Vector3(0,0,0);
-                Vector3 y2 = (y != ydim-1) ? M[(z  )*ydim*xdim + (y+1)*xdim + (x  )] : Vector3(0,0,0);
-                Vector3 y0 = (y != 0     ) ? M[(z  )*ydim*xdim + (y-1)*xdim + (x  )] : Vector3(0,0,0);
-                Vector3 z2 = (z != zdim-1) ? M[(z+1)*ydim*xdim + (y  )*xdim + (x  )] : Vector3(0,0,0);
-                Vector3 z0 = (z != 0     ) ? M[(z-1)*ydim*xdim + (y  )*xdim + (x  )] : Vector3(0,0,0);
-                H[z*ydim*xdim + y*xdim + x] += constant_multiple * (1/(dx*dx)*(x2+x0) + 1/(dy*dy)*(y2+y0) + 1/(dz*dz)*(z2+z0));
-                // H[z*ydim*xdim + y*xdim + x] = H[z*ydim*xdim + y*xdim + x] + constant_multiple * (x2 + x0 + y2 + y0 + z2 + z0);
-                // printf("Hexch_normalized = "); (1/(constant_multiple*Ms) * H[z*ydim*xdim + y*xdim + x]).print(stdout);
+                fptype L_Mx = ( ((x != xdim-1) ? M[(z  )*ydim*xdim + (y  )*xdim + (x+1)].x : 0)
+                               +((x != 0     ) ? M[(z  )*ydim*xdim + (y  )*xdim + (x-1)].x : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].x    ) ) / (dx*dx)
+                             +( ((y != ydim-1) ? M[(z  )*ydim*xdim + (y+1)*xdim + (x  )].x : 0)
+                               +((y != 0     ) ? M[(z  )*ydim*xdim + (y-1)*xdim + (x  )].x : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].x    ) ) / (dy*dy)
+                             +( ((z != zdim-1) ? M[(z+1)*ydim*xdim + (y  )*xdim + (x  )].x : 0)
+                               +((z != 0     ) ? M[(z-1)*ydim*xdim + (y  )*xdim + (x  )].x : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].x    ) ) / (dz*dz);
+
+                fptype L_My = ( ((x != xdim-1) ? M[(z  )*ydim*xdim + (y  )*xdim + (x+1)].y : 0)
+                               +((x != 0     ) ? M[(z  )*ydim*xdim + (y  )*xdim + (x-1)].y : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].y    ) ) / (dx*dx)
+                             +( ((y != ydim-1) ? M[(z  )*ydim*xdim + (y+1)*xdim + (x  )].y : 0)
+                               +((y != 0     ) ? M[(z  )*ydim*xdim + (y-1)*xdim + (x  )].y : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].y    ) ) / (dy*dy)
+                             +( ((z != zdim-1) ? M[(z+1)*ydim*xdim + (y  )*xdim + (x  )].y : 0)
+                               +((z != 0     ) ? M[(z-1)*ydim*xdim + (y  )*xdim + (x  )].y : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].y    ) ) / (dz*dz);
+
+                fptype L_Mz = ( ((x != xdim-1) ? M[(z  )*ydim*xdim + (y  )*xdim + (x+1)].z : 0)
+                               +((x != 0     ) ? M[(z  )*ydim*xdim + (y  )*xdim + (x-1)].z : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].z    ) ) / (dx*dx)
+                             +( ((y != ydim-1) ? M[(z  )*ydim*xdim + (y+1)*xdim + (x  )].z : 0)
+                               +((y != 0     ) ? M[(z  )*ydim*xdim + (y-1)*xdim + (x  )].z : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].z    ) ) / (dy*dy)
+                             +( ((z != zdim-1) ? M[(z+1)*ydim*xdim + (y  )*xdim + (x  )].z : 0)
+                               +((z != 0     ) ? M[(z-1)*ydim*xdim + (y  )*xdim + (x  )].z : 0)
+                               -(            2 * M[(z  )*ydim*xdim + (y  )*xdim + (x  )].z    ) ) / (dz*dz);
+
+                H[z*ydim*xdim + y*xdim + x] +=  constant_multiple * Vector3(L_Mx, L_My, L_Mz);
             }
 }

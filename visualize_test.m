@@ -17,12 +17,14 @@ function animate_M(folder_name)
     subplot(221);
         plot(time, E, '.-');
         %axis tight;
+        grid on;
         xlabel('time'); title('Energy (eV)');
 
     subplot(222);
         plot(time, Mx, time, My, time, Mz, time, M);
         %axis tight;
         ylim([-1 1]);
+        grid on;
         legend('Mx', 'My', 'Mz', 'M');
         xlabel('time'); title('Magnetization (A/m)');
 
@@ -32,12 +34,14 @@ function animate_M(folder_name)
         %plot(time, torque, '-');
         semilogy(time, torque, '.-');
         %axis tight;
+        grid on;
         xlabel('time'); title('Normalized maximum Torque M \times H / Ms^2');
 
     subplot(224);
         %plot(time, dt, '-');
         semilogy(time, dt, '.-');
         %axis tight;
+        grid on;
         xlabel('time'); title('Time step');
 
 end % function

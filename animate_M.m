@@ -19,7 +19,10 @@ function animate_M(folder_name)
         xdim = 32;
         ydim = 32;
         zdim = 3;
-        zslice = 2;
+        if(zdim == 3)       zslice = 2;
+        elseif(zdim == 4)   zslice = 3;
+        elseif(zdim == 5)   zslice = 3;
+        end
         x = 0:xdim-1;
         y = 0:ydim-1;
         z = zslice:zslice;

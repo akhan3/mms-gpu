@@ -212,7 +212,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // const fptype tolerance_hyst = .5 * tolerance;  // in radians
     // const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
     const int normalize = true;
-    const int adjust_step = true;
+    const int adjust_step = true; // default to true
 // starting point
     int tindex = 0;
     fptype t = 0;
@@ -339,7 +339,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
 
         fflush(NULL);
-        // if(tindex >= 10) break;
+        // if(tindex >= 100) break;
     } // time marching while loop
 
 // closing
