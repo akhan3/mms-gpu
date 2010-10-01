@@ -212,7 +212,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // const fptype tolerance_hyst = .5 * tolerance;  // in radians
     // const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
     const int normalize = true;
-    const int adjust_step = true; // default to true
+    const int adjust_step = false; // use with extreme caution!
 // starting point
     int tindex = 0;
     fptype t = 0;
@@ -278,7 +278,8 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         // printf("dt=%g, E=%f , E2=%f\n", dt, E, E2);
 
     // check energies and adjust stepsize
-        if(E2 > E) { // reject and invalidate this step
+        if(E2-E > .1)
+        { // reject and invalidate this step if energy increases more than 0.1 eV
             dt = dt / 2.5; // reduce the stepsize
             printf("PANIC!! energy is increasing, so halving the step.\n");
             fprintf(fhp, "PANIC!! energy is increasing, so halving the step. %d, %g, %g, %g, %g \n",
@@ -290,7 +291,8 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 break;
             }
         }
-        else { // accept the step
+        else
+        { // accept the step
             consecutive_error_count = 0;
             if(adjust_step)
                 dt = 1e-13 / torque/2;
@@ -331,7 +333,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             }
 
         // check stopping torque criteria
-            if(torque < 1e-4) {
+            if(torque < 1e-3) {
                 printf("Torque is too low. Breaking simulation...\n");
                 break;
             }

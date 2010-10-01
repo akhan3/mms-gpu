@@ -12,7 +12,7 @@ function animate_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    figure;
+    fig = figure; set(fig, 'name', folder_name);
     set(gcf, 'OuterPosition', [0 0 1280 800]);
     subplot(221);
         plot(time, E, '.-');

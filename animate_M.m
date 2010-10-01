@@ -12,21 +12,22 @@ function animate_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
+    xdim = 100;
+    ydim = 100;
+    zdim = 4;
+    if(zdim == 3)       zslice = 2;
+    elseif(zdim == 4)   zslice = 3;
+    elseif(zdim == 5)   zslice = 3;
+    end
+    x = 0:xdim-1;
+    y = 0:ydim-1;
+    z = zslice:zslice;
+    [X,Y,Z] = meshgrid(x,y,z);
+
     for bigindex = 0:0
         animation_skip = 20;
         start_tindex = 5000*bigindex %1
         tdim = length(time);
-        xdim = 32;
-        ydim = 32;
-        zdim = 3;
-        if(zdim == 3)       zslice = 2;
-        elseif(zdim == 4)   zslice = 3;
-        elseif(zdim == 5)   zslice = 3;
-        end
-        x = 0:xdim-1;
-        y = 0:ydim-1;
-        z = zslice:zslice;
-        [X,Y,Z] = meshgrid(x,y,z);
         %start_tindex = 0;
         start_line = ydim*xdim*zdim*(start_tindex)
         required_lines = ydim*xdim*zdim*tdim
@@ -44,7 +45,7 @@ function animate_M(folder_name)
         Mz = shiftdim(M_yxzt(3,:,:,zslice,:), 1);
     clear M_yxzt
 
-    figure;
+    fig = figure; set(fig, 'name', folder_name);
     set(gcf, 'OuterPosition', [0 0 1280 800]);
     subplot(121);
         q1 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);

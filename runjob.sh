@@ -7,19 +7,19 @@ export OMP_NUM_THREADS=8
 #valgrind --leak-check=full \
 
 ./main                      \
-                disc_40x40.png   \
+                dummy_disc_40x40.png   \
                 3           \
                             \
                 10e-9       \
                 1e-13       \
                             \
-                320e-9       \
-                320e-9       \
-                30e-9        \
+                250e-9       \
+                250e-9       \
+                10e-9        \
                             \
-                32          \
-                32          \
-                3           \
+                100          \
+                100          \
+                4           \
                             \
                 1           \
                 1           \
@@ -28,8 +28,9 @@ export OMP_NUM_THREADS=8
                 0           \
                 1           \
                             \
-                sim_square_32x32_10nm     \
+                sim_square_250x10nm_randomIC     \
                 2010        \
+                2       \
 
 #| tee -a log.dat
 
@@ -62,3 +63,4 @@ exit $exit_status
 
 # sim_name = sim_untitled
 # SEED = time(NULL)
+# IC = 0; // 0 = SD, 1 = Vortex, 2 = Random
