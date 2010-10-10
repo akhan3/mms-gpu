@@ -109,12 +109,6 @@ int main(int argc, char **argv)
     const fptype Aexch = 1.3e-11;        // exchange constant (permalloy)
     const fptype alfa = 0.5;             // damping coefficient (permalloy)
     const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
-    const fptype dx = sample_width  / xdim;
-    const fptype dy = sample_height / ydim;
-    const fptype dz = sample_depth  / zdim;
-    assert(dx == dy);
-    assert(dy == dz);
-    assert(dx <= 2.5e-9);
 
 // Mask configuration for magnetic material
 #ifdef USE_FREEIMAGE
@@ -134,10 +128,18 @@ int main(int argc, char **argv)
         for(int x = 1; x < xdim-1; x++)
             mask[y*xdim + x] = 0;   // selected black (material)
 #endif
-    // assert(xdim == ydim);
+
+    const fptype dx = sample_width  / xdim;
+    const fptype dy = sample_height / ydim;
+    const fptype dz = sample_depth  / zdim;
+
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
     printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g)\n", sample_width, sample_height, sample_depth);
     printf("(dx, dy, dz) = (%g, %g, %g)\n", dx, dy, dz);
+
+    // assert(dx == dy);
+    // assert(dy == dz);
+    assert(dx <= 5e-9);
 
 // determine initial condition
     int IC_singledomain = 0;
@@ -200,7 +202,7 @@ int main(int argc, char **argv)
                     // fptype theta = M_PI/2 + frand_atob(-10, 10) * M_PI/180;
                     // fptype phi   = 0 + frand_atob(-90, 90) * M_PI/180;
                     if(IC_singledomain)
-                        phi = 0;
+                        phi = 0 * M_PI/180;
                     else if(IC_random)
                         phi   = frand_atob(0, 360) * M_PI/180;
                     else if(IC_vortex) {

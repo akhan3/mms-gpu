@@ -6,6 +6,7 @@
 
 
 int Hfield (    const Vector3 *M, Vector3 *H, fptype *charge, fptype *potential,
+                const fptype t,
                 const int xdim, const int ydim, const int zdim,
                 const fptype dx, const fptype dy, const fptype dz,
                 const int P,

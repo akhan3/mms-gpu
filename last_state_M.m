@@ -12,12 +12,13 @@ function last_state_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    xdim = 100;
-    ydim = 100;
-    zdim = 4;
+    xdim = 76;
+    ydim = 27;
+    zdim = 3;
     if(zdim == 3)       zslice = 2;
     elseif(zdim == 4)   zslice = 3;
     elseif(zdim == 5)   zslice = 3;
+    elseif(zdim == 6)   zslice = 3;
     end
     x = 0:xdim-1;
     y = 0:ydim-1;
@@ -39,9 +40,38 @@ function last_state_M(folder_name)
         Mz = shiftdim(M_yxzt(3,:,:,zslice,:), 1);
     clear M_yxzt
 
-    %fig = figure; set(fig, 'name', folder_name);
-    fig = figure; set(fig, 'name', [num2str(xdim), 'x', num2str(ydim), 'x', num2str(zdim)]);
+% subsample
+    sf = 1;
+    X = X(1:sf:end, 1:sf:end, 1:sf:end);
+    Y = Y(1:sf:end, 1:sf:end, 1:sf:end);
+    Z = Z(1:sf:end, 1:sf:end, 1:sf:end);
+    Mx = Mx(1:sf:end, 1:sf:end, 1:sf:end, 1);
+    My = My(1:sf:end, 1:sf:end, 1:sf:end, 1);
+    Mz = Mz(1:sf:end, 1:sf:end, 1:sf:end, 1);
+
+    fig = figure; set(fig, 'name', folder_name);
+    %fig = figure; set(fig, 'name', [num2str(xdim), 'x', num2str(ydim), 'x', num2str(zdim)]);
     set(gcf, 'OuterPosition', [0 0 1280 800]);
+    q1 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
+    set(gca, 'visible', 'off');
+    %set(gca, 'visible', 'off');
+    axis tight equal; grid off;
+    xlabel('x'); ylabel('y'); zlabel('z'); qt1 = title('Magnetization (M)');
+    [a,b] = view();
+    view(0,90);
+
+
+    print(gcf, ['M', 'state'], '-depsc');
+    %print(gcf, ['M', 'state'], '-dpdf');
+    return
+
+
+
+
+
+
+
+
     subplot(121);
         q1 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
         axis tight equal; grid off;
@@ -53,7 +83,8 @@ function last_state_M(folder_name)
         q2 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
         axis tight; grid on
         zlim ([zslice-1, zslice+1]);
-        daspect([1 1 .5]);
+        %daspect([1 1 .5]);
+        daspect([1 1 1]);
         xlabel('x'); ylabel('y'); zlabel('z'); qt2 = title('Magnetization (M)');
         view(0,0);
         set(qt1, 'string', ['M(t = ', num2str(time(end)), ') E = ', num2str(E(end)), 'eV']);

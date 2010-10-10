@@ -56,7 +56,7 @@ void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
 
 #ifdef USE_FREEIMAGE
 #include <FreeImage.h>
-int load_mask(const char *filename, BYTE **mask, unsigned *xdim, unsigned *ydim);
+int load_mask(const char *filename, BYTE **mask, int *xdim, int *ydim);
 #endif
 
 

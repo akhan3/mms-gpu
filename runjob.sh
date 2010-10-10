@@ -7,19 +7,19 @@ export OMP_NUM_THREADS=8
 #valgrind --leak-check=full \
 
 ./main                      \
-                dummy_disc_40x40.png   \
+                nanowire3.png   \
                 3           \
                             \
                 10e-9       \
                 1e-13       \
                             \
-                250e-9       \
-                250e-9       \
-                10e-9        \
+                380e-9       \
+                135e-9       \
+                15e-9        \
                             \
-                100          \
-                100          \
-                4           \
+                76          \
+                27          \
+                3           \
                             \
                 1           \
                 1           \
@@ -28,9 +28,9 @@ export OMP_NUM_THREADS=8
                 0           \
                 1           \
                             \
-                sim_square_250x10nm_randomIC     \
+                sim_nanowire3_76x27x3_noHext     \
                 2010        \
-                2       \
+                0       \
 
 #| tee -a log.dat
 

@@ -171,11 +171,11 @@ int matrix2stdout(const fptype* matrix, const int rows, const int cols, const ch
 
 
 #ifdef USE_FREEIMAGE
-int load_mask(const char *filename, BYTE **mask, unsigned *xdim, unsigned *ydim)
+int load_mask(const char *filename, BYTE **mask, int *xdim, int *ydim)
 {
     assert( !strcmp(filename+strlen(filename)-3, "png") || !strcmp(filename+strlen(filename)-3, "PNG") );
     FIBITMAP *myimage = FreeImage_Load(FIF_PNG, filename, PNG_DEFAULT);
-    assert(FreeImage_GetWidth(myimage) == FreeImage_GetHeight(myimage));
+    // assert(FreeImage_GetWidth(myimage) == FreeImage_GetHeight(myimage));
     assert(FreeImage_GetColorType(myimage) != FIC_RGBALPHA);
 
     // std::cout << "type = "       << FreeImage_GetImageType(myimage) << std::endl;

@@ -44,4 +44,6 @@ function animate_M(folder_name)
         grid on;
         xlabel('time'); title('Time step');
 
+    print(gcf, ['dynamics'], '-depsc');
+
 end % function
