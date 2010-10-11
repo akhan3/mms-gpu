@@ -12,8 +12,8 @@ function last_state_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    xdim = 32;
-    ydim = 32;
+    xdim = 76;
+    ydim = 27;
     zdim = 3;
     if(zdim == 3)       zslice = 2;
     elseif(zdim == 4)   zslice = 3;
@@ -49,11 +49,11 @@ function last_state_M(folder_name)
     My = My(1:sf:end, 1:sf:end, 1:sf:end, 1);
     Mz = Mz(1:sf:end, 1:sf:end, 1:sf:end, 1);
 
-    fig = figure; set(fig, 'name', folder_name);
     %fig = figure; set(fig, 'name', [num2str(xdim), 'x', num2str(ydim), 'x', num2str(zdim)]);
-    set(gcf, 'OuterPosition', [0 0 1280 800]);
+    %set(gcf, 'OuterPosition', [0 0 1280 800]);
     q1 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
     set(gca, 'visible', 'off');
+    %set(gca, 'visible', 'off');
     axis tight equal; grid off;
     xlabel('x'); ylabel('y'); zlabel('z'); qt1 = title('Magnetization (M)');
     [a,b] = view();
@@ -61,34 +61,5 @@ function last_state_M(folder_name)
 
 
     print(gcf, ['M', 'state'], '-depsc');
-    %print(gcf, ['M', 'state'], '-dpdf');
-    return
-
-
-
-
-
-
-
-
-    subplot(121);
-        q1 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
-        axis tight equal; grid off;
-        xlabel('x'); ylabel('y'); zlabel('z'); qt1 = title('Magnetization (M)');
-        [a,b] = view();
-        view(0,90);
-
-    subplot(122);
-        q2 = quiver3(X,Y,Z, Mx(:,:,:,1), My(:,:,:,1), Mz(:,:,:,1), .5);
-        axis tight; grid on
-        zlim ([zslice-1, zslice+1]);
-        %daspect([1 1 .5]);
-        daspect([1 1 1]);
-        xlabel('x'); ylabel('y'); zlabel('z'); qt2 = title('Magnetization (M)');
-        view(0,0);
-        set(qt1, 'string', ['M(t = ', num2str(time(end)), ') E = ', num2str(E(end)), 'eV']);
-        set(qt2, 'string', ['M(t = ', num2str(time(end)), ') E = ', num2str(E(end)), 'eV']);
-        %view(3)
-
 
 end % function

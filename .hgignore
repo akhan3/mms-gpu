@@ -2,10 +2,15 @@
 syntax: glob
 obj/*
 bin/*
+data_results*
 *.mat
+*.log
 *.dat
 *.ods
 *.png
+*.gif
+*.eps
+*.pdf
 *.o
 *.out
 log*

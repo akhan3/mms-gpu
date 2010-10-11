@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 
     // assert(dx == dy);
     // assert(dy == dz);
-    assert(dx <= 5e-9);
+    // assert(dx <= 5e-9);
 
 // determine initial condition
     int IC_singledomain = 0;

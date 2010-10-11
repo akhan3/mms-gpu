@@ -12,8 +12,8 @@ function animate_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    xdim = 76;
-    ydim = 27;
+    xdim = 32;
+    ydim = 32;
     zdim = 3;
     if(zdim == 3)       zslice = 2;
     elseif(zdim == 4)   zslice = 3;

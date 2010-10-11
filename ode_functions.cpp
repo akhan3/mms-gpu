@@ -334,7 +334,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             }
 
         // check stopping torque criteria
-            if(torque < 1e-4) {
+            if(torque < 1e-3) {
                 printf("Torque is too low. Breaking simulation...\n");
                 break;
             }
