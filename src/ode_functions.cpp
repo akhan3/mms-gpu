@@ -9,12 +9,12 @@
 
 // global variables
 const double _fixed = 1; // Tesla
-const double _amplitude = 0.5; // Tesla
-const double _f = 10e9; // Hz
+const double _amplitude = 0.3; // Tesla
+const double _f = 25e9; // Hz
 const double _t0 = 0.001e-9; // seconds
 const double _r = 5;
 // barrier
-const bool _barrier = false;
+const bool _barrier = true;
 const double _b_fixed = +0.5; // Tesla
 const double _b_d = 15;
 const double _b_s = 10;
@@ -117,7 +117,7 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
             }
         }
 
-        // apply sinusoidal field in the oscillating regions
+        // apply sinusoidal field in the middle region
         Hext = (1/mu_0) * ((t > _t0) ? _amplitude * sin(2*M_PI*_f*(t-_t0)) : 0) * Vector3(1,0,0);
         #ifdef _OPENMP
         #pragma omp parallel for
@@ -125,10 +125,8 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
         for(int z = 0; z < zdim; z++) {
             for(int y = ydim/2-_r; y < ydim/2+_r; y++) {
                 for(int x = xdim/2-_r; x < xdim/2+_r; x++) {
-                    if (pow(x-xdim/4., 2) + pow(y-ydim/2., 2) <= _r*_r)
+                    if (pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= _r*_r)
                         H[z*ydim*xdim + y*xdim + x] += Hext;
-                    // else if (pow(x-xdim*3./4., 2) + pow(y-ydim/2., 2) <= _r*_r)
-                        // H[z*ydim*xdim + y*xdim + x] += Hext;
                 }
             }
         }
