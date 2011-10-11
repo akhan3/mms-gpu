@@ -6,6 +6,8 @@ bin/*
 *.dat
 *.ods
 *.png
+*.jpg
+*.eps
 *.o
 *.out
 log*

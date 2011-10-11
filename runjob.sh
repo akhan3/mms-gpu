@@ -3,32 +3,40 @@
 # set OpenMP threads
 export OMP_NUM_THREADS=8
 
+
+SIM_NAME="sim_spin_150x150x3_disc_10GHz_constant_demag"
+FIGURE="disc_150x150.png"
+
+mkdir $SIM_NAME
+cp $0 $SIM_NAME/$SIM_NAME.runjob.sh
+cp $FIGURE $SIM_NAME
+
 # launch the simulation
 #valgrind --leak-check=full \
 
 ./main                      \
-                nanowire3.png   \
+                $FIGURE   \
                 3           \
                             \
-                10e-9       \
-                1e-13       \
+                0.5e-9       \
+                2.5e-13       \
                             \
-                380e-9       \
-                135e-9       \
+                750e-9       \
+                750e-9       \
                 15e-9        \
                             \
-                76          \
-                27          \
+                150          \
+                150          \
                 3           \
                             \
-                1           \
-                1           \
                 0           \
+                1           \
+                1           \
                             \
                 0           \
                 1           \
                             \
-                sim_nanowire3_76x27x3_noHext     \
+                $SIM_NAME     \
                 2010        \
                 0       \
 

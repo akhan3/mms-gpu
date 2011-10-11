@@ -129,7 +129,7 @@ int calc_potential_exact_gpu( const fptype *charge,
 // setup device
     if(first_time) {
         // select device to use
-        cudaSetDevice(0); // device-0 is tied to display output
+        cudaSetDevice(1); // device-0 is tied to display output
 
         int currentDevice;
         cudaGetDevice(&currentDevice);

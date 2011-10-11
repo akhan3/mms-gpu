@@ -12,8 +12,8 @@ function animate_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    xdim = 76;
-    ydim = 27;
+    xdim = 100;
+    ydim = 100;
     zdim = 3;
     if(zdim == 3)       zslice = 2;
     elseif(zdim == 4)   zslice = 3;
@@ -90,7 +90,7 @@ function animate_M(folder_name)
         drawnow;
     end
 
-    print(gcf, ['M' num2str(start_tindex)], '-dpdf');
+    %print(gcf, ['M' num2str(start_tindex)], '-dpdf');
     end % bigindex
 
 
