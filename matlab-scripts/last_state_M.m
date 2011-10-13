@@ -12,8 +12,8 @@ function last_state_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    xdim = 100;
-    ydim = 100;
+    xdim = 50;
+    ydim = 50;
     zdim = 3;
     if(zdim == 3)       zslice = 2;
     elseif(zdim == 4)   zslice = 3;

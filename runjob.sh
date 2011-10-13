@@ -1,43 +1,43 @@
 #!/bin/bash
 
 # set OpenMP threads
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS=16
 
 
-SIM_NAME="sim_spin_150x150x3_disc_10GHz_constant_demag"
-FIGURE="disc_150x150.png"
+SIM_NAME="results/sim_spin_50x50x3_testing"
+FIGURE="shapes/disc.png"
 
-mkdir $SIM_NAME
+mkdir -p $SIM_NAME
 cp $0 $SIM_NAME/$SIM_NAME.runjob.sh
 cp $FIGURE $SIM_NAME
 
 # launch the simulation
 #valgrind --leak-check=full \
 
-./main                      \
+src/main                      \
                 $FIGURE   \
                 3           \
                             \
-                0.5e-9       \
-                2.5e-13       \
+                10e-9       \
+                2e-13       \
                             \
-                750e-9       \
-                750e-9       \
+                65e-9       \
+                65e-9       \
                 15e-9        \
                             \
-                150          \
-                150          \
+                13          \
+                13          \
                 3           \
                             \
+                1           \
+                1           \
                 0           \
-                1           \
-                1           \
                             \
                 0           \
-                1           \
+                0           \
                             \
                 $SIM_NAME     \
-                2010        \
+                2011        \
                 0       \
 
 #| tee -a log.dat

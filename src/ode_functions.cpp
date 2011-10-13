@@ -7,15 +7,17 @@
 #include "helper_functions.hpp"
 #include "vector_functions.hpp"
 
+
 // global variables
-const double _fixed = 1; // Tesla
-const double _amplitude = 0.3; // Tesla
-const double _f = 25e9; // Hz
-const double _t0 = 0.001e-9; // seconds
-const double _r = 5;
+const double _fixed = 0; // Tesla
+const double _amplitude = 0.5; // Tesla
+const double _f = 10e9; // Hz
+const double _t0 = 0.1e-9; // seconds
+const double _r = 10;
+const double _Ksto = 1 * 1e-1;
+const Vector3 _S(0,0,1);
 // barrier
-const bool _barrier = true;
-const double _b_fixed = +0.5; // Tesla
+const double _b_fixed = 0; // Tesla
 const double _b_d = 15;
 const double _b_s = 10;
 
@@ -27,6 +29,32 @@ Vector3 LLG_Mprime( const Vector3 &M,
     Vector3 McrossH = M.cross(H);
     Vector3 Mprime = -gamma * McrossH - (alfa * gamma / Ms) * M.cross(McrossH);
     return Mprime;
+}
+
+
+int LLG_STO_Mprime( const Vector3 *M, const Vector3 *H,
+                    Vector3 *this_slope, const byte *material,
+                    const int xdim, const int ydim, const int zdim,
+                    const fptype alfa, const fptype gamma, const fptype Ms )
+{
+    for(int z = 0; z < zdim; z++) {
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for(int y = 0; y < ydim; y++) {
+            for(int x = 0; x < xdim; x++) {
+                int i = z*ydim*xdim + y*xdim + x;
+                if(material[i]) {
+                    this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
+                    // Do STO stuff here
+                    if( pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= _r*_r ) {
+                         this_slope[i] += (-gamma*_Ksto) * M[i].cross(M[i].cross(_S));
+                    }
+                }
+            }
+        }
+    }
+    return EXIT_SUCCESS;
 }
 
 
@@ -95,15 +123,17 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
             // H[i] += Hext;
 
         // apply constant external field
-        Vector3 Hext = _fixed * (1/mu_0) * Vector3(0,0,1); // constant 1 Tesla in +Hz
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for(int i = 0; i < xyzdim; i++)
-            H[i] += Hext;
+        if(_fixed) {
+            Vector3 Hext = _fixed * (1/mu_0) * Vector3(0,0,1); // constant 1 Tesla in +Hz
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for(int i = 0; i < xyzdim; i++)
+                H[i] += Hext;
+        }
 
         // apply constant external field for the barrier
-        if(_barrier) {
+        if(_b_fixed) {
             Vector3 Hext = _b_fixed * (1/mu_0) * Vector3(0,0,1); // constant in +Hz
             #ifdef _OPENMP
             #pragma omp parallel for
@@ -118,18 +148,18 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
         }
 
         // apply sinusoidal field in the middle region
-        Hext = (1/mu_0) * ((t > _t0) ? _amplitude * sin(2*M_PI*_f*(t-_t0)) : 0) * Vector3(1,0,0);
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for(int z = 0; z < zdim; z++) {
-            for(int y = ydim/2-_r; y < ydim/2+_r; y++) {
-                for(int x = xdim/2-_r; x < xdim/2+_r; x++) {
-                    if (pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= _r*_r)
-                        H[z*ydim*xdim + y*xdim + x] += Hext;
-                }
-            }
-        }
+        // Hext = (1/mu_0) * ((t > _t0) ? _amplitude * sin(2*M_PI*_f*(t-_t0)) : 0) * Vector3(1,0,0);
+        // #ifdef _OPENMP
+        // #pragma omp parallel for
+        // #endif
+        // for(int z = 0; z < zdim; z++) {
+            // for(int y = ydim/2-_r; y < ydim/2+_r; y++) {
+                // for(int x = xdim/2-_r; x < xdim/2+_r; x++) {
+                    // if (pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= _r*_r)
+                        // H[z*ydim*xdim + y*xdim + x] += Hext;
+                // }
+            // }
+        // }
     }
 
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
@@ -159,52 +189,65 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
     #endif
     for(int i = 0; i < xyzdim; i++)
         slope[i] = Vector3(0,0,0);
+// // k1 @ t1
+    // // Hfield has already been calculated, so save time
+    // #ifdef _OPENMP
+    // #pragma omp parallel for
+    // #endif
+    // for(int i = 0; i < xyzdim; i++) {
+        // if(material[i]) {
+            // this_slope[i] = LLG_STO_Mprime(i, M[i], H[i], alfa, gamma, Ms);
+            // M2[i] = M[i] + (this_slope[i] * 0.5 * dt);
+            // slope[i] += this_slope[i];
+        // }
+    // }
 // k1 @ t1
     // Hfield has already been calculated, so save time
+    LLG_STO_Mprime(M, H, this_slope, material, xdim, ydim, zdim, alfa, gamma, Ms);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for(int i = 0; i < xyzdim; i++) {
         if(material[i]) {
-            this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
             M2[i] = M[i] + (this_slope[i] * 0.5 * dt);
             slope[i] += this_slope[i];
         }
     }
 // k2 @ t1 + dt/2
     Hfield(M2, H, Hdemag_last, charge, potential, t, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
+    LLG_STO_Mprime(M2, H, this_slope, material, xdim, ydim, zdim, alfa, gamma, Ms);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for(int i = 0; i < xyzdim; i++) {
         if(material[i]) {
-            this_slope[i] = LLG_Mprime(M2[i], H[i], alfa, gamma, Ms);
             M2[i] = M[i] + (this_slope[i] * 0.5 * dt);
             slope[i] += 2 * this_slope[i];
         }
     }
 // k3 @ t1 + dt/2
     Hfield(M2, H, Hdemag_last, charge, potential, t, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
+    LLG_STO_Mprime(M2, H, this_slope, material, xdim, ydim, zdim, alfa, gamma, Ms);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for(int i = 0; i < xyzdim; i++) {
         if(material[i]) {
-            this_slope[i] = LLG_Mprime(M2[i], H[i], alfa, gamma, Ms);
             M2[i] = M[i] + (this_slope[i] * dt);
             slope[i] += 2 * this_slope[i];
         }
     }
 // k4 @ t1 + dt
     Hfield(M2, H, Hdemag_last, charge, potential, t, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
+    LLG_STO_Mprime(M2, H, this_slope, material, xdim, ydim, zdim, alfa, gamma, Ms);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for(int i = 0; i < xyzdim; i++) {
         if(material[i]) {
-            this_slope[i] = LLG_Mprime(M2[i], H[i], alfa, gamma, Ms);
-            slope[i] += this_slope[i];
-            M2[i] = M[i] + dt * slope[i] * (1/6.0);
+            // slope[i] += this_slope[i];
+            // M2[i] = M[i] + dt * slope[i] * (1/6.0);
+            M2[i] = M[i] + dt * (slope[i]+this_slope[i]) * (1/6.0);
             if(normalize)
                 M2[i] = M2[i] * (Ms / M2[i].magnitude());  // re-normalize with Ms
         }
@@ -348,9 +391,9 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // check energies and adjust stepsize
         if(E2-E > .1)
         { // reject and invalidate this step if energy increases more than 0.1 eV
-            dt = dt / 2.5; // reduce the stepsize
-            printf("PANIC!! energy is increasing, so halving the step.\n");
-            fprintf(fhp, "PANIC!! energy is increasing, so halving the step. %d, %g, %g, %g, %g \n",
+            dt = dt / 1.1; // reduce the stepsize
+            printf("PANIC!! energy is increasing, so reducing the step.\n");
+            fprintf(fhp, "PANIC!! energy is increasing, so reducing the step. %d, %g, %g, %g, %g \n",
                         tindex, t, dt, E2, torque);
             consecutive_error_count++;
             if(consecutive_error_count > 50) {
@@ -394,13 +437,10 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 Mmag_avg /= count;
                 M_avg = M_avg * (1.0 / count);
 
-// display constant external field
-const double _Hext = (1/mu_0) * ((t > _t0) ? _amplitude * sin(2*M_PI*_f*(t-_t0)) : 0);
-
-                fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e, %g \n",
-                        tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque, _Hext);
-                fprintf(stdout, "%d, %g, %g, %g, %g, %g, %g, %g, %e, %g \n",
-                        tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque, _Hext);
+                fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
+                        tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
+                fprintf(stdout, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
+                        tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
                 // display sinusoid
                 // Vector3 Hmid = H[1*ydim*xdim + ydim/2*xdim + xdim/2];
                 // Vector3 Hcor = H[1*ydim*xdim + 2*xdim + 2];

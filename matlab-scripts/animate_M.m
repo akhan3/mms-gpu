@@ -12,8 +12,8 @@ function animate_M(folder_name)
         torque  = dynamics(:,9);
     clear dynamics
 
-    xdim = 100;
-    ydim = 100;
+    xdim = 50;
+    ydim = 50;
     zdim = 3;
     if(zdim == 3)       zslice = 2;
     elseif(zdim == 4)   zslice = 3;
@@ -37,7 +37,9 @@ function animate_M(folder_name)
     Mfile = [folder_name, '/Mdynamics.dat'];
     %system(['tail -n +' num2str(start_line) ' Mdynamics.dat | head -n' num2str(required_lines) ' > Mdynamics1.dat']);
     %M_yxzt = load('Mdynamics1.dat');
+    disp 'loading file...'; tic
     M_yxzt = load(Mfile);
+    disp 'file loaded!'; toc
         M_yxzt = M_yxzt(1:required_lines,:);
         M_yxzt = reshape(M_yxzt', 3,ydim,xdim,zdim, tdim);
         Mx = shiftdim(M_yxzt(1,:,:,zslice,:), 1);

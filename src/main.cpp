@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     const fptype mu_0 = 4 * M_PI * 1e-7; // permeability of vacuum
     const fptype Ms = 8.6e5;             // saturation magnetization (permalloy)
     const fptype Aexch = 1.3e-11;        // exchange constant (permalloy)
-    const fptype alfa = 0.08;             // damping coefficient (permalloy)
+    const fptype alfa = 0.008;             // damping coefficient (permalloy)
     const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
 
 // Mask configuration for magnetic material
@@ -202,8 +202,10 @@ int main(int argc, char **argv)
                     // fptype theta = M_PI/2 + frand_atob(-10, 10) * M_PI/180;
                     // fptype phi   = 0 + frand_atob(-90, 90) * M_PI/180;
                     if(IC_singledomain) {
-                        theta = 0 + frand_atob(-1, 1) * M_PI/180;
-                        phi   = frand_atob(0, 360) * M_PI/180;
+                        theta = 90 * M_PI/180;
+                        phi   = 45 * M_PI/180;
+                        // theta = 0 + frand_atob(-1, 1) * M_PI/180;
+                        // phi   = frand_atob(0, 360) * M_PI/180;
                         // theta = (90 + frand_atob(-1, 1)) * M_PI/180;
                         // phi = (90 + frand_atob(-1, 1)) * M_PI/180;
                     }

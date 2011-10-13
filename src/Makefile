@@ -14,7 +14,7 @@ CUDA_LIBRARIES 		:= 	-L$(CUDA_INSTALL_PATH)/lib64 -lcuda -lcudart \
 #LIBPATH		:= $(MATLAB_LIBRARIES)
 DEFINES		:=
 COMMONFLAGS	:=
-LIBRARIES	:=
+LIBRARIES	:= -lgflags
 
 ifeq ($(use_freeimage),0)
 	LIBRARIES	+=
