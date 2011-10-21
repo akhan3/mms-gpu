@@ -20,27 +20,28 @@
 //*************************************************************************//
 //******************** intial command line arguments **********************//
 //*************************************************************************//
-    // DEFINE_string   (maskImg, "", "Text format mask file for the structure of magnetic material");
-    // DEFINE_string   (maskTxt, "", "PNG format mask file for the structure of magnetic material");
-    // DEFINE_double   (sample_width,  100e-9, "width (X) of magnetic sample");
-    // DEFINE_double   (sample_height, 100e-9, "height (Y) of magnetic sample");
-    // DEFINE_double   (sample_depth,  5e-9, "depth (Z) of magnetic sample");
-    DEFINE_int32    (Nx, 13, "number of mesh points in X-direction");
-    DEFINE_int32    (Ny, 13, "number of mesh points in Y-direction");
-    DEFINE_int32    (Nlayers, 3, "number of layers of magnetic materials");
-    DEFINE_double   (cellSize, 5e-9, "mesh cell size (dx,dy,dz)");
-    // DEFINE_int32    (zdim, 3, "number of mesh points in Z-direction");
-    DEFINE_string   (Minit_file, "", "Text file in matrix format for intial state of M");
-    DEFINE_int32    (P, 3, "order of multipole expansion");
-    DEFINE_double   (finaltime, 10e-9, "final time for simulation to terminate");
-    DEFINE_double   (timestep, 1e-12, "simulation time step");
-    DEFINE_bool     (demag, true, "account for demagnetization field");
-    DEFINE_bool     (exchange, true, "account for exchange field");
-    DEFINE_bool     (external, false, "account for external field");
-    DEFINE_bool     (use_fmm, false, "use Fast-Multipole-Method for potential calculation");
-    DEFINE_bool     (use_gpu, false, "use Graphics Processor for potential calculation");
-    DEFINE_string   (sim_name, "sim_untitled", "name of this simulation");
-    DEFINE_int32    (seed, time(NULL), "seed for random number generator");
+DEFINE_string   (simName, "simUntitled", "name of this simulation");
+DEFINE_double   (Ms, 8.6e5, "saturation magnetization [A/m]");
+DEFINE_double   (Aexch, 1.3e-11, "exchange constant [?]");
+DEFINE_double   (alpha, 0.008, "damping coefficient []");
+DEFINE_double   (gamma, 2.21e5, "gyromagnetic ratio [1/(A/m/s)]");
+DEFINE_int32    (Nx, 13, "number of mesh points in X-direction");
+DEFINE_int32    (Ny, 13, "number of mesh points in Y-direction");
+DEFINE_int32    (Nlayers, 3, "number of layers of magnetic materials");
+DEFINE_double   (cellSize, 5e-9, "mesh cell size (dx,dy,dz) [m]");
+DEFINE_string   (MinitFile, "disc_13x13.txt", "Text file in matrix format for intial state of M");
+DEFINE_double   (finaltime, 10e-9, "final time for simulation to terminate [s]");
+DEFINE_double   (timestep, 1e-12, "simulation time step [s]");
+DEFINE_bool     (demag, true, "account for demagnetization field");
+DEFINE_int32    (subsample_demag, 1, "Subsampling of Hdemag calculation");
+DEFINE_bool     (exchange, true, "account for exchange field");
+DEFINE_bool     (external, false, "account for external field");
+DEFINE_bool     (useGPU, false, "use Graphics Processor for potential calculation");
+DEFINE_bool     (useFMM, false, "use Fast-Multipole-Method for potential calculation");
+DEFINE_int32    (fmmP, 3, "order of multipole expansion");
+DEFINE_int32    (seed, time(NULL), "seed for random number generator");
+DEFINE_int32    (verbosity, 4, "Verbosity level of the simulator");
+DEFINE_bool     (printArgsAndExit, false, "Print command line arguments and exit");
 
 //*************************************************************************//
 //******************** Main function **************************************//
@@ -48,7 +49,7 @@
 int main(int argc, char **argv)
 {
     int status = 0;
-    const int verbosity = 4;
+    // const int verbosity = 4;
 
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
@@ -56,53 +57,70 @@ int main(int argc, char **argv)
 // read command line arguments
     google::ParseCommandLineFlags(&argc, &argv, true);
 
-    // char *maskImg = (char*)FLAGS_maskImg.c_str();
-    // char *maskTxt = (char*)FLAGS_maskTxt.c_str();
-    unsigned int P = FLAGS_P;
-    fptype finaltime = FLAGS_finaltime;
-    fptype timestep = FLAGS_timestep;
-    fptype cellSize  = FLAGS_cellSize;
-    int Nx = FLAGS_Nx;
-    int Ny = FLAGS_Ny;
-    int Nlayers = FLAGS_Nlayers;
-    // fptype sample_width  = FLAGS_sample_width;
-    // fptype sample_height = FLAGS_sample_height;
-    // fptype sample_depth  = FLAGS_sample_depth;
-    // int xdim = FLAGS_xdim;
-    // int ydim = FLAGS_ydim;
-    // int zdim = FLAGS_zdim;
-    int demag = FLAGS_demag;
-    int exchange = FLAGS_exchange;
-    int external = FLAGS_external;
-    int use_fmm = FLAGS_use_fmm;
-    int use_gpu = FLAGS_use_gpu;
-    char *sim_name = (char*)FLAGS_sim_name.c_str();
+// sanity check
+    assert(FLAGS_fmmP <= 4); // very important
+    assert(FLAGS_Nlayers == 3); // very important
+    assert(FLAGS_cellSize <= 5e-9);
 
-    assert(P <= 4); // very important
-    assert(Nlayers == 3); // very important
+// seed the random generator
     srand(FLAGS_seed);
+
+// convert the strings
+    char *simName = (char*)FLAGS_simName.c_str();
+    char *MinitFile = (char*)FLAGS_MinitFile.c_str();
 
 // print command line arguments
 #ifdef _OPENMP
     printf("Compiled with OpenMP and running with %s threads.\n", getenv("OMP_NUM_THREADS"));
 #endif
-    if(verbosity >= 2) {
-        printf("Minit_file = %s \n", FLAGS_Minit_file.c_str());
-        printf("P = %d \n", P);
-        printf("finaltime = %g \n", finaltime);
-        printf("timestep = %g \n", timestep);
-        printf("Nlayers = %d \n", Nlayers);
-        printf("demag = %d \n", demag);
-        printf("exchange = %d \n", exchange);
-        printf("external = %d \n", external);
-        printf("use_fmm = %d \n", use_fmm);
-        printf("use_gpu = %d \n", use_gpu);
-        printf("sim_name = %s \n", sim_name);
+    if(FLAGS_verbosity >= 2 || FLAGS_printArgsAndExit) {
+        printf("sim_name = %s \n", simName);
+
+        printf("Nx = %d \n", FLAGS_Nx);
+        printf("Ny = %d \n", FLAGS_Ny);
+        printf("Nlayers = %d \n", FLAGS_Nlayers);
+        printf("cellSize = %g \n", FLAGS_cellSize);
+        printf("timestep = %g \n", FLAGS_timestep);
+        printf("finaltime = %g \n", FLAGS_finaltime);
+        printf("terminatingTorque = %g \n", FLAGS_terminatingTorque);
+        printf("adjust_step = %d \n", FLAGS_adjust_step);
+        NEWLINE;
+        printf("Minit_file = %s \n", MinitFile);
+        printf("Ms = %g \n", FLAGS_Ms);
+        printf("alpha = %g \n", FLAGS_alpha);
+        printf("gamma = %g \n", FLAGS_gamma);
+        printf("Aexch = %g \n", FLAGS_Aexch);
+        NEWLINE;
+        printf("Bext = %s \n", FLAGS_Bext.c_str());
+        printf("STO_I = %g \n", FLAGS_STO_I);
+        printf("STO_Pdir = %s \n", FLAGS_STO_Pdir.c_str());
+        printf("STO_A = %g \n", FLAGS_STO_A);
+        printf("STO_P = %g \n", FLAGS_STO_P);
+        printf("STO_Lambda = %g \n", FLAGS_STO_Lambda);
+        printf("STO_t0 = %g \n", FLAGS_STO_t0);
+        NEWLINE;
+        printf("demag = %d \n", FLAGS_demag);
+        printf("subsample_demag = %d \n", FLAGS_subsample_demag);
+        printf("exchange = %d \n", FLAGS_exchange);
+        printf("external = %d \n", FLAGS_external);
+        printf("useGPU = %d \n", FLAGS_useGPU);
+        printf("useFMM = %d \n", FLAGS_useFMM);
+        printf("fmmP = %d \n", FLAGS_fmmP);
+        NEWLINE;
+        printf("log_Mfield = %d \n", FLAGS_log_Mfield);
+        printf("subsample = %d \n", FLAGS_subsample);
+        NEWLINE;
         printf("SEED = %d \n", FLAGS_seed);
+        printf("verbosity = %d \n", FLAGS_verbosity);
+        printf("printArgsAndExit = %d \n", FLAGS_printArgsAndExit);
+        NEWLINE;
     }
 
+    if(FLAGS_printArgsAndExit)
+        return EXIT_SUCCESS;
+
 // create directory to hold results
-    int err = mkdir(sim_name, 0755);
+    int err = mkdir(simName, 0755);
     // if(err == EEXIST)
         // printf("ERROR%d: Directory already exists\n", err);
     // else
@@ -113,29 +131,26 @@ int main(int argc, char **argv)
 
 // Material parameters
 // ================================================
-    const fptype mu_0 = 4 * M_PI * 1e-7; // permeability of vacuum
-    const fptype Ms = 8.6e5;             // saturation magnetization (permalloy)
-    const fptype Aexch = 1.3e-11;        // exchange constant (permalloy)
-    const fptype alfa = 0.008;             // damping coefficient (permalloy)
-    const fptype gamma = 2.21e5;         // gyromagnetic ratio (permalloy)
+    // const fptype Ms = FLAGS_Ms;
+    // const fptype Aexch = FLAGS_Aexch;
+    // const fptype alpha = FLAGS_alpha;
+    // const fptype gamma = FLAGS_gamma;
 
 // Mask configuration for magnetic material
-    int xdim = Nx;
-    int ydim = Ny;
-    int zdim = Nlayers; // +2
-    assert(zdim == 3); // very important
-    assert(cellSize <= 5e-9);
-    const fptype dx = cellSize;
-    const fptype dy = cellSize;
-    const fptype dz = cellSize;
+    int xdim = FLAGS_Nx;
+    int ydim = FLAGS_Ny;
+    int zdim = FLAGS_Nlayers; // +2
+    const fptype dx = FLAGS_cellSize;
+    const fptype dy = FLAGS_cellSize;
+    const fptype dz = FLAGS_cellSize;
     const fptype sample_width =  dx * xdim;
     const fptype sample_height =  dy * ydim;
     const fptype sample_depth =  dz * zdim;
     // assert(dx == dy);
     // assert(dy == dz);
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
-    printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g)\n", sample_width, sample_height, sample_depth);
-    printf("(dx, dy, dz) = (%g, %g, %g)\n", dx, dy, dz);
+    printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g) nm\n", sample_width/1e-9, sample_height/1e-9, sample_depth/1e-9);
+    printf("(dx, dy, dz) = (%g, %g, %g) nm\n", dx/1e-9, dy/1e-9, dz/1e-9);
 
 // load Minitial from file
     Vector3 *Minit = new Vector3[ydim*xdim]();  // magnetization matrix
@@ -143,7 +158,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
     }
-    status |= load_Minit(FLAGS_Minit_file.c_str(), ydim, xdim, Minit, verbosity);
+    status |= load_Minit(MinitFile, ydim, xdim, Minit, FLAGS_verbosity);
     if(status) return EXIT_FAILURE;
 
 
@@ -172,8 +187,9 @@ int main(int argc, char **argv)
 
 // write M field to file
     char filename[1000];
-    sprintf(filename, "%s/%s", sim_name, "Minit.dat");
-    status |= save_vector3d(M, zdim, ydim, xdim, filename, verbosity);
+    sprintf(filename, "%s/%s", simName, "Minit.dat");
+    // status |= save_vector3d(M, zdim, ydim, xdim, filename, verbosity);
+    status |= save_vector3d(&M[ydim*xdim], 1, ydim, xdim, filename, FLAGS_verbosity);
     if(status) return EXIT_FAILURE;
 
 // write material field to file
@@ -182,8 +198,8 @@ int main(int argc, char **argv)
     for(int y = 0; y < ydim; y++)
         for(int x = 0; x < xdim; x++)
             m[y*xdim + x] = (fptype)material[z*ydim*xdim + y*xdim + x];
-    sprintf(filename, "%s/%s", sim_name, "material.dat");
-    status |= matrix2file(m, ydim, xdim, filename, verbosity);
+    sprintf(filename, "%s/%s", simName, "material.dat");
+    status |= matrix2file(m, ydim, xdim, filename, FLAGS_verbosity);
     if(status) return EXIT_FAILURE;
     delete []m;
 
@@ -192,13 +208,12 @@ int main(int argc, char **argv)
 
 // magnetization dynamics
 // ===================================================================
-    // return EXIT_FAILURE;
     status |= time_marching(    material, M,
-                                finaltime, timestep,
+                                FLAGS_finaltime, FLAGS_timestep,
                                 xdim, ydim, zdim, dx, dy, dz,
-                                P, mu_0, Ms, Aexch, alfa, gamma,
-                                demag, exchange, external, use_fmm,
-                                use_gpu, sim_name, verbosity );
+                                FLAGS_fmmP, mu_0, FLAGS_Ms, FLAGS_Aexch, FLAGS_alpha, FLAGS_gamma,
+                                FLAGS_demag, FLAGS_exchange, FLAGS_external, FLAGS_useFMM,
+                                FLAGS_useGPU, simName, FLAGS_verbosity );
 
 // closing
     delete []Minit;
@@ -214,98 +229,3 @@ int main(int argc, char **argv)
 
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
-
-
-
-
-/*
-#ifdef USE_FREEIMAGE
-    BYTE *mask = NULL; // mask matrix
-    if(strlen(maskImg) != 0)
-        load_mask(maskImg, &mask, &xdim, &ydim);
-    else
-        // load_mask_txt(maskTxt, &mask, &xdim, &ydim);
-#else
-    printf("Please compile with USE_FREEIMAGE directive\n");
-    return EXIT_FAILURE;
-    byte *mask = new byte[ydim*xdim](); // mask matrix
-// specimen magnet 20x20x20
-    for(int y = 0; y < ydim; y++)
-        for(int x = 0; x < xdim; x++)
-            mask[y*xdim + x] = 1;   // all white (no material)
-    // for(unsigned int y = 21; y <= 41; y++)
-        // for(unsigned int x = 21; x <= 41; x++)
-    for(int y = 1; y < ydim-1; y++)
-        for(int x = 1; x < xdim-1; x++)
-            mask[y*xdim + x] = 0;   // selected black (material)
-#endif
-*/
-
-/*
-// determine initial condition
-    int IC_singledomain = 0;
-    int IC_vortex = 0;
-    int IC_random = 0;
-    switch(IC) {
-        case 0: // single domain
-            IC_singledomain = 1;
-            printf("Initial condition: Single Domain\n");
-            break;
-        case 1: // vortex
-            IC_vortex = 1;
-            printf("Initial condition: Vortex\n");
-            break;
-        case 2: // random
-            IC_random = 1;
-            printf("Initial condition: Random\n");
-            break;
-        default:
-            fprintf(stderr, "ERROR: Unknown Initial Condition!\n");
-            return EXIT_FAILURE;
-    }
-
-    assert(zdim >= 3);
-    for(int z = 1; z < zdim-1; z++) {
-        for(int y = 0; y < ydim; y++) {
-            for(int x = 0; x < xdim; x++) {
-                if(mask[y*xdim + x])
-                {
-                    fptype theta = M_PI/2;
-                    fptype phi   = 0;
-                    // fptype theta = frand_atob(0, 180) * M_PI/180;
-                    // fptype phi   = frand_atob(0, 360) * M_PI/180;
-                    // fptype theta = M_PI/2 + frand_atob(-10, 10) * M_PI/180;
-                    // fptype phi   = 0 + frand_atob(-90, 90) * M_PI/180;
-                    if(IC_singledomain) {
-                        theta = 90 * M_PI/180;
-                        phi   = 45 * M_PI/180;
-                        // theta = 0 + frand_atob(-1, 1) * M_PI/180;
-                        // phi   = frand_atob(0, 360) * M_PI/180;
-                        // theta = (90 + frand_atob(-1, 1)) * M_PI/180;
-                        // phi = (90 + frand_atob(-1, 1)) * M_PI/180;
-                    }
-                    else if(IC_random)
-                        phi   = frand_atob(0, 360) * M_PI/180;
-                    else if(IC_vortex) {
-                        if((x-xdim/2 > 0) && (y-ydim/2 > 0))
-                            phi = -M_PI/4;
-                        else if((x-xdim/2 <= 0) && (y-ydim/2 > 0))
-                            phi = M_PI/4;
-                        else if((x-xdim/2 <= 0) && (y-ydim/2 <= 0))
-                            phi = 3*M_PI/4;
-                        else if((x-xdim/2 > 0) && (y-ydim/2 <= 0))
-                            phi = -3*M_PI/4;
-                    }
-
-                    M[z*ydim*xdim + y*xdim + x] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
-                    material[z*ydim*xdim + y*xdim + x] = 1;
-                }
-            }
-        }
-        // fptype theta = 0;
-        // fptype phi   = frand_atob(0, 360) * M_PI/180;
-        // M[z*ydim*xdim + ydim/2*xdim + xdim/2] = Ms * Vector3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
-    }
-
-    delete []mask;
-*/

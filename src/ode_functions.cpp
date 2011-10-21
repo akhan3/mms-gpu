@@ -3,23 +3,30 @@
 #endif
 #include <stdlib.h>
 #include <sys/time.h>
+#include "globals.hpp"
 #include "ode_functions.hpp"
 #include "helper_functions.hpp"
 #include "vector_functions.hpp"
 
 
-// global variables
-const double _fixed = 0; // Tesla
-const double _amplitude = 0.0; // Tesla
-const double _f = 10e9; // Hz
-const double _t0 = 0.1e-9; // seconds
-const double _r = 5;
-const double _Ksto = 0 * 1e-1;
-const Vector3 _S(0,0,1);
-// barrier
-const double _b_fixed = 0; // Tesla
-const double _b_d = 15;
-const double _b_s = 10;
+//*************************************************************************//
+//*************************** command line arguments **********************//
+//*************************************************************************//
+DEFINE_bool     (adjust_step, false, "Adaptive time stepping in RK4 solver");
+DEFINE_double   (terminatingTorque, 1e-4, "Torque threshold to terminate the simualtion []");
+DEFINE_int32    (subsample, 1, "Subsampling factor for logging data");
+DEFINE_bool     (log_Mfield, false, "whether to log M-field at each time sample in a file");
+DEFINE_string   (Bext, "[0 0 0]", "External global B-field [Tesla]");
+DEFINE_double   (STO_I, 0, "STO current [Ampere]"); // 500e-6
+DEFINE_string   (STO_Pdir, "[0 0 1]", "Direction of Spin polarization");
+DEFINE_double   (STO_A, 1.96e-15, "STO contact area [m^2]");
+DEFINE_double   (STO_P, 0.4, "STO current polarization factor");
+DEFINE_double   (STO_Lambda, 2, "STO Lambda factor. Must be >= 1");
+DEFINE_double   (STO_t0, 0, "Time when to switch on the STO current [s]"); // 0.1e-9
+// DEFINE_int32    (STO_radius, 0, "Radius of STO contact in cells");
+
+Vector3 _STO_s; // spin direction vector
+Vector3 _Bext; // spin direction vector
 
 
 Vector3 LLG_Mprime( const Vector3 &M,
@@ -47,8 +54,21 @@ int LLG_STO_Mprime( const Vector3 *M, const Vector3 *H,
                 if(material[i]) {
                     this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
                     // Do STO stuff here
-                    if( pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= _r*_r ) {
-                         this_slope[i] += (-gamma*_Ksto) * M[i].cross(M[i].cross(_S));
+                    if(FLAGS_STO_I) {
+                        double STO_beta = (hbar/mu_0/e) * (FLAGS_STO_I/FLAGS_STO_A) / FLAGS_cellSize/FLAGS_Ms;
+                        double L = FLAGS_STO_Lambda;
+                        double mdots = M[i].dot(_STO_s) / M[i].magnitude();
+                        double STO_eps = FLAGS_STO_P*L*L / ((L*L+1) + (L*L-1)*mdots);
+                        // TODO: full disk is contact. Not necessarily
+                        // if( pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= FLAGS_STO_radius*FLAGS_STO_radius ) {
+                        if(1) {
+                             this_slope[i] += (-gamma*STO_beta*STO_eps/Ms) * M[i].cross(M[i].cross(_STO_s));
+                        }
+                        // printf("%g/(%g*%g) * %g/(%g*%g*%g) *%g/2 * %g/%g -> [beta*eps*gamma/Ms=%g] \n",
+                            // hbar,mu_0,e, FLAGS_STO_I,FLAGS_STO_A,FLAGS_cellSize,FLAGS_Ms,
+                            // FLAGS_STO_P,gamma,FLAGS_Ms,
+                            // STO_beta*STO_eps*gamma/Ms);
+                        // printf("(beta=%g)(eps=%g)=%g\n", STO_beta, STO_eps, STO_beta*STO_eps);
                     }
                 }
             }
@@ -73,7 +93,8 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
     if(verbosity) {}
 
 // reset H before beginning
-    if(demag || t <= _t0) {
+    // if((demag || t <= FLAGS_STO_t0) && !(tindex%FLAGS_subsample_demag)) {
+    if(demag || t <= FLAGS_STO_t0) {
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
@@ -102,7 +123,7 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
                 Hdemag_last[i] = H[i];
         }
     }
-    else if(!demag && t > _t0) {
+    else if(!demag && t > FLAGS_STO_t0) {
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
@@ -116,49 +137,26 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
     }
 
     if(external) {
-        // add external field = H_ext
-        // const Vector3 Hext = (1/mu_0) * ((t<1e-9) ? (-0.3/1e-9*t + 0.3) : 0) * Vector3(1,0,0); // 0.3mT ramp in Bx
-        // #ifdef _OPENMP
-        // #pragma omp parallel for
-        // #endif
-        // for(int i = 0; i < xyzdim; i++)
-            // H[i] += Hext;
-
-        // apply constant external field
-        if(_fixed) {
-            Vector3 Hext = _fixed * (1/mu_0) * Vector3(0,0,1); // constant 1 Tesla in +Hz
+        // apply constant external field = H_ext
+        if(_Bext.magnitude()) {
+            Vector3 Hext = 1/mu_0 * _Bext;
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
             for(int i = 0; i < xyzdim; i++)
                 H[i] += Hext;
         }
-
-        // apply constant external field for the barrier
-        if(_b_fixed) {
-            Vector3 Hext = _b_fixed * (1/mu_0) * Vector3(0,0,1); // constant in +Hz
-            #ifdef _OPENMP
-            #pragma omp parallel for
-            #endif
-            for(int z = 0; z < zdim; z++) {
-                for(int y = ydim/2-_b_d/2; y < ydim/2+_b_d/2; y++) {
-                    for(int x = xdim/2-_r-_b_s-_b_d; x < xdim/2-_r-_b_s; x++) {
-                        H[z*ydim*xdim + y*xdim + x] += Hext;
-                    }
-                }
-            }
-        }
-
-        // apply sinusoidal field in the middle region
-        // Hext = (1/mu_0) * ((t > _t0) ? _amplitude * sin(2*M_PI*_f*(t-_t0)) : 0) * Vector3(1,0,0);
-        // #ifdef _OPENMP
-        // #pragma omp parallel for
-        // #endif
-        // for(int z = 0; z < zdim; z++) {
-            // for(int y = ydim/2-_r; y < ydim/2+_r; y++) {
-                // for(int x = xdim/2-_r; x < xdim/2+_r; x++) {
-                    // if (pow(x-xdim/2, 2) + pow(y-ydim/2, 2) <= _r*_r)
+        // // apply constant external field for the barrier
+        // if(_b_fixed) {
+            // Vector3 Hext = _b_fixed * (1/mu_0) * Vector3(0,0,1); // constant in +Hz
+            // #ifdef _OPENMP
+            // #pragma omp parallel for
+            // #endif
+            // for(int z = 0; z < zdim; z++) {
+                // for(int y = ydim/2-_b_d/2; y < ydim/2+_b_d/2; y++) {
+                    // for(int x = xdim/2-_r-_b_s-_b_d; x < xdim/2-_r-_b_s; x++) {
                         // H[z*ydim*xdim + y*xdim + x] += Hext;
+                    // }
                 // }
             // }
         // }
@@ -198,7 +196,7 @@ int rk4_step(   const fptype t, const fptype dt, fptype *t2,
     // #endif
     // for(int i = 0; i < xyzdim; i++) {
         // if(material[i]) {
-            // this_slope[i] = LLG_STO_Mprime(i, M[i], H[i], alfa, gamma, Ms);
+            // this_slope[i] = LLG_Mprime(i, M[i], H[i], alfa, gamma, Ms);
             // M2[i] = M[i] + (this_slope[i] * 0.5 * dt);
             // slope[i] += this_slope[i];
         // }
@@ -273,8 +271,24 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                     const int P,
                     const fptype mu_0, const fptype Ms, const fptype Aexch, const fptype alfa, const fptype gamma,
                     const int demag, const int exchange, const int external, const int use_fmm,
-                    const int use_gpu, const char *sim_name, const int verbosity )
+                    const int use_gpu, const char *simName, const int verbosity )
 {
+// parse STO spin vector
+    char *STO_Pdir_str = (char*)FLAGS_STO_Pdir.c_str();
+    int dummy = sscanf(STO_Pdir_str, "[%g %g %g]", &_STO_s.x, &_STO_s.y, &_STO_s    .z);
+    if(dummy != 3) {
+        printf("FATAL ERROR: Malformed string for STO_Pdir %s\n", STO_Pdir_str);
+        return EXIT_FAILURE;
+    }
+
+// parse Bext vector
+    char *Bext_str = (char*)FLAGS_Bext.c_str();
+    dummy = sscanf(Bext_str, "[%g %g %g]", &_Bext.x, &_Bext.y, &_Bext.z);
+    if(dummy != 3) {
+        printf("FATAL ERROR: Malformed string for STO_Pdir %s\n", Bext_str);
+        return EXIT_FAILURE;
+    }
+
     int status = 0;
     const int xyzdim = zdim*ydim*xdim;
 
@@ -296,21 +310,24 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     char filename[1000];
 
 // open file for logging runtime statistics
-    sprintf(filename, "%s/%s", sim_name, "dynamics.dat");
+    sprintf(filename, "%s/%s", simName, "dynamics.dat");
     FILE *fh = fopen(filename, "w");
     if(fh == NULL) {
         printf("FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
 // open file for logging time evolution of M
-    sprintf(filename, "%s/%s", sim_name, "Mdynamics.dat");
-    FILE *fhM = fopen(filename, "w");
-    if(fhM == NULL) {
-        printf("FATAL ERROR: Error opening file %s\n", filename);
-        return EXIT_FAILURE;
+    FILE *fhM = NULL;
+    if(FLAGS_log_Mfield) {
+        sprintf(filename, "%s/%s", simName, "Mdynamics.dat");
+        FILE *fhM = fopen(filename, "w");
+        if(fhM == NULL) {
+            printf("FATAL ERROR: Error opening file %s\n", filename);
+            return EXIT_FAILURE;
+        }
     }
 // open file for logging panics
-    sprintf(filename, "%s/%s", sim_name, "panic.dat");
+    sprintf(filename, "%s/%s", simName, "panic.dat");
     FILE *fhp = fopen(filename, "w");
     if(fhp == NULL) {
         printf("FATAL ERROR: Error opening file %s\n", filename);
@@ -325,7 +342,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // const fptype tolerance_hyst = .5 * tolerance;  // in radians
     // const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
     const int normalize = true;
-    const int adjust_step = false; // use with extreme caution!
+    // const int adjust_step = false; // use with extreme caution!
 // starting point
     int tindex = 0;
     fptype t = 0;
@@ -407,7 +424,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         else
         { // accept the step
             consecutive_error_count = 0;
-            if(adjust_step)
+            if(FLAGS_adjust_step)
                 dt = 1e-13 / torque/2;
             t = t2;
             tindex++;
@@ -423,8 +440,6 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             if(1)
             // if(E2 <= E) // if step was validated
             {
-                // append M to Mdynamics file
-                status |= append_vector3d(M, zdim, ydim, xdim, fhM, verbosity);
                 // calculate average magnetization
                 fptype Mmag_avg = 0;
                 int count = 0;
@@ -438,20 +453,22 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 }
                 Mmag_avg /= count;
                 M_avg = M_avg * (1.0 / count);
-
-                fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
-                        tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
                 fprintf(stdout, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
                         tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
-                // display sinusoid
-                // Vector3 Hmid = H[1*ydim*xdim + ydim/2*xdim + xdim/2];
-                // Vector3 Hcor = H[1*ydim*xdim + 2*xdim + 2];
-                // fprintf(stdout, "%g, %g, %g,    %g, %g, %g \n", Hmid.x, Hmid.y, Hmid.z, Hcor.x, Hcor.y, Hcor.z);
+                if(!(tindex % FLAGS_subsample)) {
+                    fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
+                            tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
+                    // append M to Mdynamics file
+                    if(FLAGS_log_Mfield) {
+                        // status |= append_vector3d(M, zdim, ydim, xdim, fhM, verbosity);
+                        status |= append_vector3d(&M[ydim*xdim], 1, ydim, xdim, fhM, verbosity);
+                    }
+                }
             }
 
         // check stopping torque criteria
-            if(torque < 1e-4) {
-                printf("Torque is too low. Breaking simulation...\n");
+            if(torque < FLAGS_terminatingTorque) {
+                printf("Torque is too low. Terminating simulation...\n");
                 break;
             }
         } // valid step
@@ -459,26 +476,33 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
 
         fflush(NULL);
         // if(tindex >= 100) break;
-        if(tindex == 1) {
-            printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
-            // getchar();
-            printf("\n");
-        }
+        // if(tindex == 1) {
+            // printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
+            // // getchar();
+            // printf("\n");
+        // }
 
         // return EXIT_FAILURE;
 
     } // time marching while loop
+
+// write Mfinal field to file
+    sprintf(filename, "%s/%s", simName, "Mfinal.dat");
+    status |= save_vector3d(&M[ydim*xdim], 1, ydim, xdim, filename, verbosity);
+    if(status) return EXIT_FAILURE;
 
 // closing
     delete []M2;
     delete []H;
     delete []H2;
     delete []H3;
+    delete []Hdemag_last;
     delete []slope;
     delete []this_slope;
     delete []charge;
     delete []potential;
     fclose(fh);
-    fclose(fhM);
+    if(FLAGS_log_Mfield)
+        fclose(fhM);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }

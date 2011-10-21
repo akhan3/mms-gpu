@@ -20,14 +20,14 @@ int load_Minit(const char* filename, const int rows, const int cols, Vector3* M,
     for(int r=0; r<rows; r++) {     // axis ij
     // for(int r=rows-1; r>=0; r--) {   // axis xy
         for(int c=0; c<cols; c++) {
-            dummy = fscanf(fh, "%g,%g,%g\t", &M[r*cols+c].x, &M[r*cols+c].y, &M[r*cols+c].z);
+            dummy = fscanf(fh, "%g %g %g", &M[r*cols+c].x, &M[r*cols+c].y, &M[r*cols+c].z);
             if(dummy != 3) {
                 printf("FATAL ERROR: Malformed file %s @ (%d,%d)\n", filename,r+1,c+1);
                 return EXIT_FAILURE;
             }
             // fprintf(fw, "%g,%g,%g\t", M[r*cols+c].x, M[r*cols+c].y, M[r*cols+c].z);
         }
-        fscanf(fh, "\n");
+        dummy = fscanf(fh, "\n");
         // fprintf(fw, "\n");
     }
     fclose(fh);
@@ -69,9 +69,12 @@ int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, con
         fprintf(stderr, "%s:%d FATAL ERROR: couldn't open file %s\n", __FILE__, __LINE__, filename);
         return EXIT_FAILURE;
     }
+    // for(int z = 0; z < zdim; z++) {
+        // for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
+            // for(int y = 0; y < ydim; y++) {
     for(int z = 0; z < zdim; z++) {
-        for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
-            for(int y = 0; y < ydim; y++) {
+        for(int y = 0; y < ydim; y++) {
+            for(int x = 0; x < xdim; x++) {     // mind it!! writing in row major order for C
                 fprintf(fh, "%g ", scalarfield[z*ydim*xdim + y*xdim + x]);
             }
             fprintf(fh, "\n");
@@ -94,14 +97,18 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
         fprintf(stderr, "%s:%d FATAL ERROR: couldn't open file %s\n", __FILE__, __LINE__, filename);
         return EXIT_FAILURE;
     }
+    // for(int z = 0; z < zdim; z++) {
+        // for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
+            // for(int y = 0; y < ydim; y++) {
     for(int z = 0; z < zdim; z++) {
-        for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
-            for(int y = 0; y < ydim; y++) {
+        for(int y = 0; y < ydim; y++) {
+            for(int x = 0; x < xdim; x++) {     // mind it!! writing in row major order for C
                 fprintf(fh, "%g %g %g \n", vectorfield[z*ydim*xdim + y*xdim + x].x, vectorfield[z*ydim*xdim + y*xdim + x].y, vectorfield[z*ydim*xdim + y*xdim + x].z);
             }
+            fprintf(fh, "\n");
             // fprintf(fh, "# y done\n");
         }
-        // fprintf(fh, "# yx done\n");
+        fprintf(fh, "\n\n");
     }
     // fprintf(fh, "# yxz done\n");
     fclose(fh);
@@ -117,14 +124,19 @@ int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, 
 {
     if(verbosity) {}
     int status = 0;
+    // for(int z = 0; z < zdim; z++) {
+        // for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
+            // for(int y = 0; y < ydim; y++) {
     for(int z = 0; z < zdim; z++) {
-        for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
-            for(int y = 0; y < ydim; y++) {
+        for(int y = 0; y < ydim; y++) {
+            for(int x = 0; x < xdim; x++) {     // mind it!! writing in row major order for C
                 fprintf(fh, "%g %g %g \n", vectorfield[z*ydim*xdim + y*xdim + x].x, vectorfield[z*ydim*xdim + y*xdim + x].y, vectorfield[z*ydim*xdim + y*xdim + x].z);
             }
+            fprintf(fh, "\n");
             // fprintf(fh, "# y done\n");
         }
         // fprintf(fh, "# yx done\n");
+        fprintf(fh, "\n\n");
     }
     // fprintf(fh, "# yxz done\n");
     // fprintf(fh, "# tindex=%d, time=%g done\n", tindex, time);

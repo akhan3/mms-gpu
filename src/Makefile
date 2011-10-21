@@ -54,21 +54,22 @@ OBJS        :=	fmm_kernel.o \
 				ode_functions.o \
 				main.o
 
-TARGET    	:= main
+TARGET    	:= mms
 
 all: $(TARGET)
 
 $(TARGET):	$(OBJS)
-	@echo "******** Linking ********"
 	$(LINKER) -o $@ $(OBJS) $(COMMONFLAGS) $(LIBRARIES) $(CUDA_LIBRARIES)
-	@echo "************************************************\n"
 
 fmm_kernel.o	: fmm_kernel.cu fmm_calc.cu potential_calc.cu Box.* Queue.* Cmpx.* Vector3.* numerics.*  mydefs.hpp
 	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
 helper_functions.o 	: helper_functions.cpp helper_functions.hpp mydefs.hpp
 vector_functions.o 	: vector_functions.cpp vector_functions.hpp mydefs.hpp
-ode_functions.o 	: ode_functions.cpp ode_functions.hpp mydefs.hpp
-main.o				: main.cpp mydefs.hpp
+ode_functions.o 	: ode_functions.cpp ode_functions.hpp mydefs.hpp globals.hpp
+main.o				: main.cpp mydefs.hpp globals.hpp
 
 clean:
 	rm -f $(OBJS) gmon.out $(TARGET)
+
+#@echo "******** Linking ********"
+#@echo "************************************************\n"
