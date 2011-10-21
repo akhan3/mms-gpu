@@ -5,28 +5,37 @@
 #include "Vector3.hpp"
 #include "helper_functions.hpp"
 
-// // Read matrix from file
-// // ===============================
-// int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbosity)
-// {
-    // int status = 0;
-    // FILE *fh = fopen(filename, "r");
-    // if(fh == NULL) {
-        // printf("FATAL ERROR: Error opening file %s\n", filename);
-        // return EXIT_FAILURE;
-    // }
-    // int dummy;
-    // for(int r=0; r<rows; r++) {     // axis ij
-    // // for(int r=rows-1; r>=0; r--) {     // axis xy
-        // for(int c=0; c<cols; c++)
-            // dummy = fscanf(fh, "%d ", &matrix[r*cols+c]);
-        // dummy = fscanf(fh, "\n");
-    // }
-    // fclose(fh);
-    // if(verbosity >= 8)
-        // printf("INFO: Read file %s with status=%d\n", filename, status);
-    // return status ? EXIT_FAILURE : EXIT_SUCCESS;
-// }
+// Read matrix from file
+// ===============================
+int load_Minit(const char* filename, const int rows, const int cols, Vector3* M, int verbosity)
+{
+    int status = 0;
+    FILE *fh = fopen(filename, "r");
+    // FILE *fw = fopen("debugFile.txt", "w");
+    if(fh == NULL) {
+        printf("FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    int dummy;
+    for(int r=0; r<rows; r++) {     // axis ij
+    // for(int r=rows-1; r>=0; r--) {   // axis xy
+        for(int c=0; c<cols; c++) {
+            dummy = fscanf(fh, "%g,%g,%g\t", &M[r*cols+c].x, &M[r*cols+c].y, &M[r*cols+c].z);
+            if(dummy != 3) {
+                printf("FATAL ERROR: Malformed file %s @ (%d,%d)\n", filename,r+1,c+1);
+                return EXIT_FAILURE;
+            }
+            // fprintf(fw, "%g,%g,%g\t", M[r*cols+c].x, M[r*cols+c].y, M[r*cols+c].z);
+        }
+        fscanf(fh, "\n");
+        // fprintf(fw, "\n");
+    }
+    fclose(fh);
+    // fclose(fw);
+    if(verbosity >= 8)
+        printf("INFO: Read file %s with status=%d\n", filename, status);
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
+}
 
 // Write matrix to file
 // ===============================
@@ -217,3 +226,69 @@ int load_mask(const char *filename, BYTE **mask, int *xdim, int *ydim)
     return EXIT_SUCCESS;
 }
 #endif
+
+/*
+int load_mask_txt(const char *filename, byte **mask, int *xdim, int *ydim) {
+    // mask = new byte[ydim*xdim](); // mask matrix
+    FILE *fh = fopen(filename, "r");
+    if(fh == NULL) {
+        printf("FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    // obtain file size:
+    fseek(fh, 0, SEEK_END);
+    long lSize = ftell(fh);
+    rewind(fh);
+    char *buffer = new char[lSize]();
+    char *bufferCopy = new char[lSize]();
+    fread (buffer, 1, lSize, fh);
+    strcpy(bufferCopy, buffer);
+    // printf("lSize=%d buffer = \n%s\n", lSize, buffer);
+    // printf("ASCII\n");
+    // for(int i = 0; i < strlen(buffer); i++) {
+        // if(buffer[i] == '\n') {
+            // printf("%d [%3d '\\n']\n", i, buffer[i]);
+            // break;
+        // }
+        // else
+            // printf("%d [%3d '%c']\n", i, buffer[i], buffer[i]);
+    // }
+    int n = strchr(buffer, 10)-buffer;
+    // printf("Newline first found at %d\n", n);
+    // find xdim
+    char *pch;
+    pch = strtok (buffer, " ,\t");
+    *xdim = 0;
+    while (pch != NULL && pch < buffer+n)
+    {
+        (*xdim)++;
+        // printf ("<%s>", pch);
+        pch = strtok (NULL, " ,\t");
+    }
+    // printf("xdim = %d\n", *xdim);
+    // find ydim
+    strcpy(buffer, bufferCopy);
+    pch = strtok (bufferCopy, "\n");
+    *ydim = 0;
+    while (pch != NULL)
+    {
+        (*ydim)++;
+        // printf ("<%s>\n", pch);
+        pch = strtok (NULL, "\n");
+    }
+    // printf("ydim = %d\n", *ydim);
+    // load mask
+    *mask = new byte[(*ydim) * (*xdim)]();
+
+    pch = strtok (buffer, " ,\t\n");
+    int i = 0;
+    while (pch != NULL)
+    {
+        int a = atoi(pch);
+        (*mask)[i++] = (a != 0);
+        // printf (" <%d %d %s> ", i++, a, pch);
+        pch = strtok (NULL, " ,\t\n");
+    }
+    return EXIT_SUCCESS;
+}
+*/

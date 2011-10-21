@@ -23,7 +23,7 @@ function animate_M(folder_name)
 
     subplot(222);
         plot(time, Mx, time, My, time, Mz, time, M);
-        legend('Mx', 'My', 'Mz', 'M');
+%         legend('Mx', 'My', 'Mz', 'M');
 %         plot(time, Mx, time, My);
 %         legend('Mx', 'My');
         ylim([-1 1]);
@@ -33,7 +33,7 @@ function animate_M(folder_name)
 
 
 
-    subplot(224);
+    subplot(223);
         %plot(time, torque, '-');
         semilogy(time, torque, '-');
         grid on;

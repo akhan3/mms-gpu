@@ -10,11 +10,11 @@
 
 // global variables
 const double _fixed = 0; // Tesla
-const double _amplitude = 0.5; // Tesla
+const double _amplitude = 0.0; // Tesla
 const double _f = 10e9; // Hz
 const double _t0 = 0.1e-9; // seconds
-const double _r = 10;
-const double _Ksto = 1 * 1e-1;
+const double _r = 5;
+const double _Ksto = 0 * 1e-1;
 const Vector3 _S(0,0,1);
 // barrier
 const double _b_fixed = 0; // Tesla
@@ -83,10 +83,12 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
         divergence_3d(M, xdim, ydim, zdim, dx, dy, dz, charge);
 
         // calculate potential from charge
+        printf("...");
         if(use_fmm)
             status |= fmm_calc(charge, potential, xdim, ydim, zdim, dx, dy, dz, P, use_gpu, verbosity);
         else
             status |= calc_potential_exact(charge, xdim, ydim, zdim, dx, dy, dz, potential, use_gpu, verbosity); // Exact O(N^2) calculation
+        printf("Hdemag ");
 
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, dx, dy, dz, 1/(4.0*M_PI), H);
@@ -462,6 +464,9 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             // getchar();
             printf("\n");
         }
+
+        // return EXIT_FAILURE;
+
     } // time marching while loop
 
 // closing

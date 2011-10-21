@@ -7,6 +7,7 @@
 #include "Cmpx.hpp"
 
 // int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbosity);
+int load_Minit(const char* filename, const int rows, const int cols, Vector3* M, int verbosity);
 int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbosity);
 int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity);
 int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbosity);
@@ -59,5 +60,6 @@ void calc_H_nearest_neighbor(   const Vector3 *M, Vector3 *H,
 int load_mask(const char *filename, BYTE **mask, int *xdim, int *ydim);
 #endif
 
+int load_mask_txt(const char *filename, byte **mask, int *xdim, int *ydim);
 
 #endif // #ifndef  _HELPER_FUNCTIONS_H_

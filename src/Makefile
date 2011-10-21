@@ -61,6 +61,7 @@ all: $(TARGET)
 $(TARGET):	$(OBJS)
 	@echo "******** Linking ********"
 	$(LINKER) -o $@ $(OBJS) $(COMMONFLAGS) $(LIBRARIES) $(CUDA_LIBRARIES)
+	@echo "************************************************\n"
 
 fmm_kernel.o	: fmm_kernel.cu fmm_calc.cu potential_calc.cu Box.* Queue.* Cmpx.* Vector3.* numerics.*  mydefs.hpp
 	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
