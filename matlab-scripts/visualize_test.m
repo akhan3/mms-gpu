@@ -13,8 +13,10 @@ function visualize_test(folder_name)
         torque  = dynamics(:,9);
         %Hext  = dynamics(:,10);
     clear dynamics
+    Npoints = length(time);
+    fprintf('%d points in %g ns\n', Npoints, time(end)/1e-9);
 
-    %fig = figure; set(fig, 'name', folder_name);
+%     fig = figure; set(fig, 'name', folder_name);
     set(gcf, 'OuterPosition', [1 1 1280 800]);
     subplot(221);
         plot(time/1e-9, E, '-');

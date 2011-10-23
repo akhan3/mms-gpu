@@ -41,11 +41,13 @@ DECLARE_int32    (subsample_demag);
 DECLARE_bool     (exchange);
 DECLARE_bool     (external);
 DECLARE_bool     (useGPU);
+DECLARE_int32    (cudaDevice);
 DECLARE_bool     (useFMM);
 DECLARE_int32    (fmmP);
 
 DECLARE_bool     (log_Mfield);
 DECLARE_int32    (subsample);
+DECLARE_bool     (silent_stdout);
 
 DECLARE_int32    (seed);
 DECLARE_int32    (verbosity);

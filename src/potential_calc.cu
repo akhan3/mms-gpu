@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include "Vector3.hpp"
 #include "mydefs.hpp"
+#include "globals.hpp"
 
 // Print a message if a CUDA error occurred
 void checkCUDAError(const char *msg) {
@@ -129,7 +130,7 @@ int calc_potential_exact_gpu( const fptype *charge,
 // setup device
     if(first_time) {
         // select device to use
-        cudaSetDevice(1); // device-0 is tied to display output
+        cudaSetDevice(FLAGS_cudaDevice); // device-0 is tied to display output
 
         int currentDevice;
         cudaGetDevice(&currentDevice);

@@ -104,12 +104,12 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
         divergence_3d(M, xdim, ydim, zdim, dx, dy, dz, charge);
 
         // calculate potential from charge
-        printf("...");
+        if(!FLAGS_silent_stdout) printf("...");
         if(use_fmm)
             status |= fmm_calc(charge, potential, xdim, ydim, zdim, dx, dy, dz, P, use_gpu, verbosity);
         else
             status |= calc_potential_exact(charge, xdim, ydim, zdim, dx, dy, dz, potential, use_gpu, verbosity); // Exact O(N^2) calculation
-        printf("Hdemag ");
+        if(!FLAGS_silent_stdout) printf("Hdemag ");
 
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, dx, dy, dz, 1/(4.0*M_PI), H);
@@ -277,7 +277,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     char *STO_Pdir_str = (char*)FLAGS_STO_Pdir.c_str();
     int dummy = sscanf(STO_Pdir_str, "[%g %g %g]", &_STO_s.x, &_STO_s.y, &_STO_s    .z);
     if(dummy != 3) {
-        printf("FATAL ERROR: Malformed string for STO_Pdir %s\n", STO_Pdir_str);
+        fprintf(stderr, "FATAL ERROR: Malformed string for STO_Pdir %s\n", STO_Pdir_str);
         return EXIT_FAILURE;
     }
 
@@ -285,7 +285,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     char *Bext_str = (char*)FLAGS_Bext.c_str();
     dummy = sscanf(Bext_str, "[%g %g %g]", &_Bext.x, &_Bext.y, &_Bext.z);
     if(dummy != 3) {
-        printf("FATAL ERROR: Malformed string for STO_Pdir %s\n", Bext_str);
+        fprintf(stderr, "FATAL ERROR: Malformed string for STO_Pdir %s\n", Bext_str);
         return EXIT_FAILURE;
     }
 
@@ -313,16 +313,16 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     sprintf(filename, "%s/%s", simName, "dynamics.dat");
     FILE *fh = fopen(filename, "w");
     if(fh == NULL) {
-        printf("FATAL ERROR: Error opening file %s\n", filename);
+        fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
 // open file for logging time evolution of M
     FILE *fhM = NULL;
     if(FLAGS_log_Mfield) {
         sprintf(filename, "%s/%s", simName, "Mdynamics.dat");
-        FILE *fhM = fopen(filename, "w");
+        fhM = fopen(filename, "w");
         if(fhM == NULL) {
-            printf("FATAL ERROR: Error opening file %s\n", filename);
+            fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
             return EXIT_FAILURE;
         }
     }
@@ -330,7 +330,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     sprintf(filename, "%s/%s", simName, "panic.dat");
     FILE *fhp = fopen(filename, "w");
     if(fhp == NULL) {
-        printf("FATAL ERROR: Error opening file %s\n", filename);
+        fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
 
@@ -348,9 +348,9 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     fptype t = 0;
     fptype t2 = t;
 
-    printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
+    // printf("If you want to see the initial state of M, now is the time! \n"); fflush(NULL);
     // getchar();
-    printf("\n");
+    // printf("\n");
 
     int consecutive_error_count = 0;
 
@@ -416,7 +416,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                         tindex, t, dt, E2, torque);
             consecutive_error_count++;
             if(consecutive_error_count > 50) {
-                fprintf(stdout, "PANIC!! Stuck in energy violation errors. Terminating the simulation.\n");
+                printf("PANIC!! Stuck in energy violation errors. Terminating the simulation.\n");
                 fprintf(fhp, "PANIC!! Stuck in energy violation errors. Terminating the simulation.\n");
                 break;
             }
@@ -453,8 +453,9 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 }
                 Mmag_avg /= count;
                 M_avg = M_avg * (1.0 / count);
-                fprintf(stdout, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
-                        tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
+                if(!FLAGS_silent_stdout)
+                    printf("%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
+                            tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
                 if(!(tindex % FLAGS_subsample)) {
                     fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
                             tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
