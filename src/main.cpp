@@ -25,8 +25,8 @@ DEFINE_double   (Ms, 8.6e5, "saturation magnetization [A/m]");
 DEFINE_double   (Aexch, 1.3e-11, "exchange constant [?]");
 DEFINE_double   (alpha, 0.008, "damping coefficient []");
 DEFINE_double   (gamma, 2.21e5, "gyromagnetic ratio [1/(A/m/s)]");
-DEFINE_int32    (Nx, 13, "number of mesh points in X-direction");
-DEFINE_int32    (Ny, 13, "number of mesh points in Y-direction");
+// DEFINE_int32    (Nx, 13, "number of mesh points in X-direction");
+// DEFINE_int32    (Ny, 13, "number of mesh points in Y-direction");
 DEFINE_int32    (Nlayers, 3, "number of layers of magnetic materials");
 DEFINE_double   (cellSize, 5e-9, "mesh cell size (dx,dy,dz) [m]");
 DEFINE_string   (MinitFile, "disc_13x13.txt", "Text file in matrix format for intial state of M");
@@ -78,8 +78,8 @@ int main(int argc, char **argv)
     if(FLAGS_verbosity >= 2 || FLAGS_printArgsAndExit) {
         printf("sim_name = %s \n", simName);
 
-        printf("Nx = %d \n", FLAGS_Nx);
-        printf("Ny = %d \n", FLAGS_Ny);
+        // printf("Nx = %d \n", FLAGS_Nx);
+        // printf("Ny = %d \n", FLAGS_Ny);
         printf("Nlayers = %d \n", FLAGS_Nlayers);
         printf("cellSize = %g \n", FLAGS_cellSize);
         printf("timestep = %g \n", FLAGS_timestep);
@@ -94,9 +94,10 @@ int main(int argc, char **argv)
         printf("Aexch = %g \n", FLAGS_Aexch);
         NEWLINE;
         printf("Bext = %s \n", FLAGS_Bext.c_str());
+        printf("STO_JFile = %s \n", FLAGS_STO_JFile.c_str());
         printf("STO_I = %g \n", FLAGS_STO_I);
         printf("STO_Pdir = %s \n", FLAGS_STO_Pdir.c_str());
-        printf("STO_A = %g \n", FLAGS_STO_A);
+        // printf("STO_A = %g \n", FLAGS_STO_A);
         printf("STO_P = %g \n", FLAGS_STO_P);
         printf("STO_Lambda = %g \n", FLAGS_STO_Lambda);
         printf("STO_t0 = %g \n", FLAGS_STO_t0);
@@ -140,12 +141,19 @@ int main(int argc, char **argv)
     // const fptype gamma = FLAGS_gamma;
 
 // Mask configuration for magnetic material
-    int xdim = FLAGS_Nx;
-    int ydim = FLAGS_Ny;
+    int xdim;   // = FLAGS_Nx;
+    int ydim;   // = FLAGS_Ny;
     int zdim = FLAGS_Nlayers; // +2
     const fptype dx = FLAGS_cellSize;
     const fptype dy = FLAGS_cellSize;
     const fptype dz = FLAGS_cellSize;
+
+// load Minitial from file
+    Vector3 *Minit = NULL;  // magnetization matrix. will be allocated inside the following function
+    status |= load_Minit(MinitFile, &ydim, &xdim, &Minit, FLAGS_verbosity);
+    if(status) return EXIT_FAILURE;
+
+// print some info about geometry
     const fptype sample_width =  dx * xdim;
     const fptype sample_height =  dy * ydim;
     const fptype sample_depth =  dz * zdim;
@@ -154,16 +162,6 @@ int main(int argc, char **argv)
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
     printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g) nm\n", sample_width/1e-9, sample_height/1e-9, sample_depth/1e-9);
     printf("(dx, dy, dz) = (%g, %g, %g) nm\n", dx/1e-9, dy/1e-9, dz/1e-9);
-
-// load Minitial from file
-    Vector3 *Minit = new Vector3[ydim*xdim]();  // magnetization matrix
-    if(Minit == NULL) {
-        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
-        return EXIT_FAILURE;
-    }
-    status |= load_Minit(MinitFile, ydim, xdim, Minit, FLAGS_verbosity);
-    if(status) return EXIT_FAILURE;
-
 
 // generate the initial magnetization distribution
     byte *material = new byte[zdim*ydim*xdim]();  // material matrix

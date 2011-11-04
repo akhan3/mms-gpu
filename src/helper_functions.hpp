@@ -7,10 +7,12 @@
 #include "Cmpx.hpp"
 
 // int matrix4mfile(const char* filename, const int rows, const int cols, int* matrix, int verbosity);
-int load_Minit(const char* filename, const int rows, const int cols, Vector3* M, int verbosity);
+int load_Minit(const char* filename, int *rows, int *cols, Vector3 **M, int verbosity);
+int load_scalarField2D(const char* filename, int *rows, int *cols, fptype **scalar, int verbosity);
 int matrix2file(const fptype* matrix, const int rows, const int cols, const char* filename, int verbosity);
 int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity);
 int append_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, const int xdim, FILE* fh, int verbosity);
+int append_vector3d_midrow(const Vector3* vectorfield, const int xdim, FILE* fh);
 int save_scalar3d(const fptype* scalarfield, const int zdim, const int ydim, const int xdim, const char* filename, int verbosity);
 // int matrix2stdout(const fptype* matrix, const int rows, const int cols, const char* matrixname);
 

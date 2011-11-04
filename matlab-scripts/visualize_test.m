@@ -17,7 +17,7 @@ function visualize_test(folder_name)
     fprintf('%d points in %g ns\n', Npoints, time(end)/1e-9);
 
 %     fig = figure; set(fig, 'name', folder_name);
-    set(gcf, 'OuterPosition', [1 1 1280 800]);
+%     set(gcf, 'OuterPosition', [1 1 1280 800]);
     subplot(221);
         plot(time/1e-9, E, '-');
         grid on;
@@ -45,6 +45,6 @@ function visualize_test(folder_name)
         grid on;
         xlabel('time [ns]'); title('Time step');
 
-    print(gcf, ['dynamics'], '-depsc');
+%     print(gcf, ['dynamics'], '-depsc');
 
 end % function

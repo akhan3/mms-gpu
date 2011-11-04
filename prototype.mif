@@ -1,6 +1,6 @@
 mms
 
-    -simName=STO_demag
+    -simName=sim_testrun
 
     -Nx=13
     -Ny=13
@@ -11,7 +11,7 @@ mms
     -terminatingTorque=1e-4
     -noadjust_step
 
-    -MinitFile=disc_13x13_1e-6_relaxed.init
+    -MinitFile=matlab-scripts/disc_200nm_M.init
     -Ms=8.6e5
     -alpha=0.008
     -gamma=2.21e5

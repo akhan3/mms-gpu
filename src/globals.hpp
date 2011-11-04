@@ -12,8 +12,8 @@ const double e = 1.60217646e-19; // electron charge
 
 DECLARE_string   (simName);
 
-DECLARE_int32    (Nx);
-DECLARE_int32    (Ny);
+// DECLARE_int32    (Nx);
+// DECLARE_int32    (Ny);
 DECLARE_int32    (Nlayers);
 DECLARE_double   (cellSize);
 DECLARE_double   (timestep);
@@ -28,9 +28,10 @@ DECLARE_double   (gamma);
 DECLARE_double   (Aexch);
 
 DECLARE_string   (Bext);
+DECLARE_string   (STO_JFile);
 DECLARE_double   (STO_I);
 DECLARE_string   (STO_Pdir);
-DECLARE_double   (STO_A);
+// DECLARE_double   (STO_A);
 DECLARE_double   (STO_P);
 DECLARE_double   (STO_Lambda);
 DECLARE_double   (STO_t0);

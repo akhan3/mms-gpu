@@ -2,6 +2,7 @@
 #include <omp.h>
 #endif
 #include <stdlib.h>
+#include <assert.h>
 #include <sys/time.h>
 #include "globals.hpp"
 #include "ode_functions.hpp"
@@ -17,14 +18,16 @@ DEFINE_double   (terminatingTorque, 1e-4, "Torque threshold to terminate the sim
 DEFINE_int32    (subsample, 1, "Subsampling factor for logging data");
 DEFINE_bool     (log_Mfield, false, "whether to log M-field at each time sample in a file");
 DEFINE_string   (Bext, "[0 0 0]", "External global B-field [Tesla]");
+DEFINE_string   (STO_JFile, "", "STO current density profile [/m^2]");
 DEFINE_double   (STO_I, 0, "STO current [Ampere]"); // 500e-6
 DEFINE_string   (STO_Pdir, "[0 0 1]", "Direction of Spin polarization");
-DEFINE_double   (STO_A, 1.96e-15, "STO contact area [m^2]");
+// DEFINE_double   (STO_A, 1.96e-15, "STO contact area [m^2]");
 DEFINE_double   (STO_P, 0.4, "STO current polarization factor");
 DEFINE_double   (STO_Lambda, 2, "STO Lambda factor. Must be >= 1");
 DEFINE_double   (STO_t0, 0, "Time when to switch on the STO current [s]"); // 0.1e-9
 // DEFINE_int32    (STO_radius, 0, "Radius of STO contact in cells");
 
+fptype *_STO_J = NULL; // Current density profile
 Vector3 _STO_s; // spin direction vector
 Vector3 _Bext; // spin direction vector
 
@@ -54,8 +57,8 @@ int LLG_STO_Mprime( const Vector3 *M, const Vector3 *H,
                 if(material[i]) {
                     this_slope[i] = LLG_Mprime(M[i], H[i], alfa, gamma, Ms);
                     // Do STO stuff here
-                    if(FLAGS_STO_I) {
-                        double STO_beta = (hbar/mu_0/e) * (FLAGS_STO_I/FLAGS_STO_A) / FLAGS_cellSize/FLAGS_Ms;
+                    if(FLAGS_STO_I * _STO_J[y*xdim+x]) {
+                        double STO_beta = (hbar/mu_0/e) * (FLAGS_STO_I * _STO_J[y*xdim+x]) / FLAGS_cellSize/FLAGS_Ms;
                         double L = FLAGS_STO_Lambda;
                         double mdots = M[i].dot(_STO_s) / M[i].magnitude();
                         double STO_eps = FLAGS_STO_P*L*L / ((L*L+1) + (L*L-1)*mdots);
@@ -104,12 +107,12 @@ int Hfield (    const Vector3 *M, Vector3 *H, Vector3 *Hdemag_last,
         divergence_3d(M, xdim, ydim, zdim, dx, dy, dz, charge);
 
         // calculate potential from charge
-        if(!FLAGS_silent_stdout) printf("...");
+        // if(!FLAGS_silent_stdout) printf("...");
         if(use_fmm)
             status |= fmm_calc(charge, potential, xdim, ydim, zdim, dx, dy, dz, P, use_gpu, verbosity);
         else
             status |= calc_potential_exact(charge, xdim, ydim, zdim, dx, dy, dz, potential, use_gpu, verbosity); // Exact O(N^2) calculation
-        if(!FLAGS_silent_stdout) printf("Hdemag ");
+        // if(!FLAGS_silent_stdout) printf("Hdemag ");
 
         // magnetostatic field from potential = H_demag
         gradient_3d(potential, xdim, ydim, zdim, dx, dy, dz, 1/(4.0*M_PI), H);
@@ -273,6 +276,10 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                     const int demag, const int exchange, const int external, const int use_fmm,
                     const int use_gpu, const char *simName, const int verbosity )
 {
+    int status = 0;
+    char filename[1000];
+    const int xyzdim = zdim*ydim*xdim;
+
 // parse STO spin vector
     char *STO_Pdir_str = (char*)FLAGS_STO_Pdir.c_str();
     int dummy = sscanf(STO_Pdir_str, "[%g %g %g]", &_STO_s.x, &_STO_s.y, &_STO_s    .z);
@@ -289,8 +296,17 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         return EXIT_FAILURE;
     }
 
-    int status = 0;
-    const int xyzdim = zdim*ydim*xdim;
+// parse STO_JFile
+    _STO_J = new fptype[ydim*xdim]();
+    int Nx,Ny;
+    status |= load_scalarField2D(FLAGS_STO_JFile.c_str(), &Ny, &Nx, &_STO_J, verbosity);
+    if(status) return EXIT_FAILURE;
+    assert(Nx == xdim);
+    assert(Ny == ydim);
+    sprintf(filename, "%s/%s", simName, "J_writeback.dat");
+    status |= matrix2file(_STO_J, ydim, xdim, filename, FLAGS_verbosity);
+
+// return EXIT_FAILURE;
 
 // allocate memory
     Vector3 *M2         = new Vector3[xyzdim]();
@@ -307,8 +323,6 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         return EXIT_FAILURE;
     }
 
-    char filename[1000];
-
 // open file for logging runtime statistics
     sprintf(filename, "%s/%s", simName, "dynamics.dat");
     FILE *fh = fopen(filename, "w");
@@ -317,6 +331,12 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         return EXIT_FAILURE;
     }
 // open file for logging time evolution of M
+    sprintf(filename, "%s/%s", simName, "Mdynamics_midrow.dat");
+    FILE *fhMmid = fopen(filename, "w");
+    if(fhMmid == NULL) {
+        fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
     FILE *fhM = NULL;
     if(FLAGS_log_Mfield) {
         sprintf(filename, "%s/%s", simName, "Mdynamics.dat");
@@ -325,6 +345,11 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
             return EXIT_FAILURE;
         }
+        // write Nx and Ny
+        fprintf(fhM, "Nx=%d\n", xdim);
+        fprintf(fhM, "Ny=%d\n", ydim);
+        fprintf(fhM, "# start field\n");
+        // status |= save_vector3d(&M[ydim*xdim], 1, ydim, xdim, fhM, verbosity);
     }
 // open file for logging panics
     sprintf(filename, "%s/%s", simName, "panic.dat");
@@ -460,9 +485,15 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                     fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
                             tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
                     // append M to Mdynamics file
+                    int ymid = (ydim-1)/2;
+                    status |= append_vector3d_midrow(&M[ydim*xdim + ymid*xdim], xdim, fhMmid);
                     if(FLAGS_log_Mfield) {
                         // status |= append_vector3d(M, zdim, ydim, xdim, fhM, verbosity);
                         status |= append_vector3d(&M[ydim*xdim], 1, ydim, xdim, fhM, verbosity);
+                        // write Mlatest field to file
+                        sprintf(filename, "%s/%s", simName, "Mlatest.dat");
+                        status |= save_vector3d(&M[ydim*xdim], 1, ydim, xdim, filename, verbosity);
+                        if(status) return EXIT_FAILURE;
                     }
                 }
             }

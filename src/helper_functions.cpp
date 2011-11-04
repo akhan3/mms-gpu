@@ -5,9 +5,9 @@
 #include "Vector3.hpp"
 #include "helper_functions.hpp"
 
-// Read matrix from file
+// Read 3d vector field from file
 // ===============================
-int load_Minit(const char* filename, const int rows, const int cols, Vector3* M, int verbosity)
+int load_Minit(const char* filename, int *rows, int *cols, Vector3 **M, int verbosity)
 {
     int status = 0;
     FILE *fh = fopen(filename, "r");
@@ -17,21 +17,70 @@ int load_Minit(const char* filename, const int rows, const int cols, Vector3* M,
         return EXIT_FAILURE;
     }
     int dummy;
-    for(int r=0; r<rows; r++) {     // axis ij
+    // read out Nx and Ny
+    dummy = fscanf(fh, "Nx=%d\n", cols);
+    dummy = fscanf(fh, "Ny=%d\n", rows);
+    dummy = fscanf(fh, "# start field\n");
+    // allocate M of size Nx*Ny
+    *M = new Vector3[*rows * *cols]();  // magnetization matrix
+    if(*M == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return EXIT_FAILURE;
+    }
+
+    Vector3 m;
+    for(int r=0; r<*rows; r++) {     // axis ij
     // for(int r=rows-1; r>=0; r--) {   // axis xy
-        for(int c=0; c<cols; c++) {
-            dummy = fscanf(fh, "%g %g %g", &M[r*cols+c].x, &M[r*cols+c].y, &M[r*cols+c].z);
+        for(int c=0; c<*cols; c++) {
+            dummy = fscanf(fh, "%g %g %g", &m.x, &m.y, &m.z);
+            (*M)[r* *cols+c] = m;
             if(dummy != 3) {
                 printf("FATAL ERROR: Malformed file %s @ (%d,%d)\n", filename,r+1,c+1);
                 return EXIT_FAILURE;
             }
-            // fprintf(fw, "%g,%g,%g\t", M[r*cols+c].x, M[r*cols+c].y, M[r*cols+c].z);
         }
         dummy = fscanf(fh, "\n");
         // fprintf(fw, "\n");
     }
     fclose(fh);
     // fclose(fw);
+    if(verbosity >= 8)
+        printf("INFO: Read file %s with status=%d\n", filename, status);
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+// Read 2D scalar field from file
+// ===============================
+int load_scalarField2D(const char* filename, int *rows, int *cols, fptype **scalar, int verbosity)
+{
+    int status = 0;
+    FILE *fh = fopen(filename, "r");
+    if(fh == NULL) {
+        printf("FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    int dummy;
+    // read out Nx and Ny
+    dummy = fscanf(fh, "Nx=%d\n", cols);
+    dummy = fscanf(fh, "Ny=%d\n", rows);
+    dummy = fscanf(fh, "# start field\n");
+    // allocate s of size Nx*Ny
+    *scalar = new fptype[*rows * *cols]();  // scalar field matrix
+    if(*scalar == NULL) {
+        fprintf(stderr, "%s:%d Error allocating memory\n", __FILE__, __LINE__);
+        return EXIT_FAILURE;
+    }
+    for(int r=0; r<*rows; r++) {     // axis ij
+        for(int c=0; c<*cols; c++) {
+            dummy = fscanf(fh, "%g ", &(*scalar)[r* *cols+c]);
+            if(dummy != 1) {
+                printf("FATAL ERROR: Malformed file %s @ (%d,%d)\n", filename,r+1,c+1);
+                return EXIT_FAILURE;
+            }
+        }
+        dummy = fscanf(fh, "\n");
+    }
+    fclose(fh);
     if(verbosity >= 8)
         printf("INFO: Read file %s with status=%d\n", filename, status);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
@@ -47,12 +96,17 @@ int matrix2file(const fptype* matrix, const int rows, const int cols, const char
         printf("FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
+    // write Nx and Ny
+    fprintf(fh, "Nx=%d\n", cols);
+    fprintf(fh, "Ny=%d\n", rows);
+    fprintf(fh, "# start field\n");
     for(int r=0; r<rows; r++) {     // axis ij
     // for(int r=rows-1; r>=0; r--) {     // axis xy
         for(int c=0; c<cols; c++)
             fprintf(fh, "%g ", matrix[r*cols+c]);
         fprintf(fh, "\n");
     }
+    fprintf(fh, "# end field\n");
     fclose(fh);
     if(verbosity >= 8)
         printf("INFO: Written file %s with status=%d\n", filename, status);
@@ -97,6 +151,10 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
         fprintf(stderr, "%s:%d FATAL ERROR: couldn't open file %s\n", __FILE__, __LINE__, filename);
         return EXIT_FAILURE;
     }
+    // write Nx and Ny
+    fprintf(fh, "Nx=%d\n", xdim);
+    fprintf(fh, "Ny=%d\n", ydim);
+    fprintf(fh, "# start field\n");
     // for(int z = 0; z < zdim; z++) {
         // for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB
             // for(int y = 0; y < ydim; y++) {
@@ -110,6 +168,7 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
         }
         fprintf(fh, "\n\n");
     }
+    fprintf(fh, "# end field\n");
     // fprintf(fh, "# yxz done\n");
     fclose(fh);
     if(verbosity >= 8) {
@@ -153,6 +212,17 @@ int matrix2stdout(const fptype* matrix, const int rows, const int cols, const ch
     }
     printf("];\n");
     return EXIT_SUCCESS;
+}
+
+// Append 3D vector field to file
+// ===============================
+int append_vector3d_midrow(const Vector3* vectorfield, const int xdim, FILE* fh) {
+    int status = 0;
+    for(int x = 0; x < xdim; x++) {
+        fprintf(fh, "%g %g %g \n", vectorfield[x].x, vectorfield[x].y, vectorfield[x].z);
+    }
+    fprintf(fh, "\n");
+    return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 // // Depth-first tarversal
