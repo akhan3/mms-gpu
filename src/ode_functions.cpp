@@ -433,9 +433,10 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         // printf("dt=%g, E=%f , E2=%f\n", dt, E, E2);
 
     // check energies and adjust stepsize
-        if(E2-E > .1)
-        { // reject and invalidate this step if energy increases more than 0.1 eV
-            dt = dt / 1.1; // reduce the stepsize
+        if(E2-E > .1) { // reject and invalidate this step if energy increases more than 0.1 eV
+
+            // dt = dt / 1.1; // reduce the stepsize
+
             printf("PANIC!! energy is increasing, so reducing the step.\n");
             fprintf(fhp, "PANIC!! energy is increasing, so reducing the step. %d, %g, %g, %g, %g \n",
                         tindex, t, dt, E2, torque);
@@ -446,7 +447,9 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 break;
             }
         }
-        else
+
+        // else
+
         { // accept the step
             consecutive_error_count = 0;
             if(FLAGS_adjust_step)

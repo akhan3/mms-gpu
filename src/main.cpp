@@ -41,7 +41,7 @@ DEFINE_bool     (useGPU, false, "use Graphics Processor for potential calculatio
 DEFINE_int32    (cudaDevice, 1, "Tesla card number to use");
 DEFINE_bool     (useFMM, false, "use Fast-Multipole-Method for potential calculation");
 DEFINE_int32    (fmmP, 3, "order of multipole expansion");
-DEFINE_int32    (seed, time(NULL), "seed for random number generator");
+DEFINE_int32    (seed, time(NULL), "seed for random number generator. Default value is current time.");
 DEFINE_int32    (verbosity, 4, "Verbosity level of the simulator");
 DEFINE_bool     (printArgsAndExit, false, "Print command line arguments and exit");
 
@@ -162,6 +162,15 @@ int main(int argc, char **argv)
     printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
     printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g) nm\n", sample_width/1e-9, sample_height/1e-9, sample_depth/1e-9);
     printf("(dx, dy, dz) = (%g, %g, %g) nm\n", dx/1e-9, dy/1e-9, dz/1e-9);
+
+// Check to see if xdim and ydim are in powers of 2
+    if(FLAGS_useFMM) {
+        assert(xdim == ydim);
+        double logN = log2f(xdim);
+        printf("pow(2,logN) = %d\n", (int)powf(2,logN));
+        printf("pow(2,ceil(logN)) = %d\n", (int)powf(2,ceil(logN)));
+        assert(xdim == pow(2,logN));
+    }
 
 // generate the initial magnetization distribution
     byte *material = new byte[zdim*ydim*xdim]();  // material matrix

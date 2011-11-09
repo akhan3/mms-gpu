@@ -60,6 +60,7 @@ set(gcf, 'OuterPosition', [0 0 1280 800]);
 
 subplot(221);
     q1 = quiver3(X,Y,Z, Mx(:,:,1), My(:,:,1), Mz(:,:,1), .5);
+%     q1 = quiver3(X,Y,Z, Mx(:,:,1), My(:,:,1), zeros(size(Mz(:,:,1))), .5);
     set(q1,'color','black','linewidth',0.2);
     grid off;
     xlabel('x'); ylabel('y'); title('Magnetization (\phi - angle in plane)');
@@ -72,18 +73,18 @@ subplot(221);
     shading interp;
     axis equal
     axis  equal tight xy;
-    %     colorbar;
     grid off;
-    colormap(jet);
+    colormap(hsv);
+    % colorbar
     caxis([-180,180])
+
 
 subplot(222);
     plot(time/1e-9, E, '-');
     grid on;
     xlabel('time [ns]'); title('Energy (eV)');
-
-
     
+
 subplot(223);
     plot(time/1e-9, Mx_avg, time/1e-9, My_avg, time/1e-9, Mz_avg, time/1e-9, M_avg);
     %     legend('Mx', 'My', 'Mz', 'M');
@@ -92,12 +93,12 @@ subplot(223);
     xlabel('time [ns]'); title('Magnetization (A/m)');
 
 
-
 subplot(224);
-    % plot(time/1e-9, torque, '-');
-    semilogy(time/1e-9, torque, '-');
+    plot(time/1e-9, torque, '-');
+%     semilogy(time/1e-9, torque, '-');
     grid on;
     xlabel('time [ns]'); title('Normalized maximum Torque M \times H / Ms^2');
+
 
 print(gcf, ['Mlatest'], '-dpdf');
 return
