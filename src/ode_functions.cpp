@@ -16,7 +16,7 @@
 DEFINE_bool     (adjust_step, false, "Adaptive time stepping in RK4 solver");
 DEFINE_double   (terminatingTorque, 1e-4, "Torque threshold to terminate the simualtion []");
 DEFINE_int32    (subsample, 1, "Subsampling factor for logging data");
-DEFINE_bool     (log_Mfield, false, "whether to log M-field at each time sample in a file");
+DEFINE_bool     (log_Mfield, false, "Whether to log M-field at each time sample in a file");
 DEFINE_string   (Bext, "[0 0 0]", "External global B-field [Tesla]");
 DEFINE_string   (STO_JFile, "", "STO current density profile [/m^2]");
 DEFINE_double   (STO_I, 0, "STO current [Ampere]"); // 500e-6

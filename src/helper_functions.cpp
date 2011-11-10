@@ -99,6 +99,7 @@ int matrix2file(const fptype* matrix, const int rows, const int cols, const char
     // write Nx and Ny
     fprintf(fh, "Nx=%d\n", cols);
     fprintf(fh, "Ny=%d\n", rows);
+    fprintf(fh, "\n");
     fprintf(fh, "# start field\n");
     for(int r=0; r<rows; r++) {     // axis ij
     // for(int r=rows-1; r>=0; r--) {     // axis xy
@@ -154,6 +155,7 @@ int save_vector3d(const Vector3* vectorfield, const int zdim, const int ydim, co
     // write Nx and Ny
     fprintf(fh, "Nx=%d\n", xdim);
     fprintf(fh, "Ny=%d\n", ydim);
+    fprintf(fh, "\n");
     fprintf(fh, "# start field\n");
     // for(int z = 0; z < zdim; z++) {
         // for(int x = 0; x < xdim; x++) {     // mind it!! writing in column major order for MATLAB

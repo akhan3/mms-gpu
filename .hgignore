@@ -2,20 +2,22 @@
 syntax: glob
 obj/*
 bin/*
-*.mat
+*.mif
 *.dat
-*.ods
+*.init
+*.mat
+*.eps
+*.pdf
 *.png
 *.jpg
-*.eps
 *.o
 *.out
-log*
-results/*
-pathdef.m
-unused/*
-ohf_mat_files/*
+*.log
+
+# pathdef.m
+# unused/*
+# ohf_mat_files/*
 
 # switch to regexp syntax.
-#syntax: regexp
-#^\.pc/
+# syntax: regexp
+# ^\.pc/

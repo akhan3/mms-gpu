@@ -131,10 +131,6 @@ int calc_potential_exact_gpu( const fptype *charge,
     if(first_time) {
         // select device to use
         cudaSetDevice(FLAGS_cudaDevice); // device-0 is tied to display output
-
-        int currentDevice;
-        cudaGetDevice(&currentDevice);
-        printf("using device %d\n", currentDevice);
     }
 
 // set up device memory pointers
@@ -166,8 +162,10 @@ int calc_potential_exact_gpu( const fptype *charge,
     if(first_time) {
         assert(grid.x <= MAXBLOCKS);
         assert(threads.x <= MAXTHREADSPERBLOCK);
-        printf("launching kernel with %u blocks and %u threads...\n",
-                    grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
+        int currentDevice;
+        cudaGetDevice(&currentDevice);
+        printf("INFO: Using CUDA device-%d with %u blocks and %u threads for calc_potential_exact_kernel()\n",
+                    currentDevice, grid.x*grid.y*grid.z, threads.x*threads.y*threads.z);
     }
 
 // launch the kernel

@@ -1,9 +1,9 @@
 clear
 
-filename = 'disc_200nm_M.init';
-filenameJ = 'disc_200nm_J.init';
+filename = 'disc_500nm_M_rand.init';
+filenameJ = 'disc_500nm_J_50nm.init';
 Ms = 8.6e5;
-dia = 200e-9;
+dia = 500e-9;
 diaJ = 50e-9;
 I = 1;
 dx = 5e-9;
@@ -24,10 +24,16 @@ M = zeros(Ny,Nx,3);
 for r = [1:Ny]
     for c = [1:Nx]
         if A(r,c) == 1
-            theta = pi/2;
-            phi = pi/4;
-            theta = pi*rand;
-            phi = 2*pi*rand;
+            random = 1;
+            if(random)
+                theta = pi*rand;
+                phi = 2*pi*rand;
+            else
+                theta = pi/2;
+                phi = pi/4;
+            end
+
+
             M(r,c,:) = Ms * [sin(theta) * cos(phi)
                              sin(theta) * sin(phi)
                              cos(theta)];
@@ -77,17 +83,38 @@ disp([filename, ' file written'])
 
 imagesc(J+A*max(J(:))); axis image;
 
+
+%% subsample
+sf = 3;
+x = x(1:sf:end);
+y = y(1:sf:end);
+[X,Y] = meshgrid(x,y);
+Z = 0*X;
+Nx = length(x);
+Ny = length(y);
+Mx = M(1:sf:end, 1:sf:end, 1);
+My = M(1:sf:end, 1:sf:end, 2);
+Mz = M(1:sf:end, 1:sf:end, 3);
+
+%% plot
+clf
+q1 = quiver3(X,Y,Z, Mx(:,:,1), My(:,:,1), Mz(:,:,1), .5);
+%     q1 = quiver3(X,Y,Z, Mx(:,:,1), My(:,:,1), zeros(size(Mz(:,:,1))), .5);
+set(q1,'color','black','linewidth',2);
+grid off;
+xlabel('x'); ylabel('y'); title('Magnetization (\phi - angle in plane)');
+view(3);
+set(gca,'visible','off')
+hold on
+phi = atan2(My,Mx) * 180/pi;
+q3 = pcolor(X(1,:),Y(:,1), phi(:,:,1) + J(1:sf:end,1:sf:end));
+hold off;
+shading interp;
+axis equal tight xy;
+grid off;
+colormap(hsv); 
+% colorbar
+caxis([-180,180])    
+hold off
+
 return
-
-M = 2*double(sqrt(X.^2+Y.^2) == r);
-M = M+double(sqrt(X.^2+Y.^2) < r);
-% [C h] = contourf(x,y,M);
-% text_handle = clabel(C,h);
-
-% figure
-imagesc(M)
-axis image 
-axis xy
-grid on
-colormap('spring')
-%colorbar

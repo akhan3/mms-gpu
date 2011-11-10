@@ -20,30 +20,30 @@
 //*************************************************************************//
 //******************** intial command line arguments **********************//
 //*************************************************************************//
-DEFINE_string   (simName, "simUntitled", "name of this simulation");
-DEFINE_double   (Ms, 8.6e5, "saturation magnetization [A/m]");
-DEFINE_double   (Aexch, 1.3e-11, "exchange constant [?]");
-DEFINE_double   (alpha, 0.008, "damping coefficient []");
-DEFINE_double   (gamma, 2.21e5, "gyromagnetic ratio [1/(A/m/s)]");
-// DEFINE_int32    (Nx, 13, "number of mesh points in X-direction");
-// DEFINE_int32    (Ny, 13, "number of mesh points in Y-direction");
-DEFINE_int32    (Nlayers, 3, "number of layers of magnetic materials");
-DEFINE_double   (cellSize, 5e-9, "mesh cell size (dx,dy,dz) [m]");
+DEFINE_string   (simName, "simUntitled", "Name of this simulation");
+DEFINE_string   (simDesc, "Untitled simulation", "Description about this simulation");
+DEFINE_double   (Ms, 8.6e5, "Saturation magnetization [A/m]");
+DEFINE_double   (Aexch, 1.3e-11, "Exchange constant [?]");
+DEFINE_double   (alpha, 0.008, "Damping coefficient []");
+DEFINE_double   (gamma, 2.21e5, "Gyromagnetic ratio [1/(A/m/s)]");
+DEFINE_int32    (Nlayers, 3, "Number of layers of magnetic materials");
+DEFINE_double   (cellSize, 5e-9, "Mesh cell size (dx,dy,dz) [m]");
 DEFINE_string   (MinitFile, "disc_13x13.txt", "Text file in matrix format for intial state of M");
-DEFINE_double   (finaltime, 10e-9, "final time for simulation to terminate [s]");
-DEFINE_double   (timestep, 1e-12, "simulation time step [s]");
+DEFINE_double   (finaltime, 10e-9, "Final time for simulation to terminate [s]");
+DEFINE_double   (timestep, 1e-12, "Simulation time step [s]");
 DEFINE_int32    (subsample_demag, 1, "Subsampling of Hdemag calculation");
 DEFINE_bool     (silent_stdout, false, "No printing on stdout. Useful for batch runs");
-DEFINE_bool     (demag, true, "account for demagnetization field");
-DEFINE_bool     (exchange, true, "account for exchange field");
-DEFINE_bool     (external, false, "account for external field");
-DEFINE_bool     (useGPU, false, "use Graphics Processor for potential calculation");
+DEFINE_bool     (demag, true, "Account for demagnetization field");
+DEFINE_bool     (exchange, true, "Account for exchange field");
+DEFINE_bool     (external, false, "Account for external field");
+DEFINE_bool     (useGPU, false, "Use Graphics Processor for potential calculation");
 DEFINE_int32    (cudaDevice, 1, "Tesla card number to use");
-DEFINE_bool     (useFMM, false, "use Fast-Multipole-Method for potential calculation");
-DEFINE_int32    (fmmP, 3, "order of multipole expansion");
-DEFINE_int32    (seed, time(NULL), "seed for random number generator. Default value is current time.");
+DEFINE_bool     (useFMM, false, "Use Fast-Multipole-Method for potential calculation");
+DEFINE_int32    (fmmP, 3, "Order of multipole expansion");
+DEFINE_int32    (seed, time(NULL), "Seed for random number generator. Default value is current time.");
 DEFINE_int32    (verbosity, 4, "Verbosity level of the simulator");
 DEFINE_bool     (printArgsAndExit, false, "Print command line arguments and exit");
+
 
 //*************************************************************************//
 //******************** Main function **************************************//
@@ -51,13 +51,17 @@ DEFINE_bool     (printArgsAndExit, false, "Print command line arguments and exit
 int main(int argc, char **argv)
 {
     int status = 0;
+    char filename[1000];
     // const int verbosity = 4;
 
     timeval time1, time2;
     status |= gettimeofday(&time1, NULL);
 
 // read command line arguments
+    NEWLINE;
+    printf("INFO: Parsing command line flags... ");
     google::ParseCommandLineFlags(&argc, &argv, true);
+    printf("done!\n");
 
 // sanity check
     assert(FLAGS_fmmP <= 4); // very important
@@ -70,68 +74,75 @@ int main(int argc, char **argv)
 // convert the strings
     char *simName = (char*)FLAGS_simName.c_str();
     char *MinitFile = (char*)FLAGS_MinitFile.c_str();
+    time_t now;
+    time(&now);
+    printf("#===============================================================================\n");
+    printf("# Simulation title : %s\n", simName);
+    printf("# Description      : %s\n", FLAGS_simDesc.c_str());
+    printf("# Time started     : %s", ctime(&now));
+    printf("#===============================================================================\n");
 
-// print command line arguments
-#ifdef _OPENMP
-    printf("Compiled with OpenMP and running with %s threads.\n", getenv("OMP_NUM_THREADS"));
-#endif
-    if(FLAGS_verbosity >= 2 || FLAGS_printArgsAndExit) {
-        printf("sim_name = %s \n", simName);
-
-        // printf("Nx = %d \n", FLAGS_Nx);
-        // printf("Ny = %d \n", FLAGS_Ny);
-        printf("Nlayers = %d \n", FLAGS_Nlayers);
-        printf("cellSize = %g \n", FLAGS_cellSize);
-        printf("timestep = %g \n", FLAGS_timestep);
-        printf("finaltime = %g \n", FLAGS_finaltime);
-        printf("terminatingTorque = %g \n", FLAGS_terminatingTorque);
-        printf("adjust_step = %d \n", FLAGS_adjust_step);
-        NEWLINE;
-        printf("Minit_file = %s \n", MinitFile);
-        printf("Ms = %g \n", FLAGS_Ms);
-        printf("alpha = %g \n", FLAGS_alpha);
-        printf("gamma = %g \n", FLAGS_gamma);
-        printf("Aexch = %g \n", FLAGS_Aexch);
-        NEWLINE;
-        printf("Bext = %s \n", FLAGS_Bext.c_str());
-        printf("STO_JFile = %s \n", FLAGS_STO_JFile.c_str());
-        printf("STO_I = %g \n", FLAGS_STO_I);
-        printf("STO_Pdir = %s \n", FLAGS_STO_Pdir.c_str());
-        // printf("STO_A = %g \n", FLAGS_STO_A);
-        printf("STO_P = %g \n", FLAGS_STO_P);
-        printf("STO_Lambda = %g \n", FLAGS_STO_Lambda);
-        printf("STO_t0 = %g \n", FLAGS_STO_t0);
-        NEWLINE;
-        printf("demag = %d \n", FLAGS_demag);
-        printf("subsample_demag = %d \n", FLAGS_subsample_demag);
-        printf("exchange = %d \n", FLAGS_exchange);
-        printf("external = %d \n", FLAGS_external);
-        printf("useGPU = %d \n", FLAGS_useGPU);
-        printf("cudaDevice = %d \n", FLAGS_cudaDevice);
-        printf("useFMM = %d \n", FLAGS_useFMM);
-        printf("fmmP = %d \n", FLAGS_fmmP);
-        NEWLINE;
-        printf("log_Mfield = %d \n", FLAGS_log_Mfield);
-        printf("subsample = %d \n", FLAGS_subsample);
-        NEWLINE;
-        printf("SEED = %d \n", FLAGS_seed);
-        printf("verbosity = %d \n", FLAGS_verbosity);
-        printf("printArgsAndExit = %d \n", FLAGS_printArgsAndExit);
-        NEWLINE;
+// create directory to hold results
+    {
+        int status = mkdir(simName, S_IRWXU);
+        if(!status)
+            printf("INFO: Directory \"%s\" created.\n", simName);
+        else {
+            // printf("mkdir caused errno = %d\n", errno);
+            if(errno == EEXIST)
+                printf("INFO: Directory \"%s\" already exists and will be overwritten!\n", simName);
+            else if(errno == EACCES) {
+                printf("ERROR: Write permission is denied for the parent directory in which the new directory is to be added.\n");
+                return EXIT_FAILURE;
+            }
+            else if(errno == ENOSPC) {
+                printf("ERROR: The file system doesn't have enough room to create the new directory.\n");
+                return EXIT_FAILURE;
+            }
+            else if(errno == EROFS) {
+                printf("ERROR: The parent directory of the directory being created is on a read-only file system and cannot be modified.\n");
+                return EXIT_FAILURE;
+            }
+            else if(errno == EMLINK) {
+                printf("ERROR: The parent directory has too many links (entries).\n");
+                return EXIT_FAILURE;
+            }
+        }
     }
+
+// write flagfile.mif
+    sprintf(filename, "%s/parameters-%s.mif", simName, simName);
+    FILE *ff = fopen(filename, "w");
+    if(ff == NULL) {
+        fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    fprintf(ff, "#===============================================================================\n");
+    fprintf(ff, "# Simulation title : %s\n", simName);
+    fprintf(ff, "# Description      : %s\n", FLAGS_simDesc.c_str());
+    fprintf(ff, "# Time started     : %s", ctime(&now));
+    fprintf(ff, "#===============================================================================\n");
+    fprintf(ff, "\n\n");
+    std::vector<google::CommandLineFlagInfo> allFlags;
+    google::GetAllFlags(&allFlags);
+    for (std::vector<google::CommandLineFlagInfo>::iterator flag = allFlags.begin(); flag != allFlags.end(); ++flag) {
+        if(flag->name == "flagfile")
+            continue;
+        if(flag->name == "fromenv") // built-in flags from this point
+            break;
+        fprintf(ff, "# %s ", flag->description.c_str());
+        fprintf(ff, "# \"%s\"\n", flag->default_value.c_str());
+        fprintf(ff, "\t-%s=%s\n\n", flag->name.c_str(), flag->current_value.c_str());
+    }
+    // Don't close here! Keep opened for appending finishing time!
+    // fclose(ff);
 
     if(FLAGS_printArgsAndExit)
         return EXIT_SUCCESS;
 
-// create directory to hold results
-    int err = mkdir(simName, 0755);
-    // if(err == EEXIST)
-        // printf("ERROR%d: Directory already exists\n", err);
-    // else
-        // printf("ERROR%d: Some other error\n", err);
-    // sprintf(command,"copy %s %s",source_file,destination_file);
-    // system(command);
-    // if(status) return EXIT_FAILURE;
+#ifdef _OPENMP
+    printf("INFO: Compiled with OpenMP and running with %s threads.\n", getenv("OMP_NUM_THREADS"));
+#endif
 
 // Material parameters
 // ================================================
@@ -159,9 +170,10 @@ int main(int argc, char **argv)
     const fptype sample_depth =  dz * zdim;
     // assert(dx == dy);
     // assert(dy == dz);
-    printf("(xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
-    printf("(sample_width, sample_height, sample_depth) = (%g, %g, %g) nm\n", sample_width/1e-9, sample_height/1e-9, sample_depth/1e-9);
-    printf("(dx, dy, dz) = (%g, %g, %g) nm\n", dx/1e-9, dy/1e-9, dz/1e-9);
+    printf("INFO: (dx, dy, dz) = (%g, %g, %g) nm\n", dx/1e-9, dy/1e-9, dz/1e-9);
+    printf("INFO: (sample_width, sample_height, sample_depth) = (%g, %g, %g) nm\n", sample_width/1e-9, sample_height/1e-9, sample_depth/1e-9);
+    printf("INFO: (xdim, ydim, zdim) = (%d, %d, %d)\n", xdim, ydim, zdim);
+    printf("INFO: (timestep, finaltime, steps) = (%g, %g). %d steps\n", FLAGS_timestep, FLAGS_finaltime, (int)(FLAGS_finaltime/FLAGS_timestep));
 
 // Check to see if xdim and ydim are in powers of 2
     if(FLAGS_useFMM) {
@@ -196,7 +208,6 @@ int main(int argc, char **argv)
     }
 
 // write M field to file
-    char filename[1000];
     sprintf(filename, "%s/%s", simName, "Minit.dat");
     // status |= save_vector3d(M, zdim, ydim, xdim, filename, verbosity);
     status |= save_vector3d(&M[ydim*xdim], 1, ydim, xdim, filename, FLAGS_verbosity);
@@ -230,12 +241,23 @@ int main(int argc, char **argv)
     delete []M;
     delete []material;
 
-    printf("SEED = %d\n", FLAGS_seed);
-    // printf("%s\n", status ? "failed to complete" : "successfuly completed");
-
     status |= gettimeofday(&time2, NULL);
     double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    printf("Simulation completed in %f seconds.\n", deltatime);
+    int hours = deltatime / 3600;
+    int mins = (deltatime - 3600*hours) / 60;
+    int secs = deltatime - 3600*hours - 60*mins;
+    time(&now);
+    printf("#===============================================================================\n");
+    printf("# Time finished     : %s", ctime(&now));
+    printf("# Time taken        : %d:%d:%d (h:mm:ss)\n", hours, mins, secs);
+    printf("#===============================================================================\n");
+
+    fprintf(ff, "\n");
+    fprintf(ff, "#===============================================================================\n");
+    fprintf(ff, "# Time finished     : %s", ctime(&now));
+    fprintf(ff, "# Time taken        : %d:%d:%d (h:mm:ss)\n", hours, mins, secs);
+    fprintf(ff, "#===============================================================================\n");
+    fclose(ff);
 
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
