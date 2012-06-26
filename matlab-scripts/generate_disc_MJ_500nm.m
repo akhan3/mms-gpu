@@ -1,10 +1,10 @@
 clear
 
-filename = 'disc_40nm_M_random.init';
-filenameJ = 'disc_40nm_J_40nm.init';
+filename = 'disc_500nm_M_sd.init';
+filenameJ = 'disc_500nm_J_50nm.init';
 Ms = 8.6e5;
-dia = 40e-9;
-diaJ = 40e-9;
+dia = 500e-9;
+diaJ = 50e-9;
 I = 1;
 dx = 5e-9;
 
@@ -17,15 +17,14 @@ y = [(-Ny+1)/2:(Ny-1)/2];
 [X Y] = meshgrid(x,y);
 
 A = zeros(Ny,Nx);
-% A = (X.^2+Y.^2 <= Nr^2);
-A = (abs(X)~=(Nr+1) & abs(Y)~=(Nr+1));
+A = (X.^2+Y.^2 <= Nr^2);
 
 M = zeros(Ny,Nx,3);
 
 for r = [1:Ny]
     for c = [1:Nx]
         if A(r,c) == 1
-            random = 1;
+            random = 0;
             if(random)
                 theta = pi*rand;
                 phi = 2*pi*rand;
@@ -45,9 +44,8 @@ end
 J = zeros(Ny,Nx,3);
 rJ = diaJ/2;
 NrJ = round(rJ/dx);
-% currentDensity = I/(pi*rJ^2)
-currentDensity = I/(diaJ^2)
-J = currentDensity * A;
+currentDensity = I/(pi*rJ^2);
+J = currentDensity * (X.^2+Y.^2 <= NrJ^2);
 Jfile = fopen(filenameJ, 'w');
 fprintf(Jfile, 'Nx=%d\n', Nx);
 fprintf(Jfile, 'Ny=%d\n', Ny);
@@ -87,7 +85,7 @@ imagesc(J+A*max(J(:))); axis image;
 
 
 %% subsample
-sf = 1;
+sf = 3;
 x = x(1:sf:end);
 y = y(1:sf:end);
 [X,Y] = meshgrid(x,y);
@@ -108,7 +106,7 @@ xlabel('x'); ylabel('y'); title('Magnetization (\phi - angle in plane)');
 view(3);
 set(gca,'visible','off')
 hold on
-% phi = atan2(My,Mx) * 180/pi;
+phi = atan2(My,Mx) * 180/pi;
 q3 = pcolor(X(1,:),Y(:,1), phi(:,:,1) + J(1:sf:end,1:sf:end));
 hold off;
 shading interp;

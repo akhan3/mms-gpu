@@ -421,15 +421,20 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         status |= Hfield(M2, H2, Hdemag_last, charge, potential, t, xdim, ydim, zdim, dx, dy, dz, P, mu_0, Ms, Aexch, demag, exchange, external, use_fmm, use_gpu, verbosity);
         fptype E2 = 0;
         fptype torque = 0;
+        fptype torque_avg = 0;
+        int j = 0;
         for(int i = 0; i < xyzdim; i++) {
             if(material[i]) {
+                j++;
                 E2 += M2[i].dot(H2[i]);
                 fptype this_torque =  M2[i].cross(H2[i]).magnitude();
                 torque = (torque > this_torque) ? torque : this_torque;
+                torque_avg = (torque_avg*(j-1) + this_torque) / j;
             }
         }
         E2 *= -0.5*mu_0 * (dx*dy*dz) / 1.6e-19;
         torque *= (1/Ms/Ms);
+        torque_avg *= (1/Ms/Ms);
         // printf("dt=%g, E=%f , E2=%f\n", dt, E, E2);
 
     // check energies and adjust stepsize
@@ -438,8 +443,8 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
             // dt = dt / 1.1; // reduce the stepsize
 
             printf("PANIC!! energy is increasing, so reducing the step.\n");
-            fprintf(fhp, "PANIC!! energy is increasing, so reducing the step. %d, %g, %g, %g, %g \n",
-                        tindex, t, dt, E2, torque);
+            fprintf(fhp, "PANIC!! energy is increasing, so reducing the step. %d, %g, %g, %g, %g, %g \n",
+                        tindex, t, dt, E2, torque, torque_avg);
             consecutive_error_count++;
             if(consecutive_error_count > 50) {
                 printf("PANIC!! Stuck in energy violation errors. Terminating the simulation.\n");
@@ -482,11 +487,11 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
                 Mmag_avg /= count;
                 M_avg = M_avg * (1.0 / count);
                 if(!FLAGS_silent_stdout)
-                    printf("%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
-                            tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
+                    printf("PID %d :\t %d, %g, %g, %g, %g, %g, %g, %g, %e, %e \n", getpid(),
+                            tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque, torque_avg);
                 if(!(tindex % FLAGS_subsample)) {
-                    fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e \n",
-                            tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque);
+                    fprintf(fh, "%d, %g, %g, %g, %g, %g, %g, %g, %e, %e \n",
+                            tindex, t, dt, E2, M_avg.x/Ms, M_avg.y/Ms, M_avg.z/Ms, Mmag_avg/Ms, torque, torque_avg);
                     // append M to Mdynamics file
                     int ymid = (ydim-1)/2;
                     status |= append_vector3d_midrow(&M[ydim*xdim + ymid*xdim], xdim, fhMmid);

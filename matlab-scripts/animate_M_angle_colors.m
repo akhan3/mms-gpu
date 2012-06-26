@@ -76,9 +76,9 @@ end
 
 %% Visualization params
 doAnimation = true;
-animation_skip = 1;
+animation_skip = 2;
 alfa = 1;
-sf = 2;
+sf = 1;
 
 
 %% subsample
@@ -92,21 +92,20 @@ theta = theta(1:sf:end, 1:sf:end, :);
 phi   = phi  (1:sf:end, 1:sf:end, :);
 mask  = mask (1:sf:end, 1:sf:end, :);
 
-
 %% animation setup
 Mx = repmat(mask,[1 1 tdim]) .* sin(theta*pi/180) .* cos(phi*pi/180);
 My = repmat(mask,[1 1 tdim]) .* sin(theta*pi/180) .* sin(phi*pi/180);
 Mz = repmat(mask,[1 1 tdim]) .* cos(theta*pi/180);
 
 clf % fig = figure; 
-set(gcf, 'OuterPosition', [0 0 1280 800]);
+% set(gcf, 'OuterPosition', [0 0 1280 800]);
 subplot(211);
-    q1 = quiver3(X,Y,Z, Mx(:,:,1), My(:,:,1), Mz(:,:,1), .5);
-    set(q1,'color','black','linewidth',0.2);
+    q1 = quiver3(X,Y,Z+.25, Mx(:,:,1), My(:,:,1), Mz(:,:,1), .5);
+    set(q1,'color','black','linewidth',0.5);
     grid off;
     xlabel('x'); ylabel('y'); title('Magnetization (\phi - angle in plane)');
     view(3);
-    set(gca,'visible','off')
+%     set(gca,'visible','off')
     hold on
     q3 = pcolor(X(1,:),Y(:,1), phi(:,:,1).^alfa);
     hold off;
@@ -115,16 +114,17 @@ subplot(211);
     axis  equal tight xy;
     %     colorbar; 
     grid off; 
-    colormap(jet);
+    colormap(hsv);
     caxis([-180,180])
     
 h2 = subplot(212);
-    q2 = plot(time(1:2),squeeze(Mx(round(Ny/2),round(Nx/2),1:2)));
+    q2 = plot(time(1:2)/1e-9,squeeze(Mx(round(Ny/2),round(Nx/2),1:2)));
     hold on
-    q2b = plot(time(1:2),squeeze(Mx(round(Ny/4),round(Nx/2),1:2)),'r');
+    q2b = plot(time(1:2)/1e-9,squeeze(Mx(round(Ny/4),round(Nx/2),1:2)),'r');
     hold off;
     set(gca,'ylim',[-1 1])
-    %     legend('Mx @ center', 'Mx @ 1/4 of diameter')
+    legend('Mx @ center', 'Mx @ 1/4 of diameter')
+    xlabel('time [ns]');
     qt2 = title('Magnetiztion');
 
 %     return
@@ -143,12 +143,12 @@ h2 = subplot(212);
         set(q3, 'Ydata', Y(:,1));
         set(q3, 'Cdata', phi(:,:,i).^alfa);
 
-        set(q2, 'xdata', time(1:i));
+        set(q2, 'xdata', time(1:i)/1e-9);
         set(q2, 'ydata', squeeze(Mx(round(Ny/2),round(Nx/2),1:i)));
-        set(q2b, 'xdata', time(1:i));
+        set(q2b, 'xdata', time(1:i)/1e-9);
         set(q2b, 'ydata', squeeze(Mx(round(Ny/4),round(Nx/2),1:i)));
         set(qt2, 'string', ['M(t = ', num2str(time(i+0)), ')']);
-        set(h2,'xlim',[time(1) time(i)]);
+        set(h2,'xlim',[time(1) time(i)]/1e-9);
         
         if doAnimation        
             drawnow;
@@ -158,7 +158,12 @@ h2 = subplot(212);
         fnum = sprintf('Mcolors%05d', kk);
 %         disp(fnum)
 %         print(gcf, fnum, '-depsc');
+
+%         if kk == 1
+%             break
+%         end
     end
+    print(gcf, 'Manimate', '-dpdf');
 
 % keyboard
 

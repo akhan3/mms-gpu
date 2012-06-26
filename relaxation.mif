@@ -1,0 +1,36 @@
+mms
+
+    -simName=simRelax
+
+    -Nlayers=3
+    -cellSize=5e-9
+    -timestep=1e-12
+    -finaltime=20e-9
+    -terminatingTorque=1e-6
+    -noadjust_step
+
+    -MinitFile=matlab-scripts/disc_200nm_M.init
+    -Ms=8.6e5
+    -alpha=0.5
+    -gamma=2.21e5
+    -Aexch=1.3e-11
+
+    -Bext=[0 0 0]
+    -STO_I=0
+    -STO_JFile=matlab-scripts/disc_200nm_J.init
+
+    -demag
+    -subsample_demag=1
+    -exchange
+    -noexternal
+    -useGPU
+    -cudaDevice=1
+    -nouseFMM
+    -fmmP=2
+
+    -nolog_Mfield
+    -subsample=1
+
+    -seed=1319186639
+    -verbosity=4
+#    -printArgsAndExit

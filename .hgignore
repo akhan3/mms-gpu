@@ -13,6 +13,7 @@ bin/*
 *.o
 *.out
 *.log
+SimResults
 
 # pathdef.m
 # unused/*

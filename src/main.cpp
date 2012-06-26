@@ -5,9 +5,10 @@
 #include <iostream>
 #include <cmath>
 #include <time.h>
+#include <errno.h>
+#include <signal.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <errno.h>
 #include "globals.hpp"
 #include "Box.hpp"
 #include "Cmpx.hpp"
@@ -45,6 +46,49 @@ DEFINE_int32    (verbosity, 4, "Verbosity level of the simulator");
 DEFINE_bool     (printArgsAndExit, false, "Print command line arguments and exit");
 
 
+// global variables to use in signal handler
+timeval _time1;
+FILE* _ff = NULL;
+
+
+int closing_function(timeval time1, FILE* ff) {
+    timeval time2;
+    int status = gettimeofday(&time2, NULL);
+    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
+    int hours = deltatime / 3600;
+    int mins = (deltatime - 3600*hours) / 60;
+    int secs = deltatime - 3600*hours - 60*mins;
+    time_t now;
+    time(&now);
+    printf("#===============================================================================\n");
+    printf("# Time finished     : %s", ctime(&now));
+    printf("# Time taken        : %d:%d:%d (h:mm:ss) = %.0f seconds\n", hours, mins, secs, deltatime);
+    printf("#===============================================================================\n");
+    fprintf(ff, "\n");
+    fprintf(ff, "#===============================================================================\n");
+    fprintf(ff, "# Time finished     : %s", ctime(&now));
+    fprintf(ff, "# Time taken        : %d:%d:%d (h:mm:ss) = %.0f seconds\n", hours, mins, secs, deltatime);
+    fprintf(ff, "#===============================================================================\n");
+    fclose(ff);
+    return status;
+}
+
+
+void handle_signal(int signum) {
+    if(signum == SIGTERM) {
+        printf("\nINFO: Caught SIGTERM from kill command. \n");
+        closing_function(_time1, _ff);
+        exit(0);
+    }
+    else if(signum == SIGINT) {
+        printf("\nINFO: Caught SIGINT by Ctrl-C.\n");
+        closing_function(_time1, _ff);
+        exit(0);
+        // signal(SIGINT, SIG_DFL); // press again to exit
+    }
+}
+
+
 //*************************************************************************//
 //******************** Main function **************************************//
 //*************************************************************************//
@@ -54,8 +98,8 @@ int main(int argc, char **argv)
     char filename[1000];
     // const int verbosity = 4;
 
-    timeval time1, time2;
-    status |= gettimeofday(&time1, NULL);
+    // now global // timeval time1;
+    status |= gettimeofday(&_time1, NULL);
 
 // read command line arguments
     NEWLINE;
@@ -80,6 +124,7 @@ int main(int argc, char **argv)
     printf("# Simulation title : %s\n", simName);
     printf("# Description      : %s\n", FLAGS_simDesc.c_str());
     printf("# Time started     : %s", ctime(&now));
+    printf("# PID              : %d\n", getpid());
     printf("#===============================================================================\n");
 
 // create directory to hold results
@@ -112,17 +157,19 @@ int main(int argc, char **argv)
 
 // write flagfile.mif
     sprintf(filename, "%s/parameters-%s.mif", simName, simName);
-    FILE *ff = fopen(filename, "w");
-    if(ff == NULL) {
+    // now global // FILE *ff = NULL;
+    _ff = fopen(filename, "w");
+    if(_ff == NULL) {
         fprintf(stderr, "FATAL ERROR: Error opening file %s\n", filename);
         return EXIT_FAILURE;
     }
-    fprintf(ff, "#===============================================================================\n");
-    fprintf(ff, "# Simulation title : %s\n", simName);
-    fprintf(ff, "# Description      : %s\n", FLAGS_simDesc.c_str());
-    fprintf(ff, "# Time started     : %s", ctime(&now));
-    fprintf(ff, "#===============================================================================\n");
-    fprintf(ff, "\n\n");
+    fprintf(_ff, "#===============================================================================\n");
+    fprintf(_ff, "# Simulation title : %s\n", simName);
+    fprintf(_ff, "# Description      : %s\n", FLAGS_simDesc.c_str());
+    fprintf(_ff, "# Time started     : %s", ctime(&now));
+    fprintf(_ff, "# PID              : %d\n", getpid());
+    fprintf(_ff, "#===============================================================================\n");
+    fprintf(_ff, "\n\n");
     std::vector<google::CommandLineFlagInfo> allFlags;
     google::GetAllFlags(&allFlags);
     for (std::vector<google::CommandLineFlagInfo>::iterator flag = allFlags.begin(); flag != allFlags.end(); ++flag) {
@@ -130,12 +177,12 @@ int main(int argc, char **argv)
             continue;
         if(flag->name == "fromenv") // built-in flags from this point
             break;
-        fprintf(ff, "# %s ", flag->description.c_str());
-        fprintf(ff, "# \"%s\"\n", flag->default_value.c_str());
-        fprintf(ff, "\t-%s=%s\n\n", flag->name.c_str(), flag->current_value.c_str());
+        fprintf(_ff, "# %s ", flag->description.c_str());
+        fprintf(_ff, "# default: %s\n", flag->default_value.c_str());
+        fprintf(_ff, "\t-%s=%s\n\n", flag->name.c_str(), flag->current_value.c_str());
     }
     // Don't close here! Keep opened for appending finishing time!
-    // fclose(ff);
+    // fclose(_ff);
 
     if(FLAGS_printArgsAndExit)
         return EXIT_SUCCESS;
@@ -225,7 +272,9 @@ int main(int argc, char **argv)
     delete []m;
 
 
-    // return EXIT_FAILURE;
+// register signal handlers
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
 
 // magnetization dynamics
 // ===================================================================
@@ -241,23 +290,6 @@ int main(int argc, char **argv)
     delete []M;
     delete []material;
 
-    status |= gettimeofday(&time2, NULL);
-    double deltatime = (time2.tv_sec + time2.tv_usec/1e6) - (time1.tv_sec + time1.tv_usec/1e6);
-    int hours = deltatime / 3600;
-    int mins = (deltatime - 3600*hours) / 60;
-    int secs = deltatime - 3600*hours - 60*mins;
-    time(&now);
-    printf("#===============================================================================\n");
-    printf("# Time finished     : %s", ctime(&now));
-    printf("# Time taken        : %d:%d:%d (h:mm:ss)\n", hours, mins, secs);
-    printf("#===============================================================================\n");
-
-    fprintf(ff, "\n");
-    fprintf(ff, "#===============================================================================\n");
-    fprintf(ff, "# Time finished     : %s", ctime(&now));
-    fprintf(ff, "# Time taken        : %d:%d:%d (h:mm:ss)\n", hours, mins, secs);
-    fprintf(ff, "#===============================================================================\n");
-    fclose(ff);
-
+    status |= closing_function(_time1, _ff);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
