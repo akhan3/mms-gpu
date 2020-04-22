@@ -213,7 +213,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
     // const fptype tolerance_hyst = .5 * tolerance;  // in radians
     // const fptype safety_factor = 0.5; // 1 is no safety at all, while 0 is infinite safety
     const int normalize = true;
-    const int adjust_step = false; // use with extreme caution!
+    const int adjust_step = true; // use with extreme caution!
 // starting point
     int tindex = 0;
     fptype t = 0;
@@ -296,7 +296,7 @@ int time_marching(  byte *material, Vector3 *M, // initial state. This will be o
         { // accept the step
             consecutive_error_count = 0;
             if(adjust_step)
-                dt = 1e-13 / torque/2;
+                dt = 1e-14 / torque/2;
             t = t2;
             tindex++;
             #ifdef _OPENMP
